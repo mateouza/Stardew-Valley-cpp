@@ -15,7 +15,7 @@ add_library(course_support STATIC
     common/common_liberror.cpp
 )
 
-target_include_directories(course_support PUBLIC common/catedra)
+target_include_directories(course_support PUBLIC common)
 
 target_compile_definitions(course_support PRIVATE _POSIX_C_SOURCE=200809L)
 
