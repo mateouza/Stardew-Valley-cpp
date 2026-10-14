@@ -25,6 +25,7 @@ target_compile_options(course_support PRIVATE -Wall -Wextra -Wpedantic)
 
 add_library(server_core STATIC
     server/acceptor.cpp
+    server/server.cpp
 )
 
 target_include_directories(server_core PUBLIC server)
@@ -32,3 +33,9 @@ target_include_directories(server_core PUBLIC server)
 target_link_libraries(server_core PUBLIC course_support)
 
 target_compile_options(server_core PRIVATE -Wall -Wextra -Wpedantic)
+
+add_executable(server server/main.cpp)
+
+target_link_libraries(server PRIVATE server_core)
+
+target_compile_options(server PRIVATE -Wall -Wextra -Wpedantic)
