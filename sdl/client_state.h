@@ -6,15 +6,12 @@ class ClientState {
         int x;
         int y;
     public:
-        ClientState(int x_inicial, int y_inicial) : x(x_inicial), y(y_inicial) {}
+        ClientState(int x_inicial, int y_inicial);
 
-        int obtener_x() const { return x; }
-        int obtener_y() const { return y; }
+        int obtener_x() const;
+        int obtener_y() const;
 
-        void mover_a(int nuevo_x, int nuevo_y) {
-            x = nuevo_x;
-            y = nuevo_y;
-        }
+        void mover_a(int nuevo_x, int nuevo_y);
 };
 
 #endif
