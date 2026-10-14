@@ -1,2 +1,15 @@
-# Stardew-Valley-cpp
-Trabajo final grupal de Taller de Programacion -  2C2026
+# Stardew Valley - TP Final
+
+Trabajo final grupal de Taller de Programacion I, Catedra Veiga, FIUBA.
+
+**Cuatrimestre:** 2C de 2026  
+**Corrector asignado:** Mateo Capon
+
+## Integrantes
+
+| Nombre | Padron |
+|---|---|
+| Jose Casartelli | 113633 |
+| Mateo Josue Uzarralde | 113581 |
+| Juana de la Torre | 113534 |
+| Federica Guasch | 112453 |
