@@ -22,3 +22,13 @@ target_compile_definitions(course_support PRIVATE _POSIX_C_SOURCE=200809L)
 target_link_libraries(course_support PUBLIC Threads::Threads)
 
 target_compile_options(course_support PRIVATE -Wall -Wextra -Wpedantic)
+
+add_library(server_core STATIC
+    server/acceptor.cpp
+)
+
+target_include_directories(server_core PUBLIC server)
+
+target_link_libraries(server_core PUBLIC course_support)
+
+target_compile_options(server_core PRIVATE -Wall -Wextra -Wpedantic)
