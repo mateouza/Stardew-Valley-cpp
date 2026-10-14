@@ -1,5 +1,7 @@
 #include "acceptor.h"
 
+#include <utility>
+
 #include <sys/socket.h>
 
 #include "liberror.h"
@@ -10,6 +12,8 @@ void Acceptor::run() {
     try {
         while (should_keep_running()) {
             Socket client_socket = server_socket.accept();
+            auto session = std::make_unique<ClientSession>(std::move(client_socket));
+            sessions.push_back(std::move(session));
         }
     } catch (const LibError&) {
         if (should_keep_running()) {
