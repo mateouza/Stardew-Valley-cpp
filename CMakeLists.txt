@@ -9,10 +9,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Threads REQUIRED)
 
 add_library(course_support STATIC
-    common/catedra/common_socket.cpp
-    common/catedra/common_resolver.cpp
-    common/catedra/common_resolvererror.cpp
-    common/catedra/common_liberror.cpp
+    common/common_socket.cpp
+    common/common_resolver.cpp
+    common/common_resolvererror.cpp
+    common/common_liberror.cpp
 )
 
 target_include_directories(course_support PUBLIC common/catedra)
