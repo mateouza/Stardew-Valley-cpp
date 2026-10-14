@@ -9,7 +9,7 @@ Trabajo final grupal de Taller de Programacion I, Catedra Veiga, FIUBA.
 
 | Nombre | Padron |
 |---|---|
-| Jose Casartelli | 113633 |
+| José Gonzalez Casartelli | 113633 |
 | Mateo Josue Uzarralde | 113581 |
 | Juana de la Torre | 113534 |
 | Federica Guasch | 112453 |
