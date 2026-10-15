@@ -13,6 +13,7 @@ add_library(course_support STATIC
     common/common_resolver.cpp
     common/common_resolvererror.cpp
     common/common_liberror.cpp
+    common/protocol_base.cpp
 )
 
 target_include_directories(course_support PUBLIC common)
@@ -27,6 +28,7 @@ add_library(server_core STATIC
     server/acceptor.cpp
     server/client_session.cpp
     server/server.cpp
+    server/server_protocol.cpp
 )
 
 target_include_directories(server_core PUBLIC server)
