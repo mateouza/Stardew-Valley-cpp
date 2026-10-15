@@ -26,6 +26,8 @@ SetDirectionResult Player::set_direction(MovementDirection direction) {
 
 MovementDirection Player::get_direction() const { return direction; }
 
+Position Player::get_position() const { return position; }
+
 void Player::set_position(Position position) {
     moving = position.x != this->position.x || position.y != this->position.y;
     this->position = position;

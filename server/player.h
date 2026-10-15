@@ -25,6 +25,7 @@ public:
     SetDirectionResult set_direction(MovementDirection direction);
     MovementDirection get_direction() const;
 
+    Position get_position() const;
     void set_position(Position position);
     void disconnect();
     ReconnectPlayerResult reconnect();
