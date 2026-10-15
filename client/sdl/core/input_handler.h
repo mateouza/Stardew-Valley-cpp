@@ -2,7 +2,7 @@
 #define INPUT_HANDLER_H
 
 #include <SDL2/SDL.h>
-#include "client_state.h"
+#include "../state/client_state.h"
 
 class InputHandler {
     private:
