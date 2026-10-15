@@ -8,6 +8,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Threads REQUIRED)
 
+add_library(game_contracts INTERFACE)
+
+target_include_directories(game_contracts INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/common)
+target_compile_features(game_contracts INTERFACE cxx_std_20)
+
 add_library(course_support STATIC
     common/common_socket.cpp
     common/common_resolver.cpp
