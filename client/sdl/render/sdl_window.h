@@ -2,21 +2,19 @@
 #define SDL_WINDOW_H
 
 #include <string>
-#include <SDL2/SDL.h>
+#include <SDL2pp/Window.hh>
 
 class SDLWindow {
     private:
-        SDL_Window* window;
+        SDL2pp::Window window;
+
+        // Uint32 es el tipo que declara SDL
+        static Uint32 obtener_flags(bool pantalla_completa);
 
     public:
         SDLWindow(const std::string& titulo, int ancho, int alto, bool pantalla_completa);
 
-        ~SDLWindow();
-
-        SDLWindow(const SDLWindow&) = delete; // Evita la copia del objeto SDLWindow
-        SDLWindow& operator=(const SDLWindow&) = delete; // Evita la asignación del objeto SDLWindow
-
-        SDL_Window* obtener_handle() const; // devuelve el puntero al objeto SDL_Window
+        SDL2pp::Window& obtener_handle(); // devuelve el puntero al objeto SDL_Window
 };
 
 #endif
