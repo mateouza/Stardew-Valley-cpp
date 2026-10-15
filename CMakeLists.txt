@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Threads REQUIRED)
+find_package(SDL2 REQUIRED)
+find_package(SDL2pp REQUIRED)
 
 add_library(course_support STATIC
     common/common_socket.cpp
@@ -22,3 +24,16 @@ target_compile_definitions(course_support PRIVATE _POSIX_C_SOURCE=200809L)
 target_link_libraries(course_support PUBLIC Threads::Threads)
 
 target_compile_options(course_support PRIVATE -Wall -Wextra -Wpedantic)
+
+add_executable(stardew_client
+    sdl/render/renderer.cpp
+    sdl/state/client_state.cpp
+    sdl/core/input_handler.cpp
+)
+
+target_link_libraries(stardew_client PRIVATE
+    course_support
+    SDL2pp::SDL2pp
+)
+
+target_compile_options(stardew_client PRIVATE -Wall -Wextra -Wpedantic)
