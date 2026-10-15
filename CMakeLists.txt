@@ -26,9 +26,10 @@ target_link_libraries(course_support PUBLIC Threads::Threads)
 target_compile_options(course_support PRIVATE -Wall -Wextra -Wpedantic)
 
 add_executable(stardew_client
-    sdl/render/renderer.cpp
-    sdl/state/client_state.cpp
-    sdl/core/input_handler.cpp
+    sdl/main_test.cpp
+    sdl/renderer.cpp
+    sdl/client_state.cpp
+    sdl/input_handler.cpp
 )
 
 target_link_libraries(stardew_client PRIVATE

@@ -7,6 +7,7 @@
 Renderer::Renderer(SDL2pp::Window& window) 
     : renderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC) {}
 
+Renderer::~Renderer() = default;
 
 SDL2pp::Texture Renderer::cargar_textura(const std::string& ruta) {
     return SDL2pp::Texture(renderer, ruta);
