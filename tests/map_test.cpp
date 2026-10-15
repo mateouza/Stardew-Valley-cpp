@@ -139,4 +139,186 @@ TEST_F(MapTest, RejectsDimensionsThatCollapseAtFloatingPointPrecision) {
     EXPECT_FALSE(map.can_occupy({0.5, 0.5}, 0.5, smallest));
 }
 
+TEST_F(MapTest, ReachesFreeDestination) {
+    const auto result = map.resolve_movement({0.5, 0.5}, {2.5, 0.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 2.5);
+    EXPECT_DOUBLE_EQ(result.y, 0.5);
+}
+
+TEST_F(MapTest, UnchangedDestinationPreservesPosition) {
+    const auto result = map.resolve_movement({0.5, 0.5}, {0.5, 0.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 0.5);
+    EXPECT_DOUBLE_EQ(result.y, 0.5);
+}
+
+TEST_F(MapTest, StopsAtWallWhenMovingRight) {
+    const auto result = map.resolve_movement({0.5, 1.5}, {2.5, 1.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 0.75);
+    EXPECT_DOUBLE_EQ(result.y, 1.5);
+}
+
+TEST_F(MapTest, StopsAtWallWhenMovingLeft) {
+    const auto result = map.resolve_movement({2.5, 1.5}, {0.5, 1.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 2.25);
+    EXPECT_DOUBLE_EQ(result.y, 1.5);
+}
+
+TEST_F(MapTest, StopsAtWallWhenMovingDown) {
+    const auto result = map.resolve_movement({1.5, 0.5}, {1.5, 2.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 1.5);
+    EXPECT_DOUBLE_EQ(result.y, 0.75);
+}
+
+TEST_F(MapTest, StopsAtWallWhenMovingUp) {
+    const auto result = map.resolve_movement({1.5, 2.5}, {1.5, 0.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 1.5);
+    EXPECT_DOUBLE_EQ(result.y, 2.25);
+}
+
+TEST_F(MapTest, ClampsMovementToMapEdges) {
+    const auto upper_left = map.resolve_movement({0.5, 0.5}, {-100.0, -100.0}, 0.5, 0.5);
+    const auto lower_right = map.resolve_movement({2.5, 2.5}, {100.0, 100.0}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(upper_left.x, 0.25);
+    EXPECT_DOUBLE_EQ(upper_left.y, 0.25);
+    EXPECT_DOUBLE_EQ(lower_right.x, 2.75);
+    EXPECT_DOUBLE_EQ(lower_right.y, 2.75);
+}
+
+TEST_F(MapTest, SlidesVerticallyWhenHorizontalMovementIsBlocked) {
+    const auto result = map.resolve_movement({0.5, 1.5}, {2.5, 2.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 0.75);
+    EXPECT_DOUBLE_EQ(result.y, 2.5);
+}
+
+TEST_F(MapTest, ResolvesHorizontalMovementBeforeVerticalMovement) {
+    const auto result = map.resolve_movement({0.5, 0.5}, {1.5, 2.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 1.5);
+    EXPECT_DOUBLE_EQ(result.y, 0.75);
+}
+
+TEST_F(MapTest, CanMoveAwayFromWallContact) {
+    const auto result = map.resolve_movement({0.75, 1.5}, {0.25, 1.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 0.25);
+    EXPECT_DOUBLE_EQ(result.y, 1.5);
+}
+
+TEST_F(MapTest, ChecksFullBodyHeightDuringHorizontalMovement) {
+    const auto result = map.resolve_movement({0.5, 0.75}, {2.5, 0.75}, 0.5, 1.0);
+
+    EXPECT_DOUBLE_EQ(result.x, 0.75);
+    EXPECT_DOUBLE_EQ(result.y, 0.75);
+}
+
+TEST_F(MapTest, ChecksFullBodyWidthDuringVerticalMovement) {
+    const auto result = map.resolve_movement({0.75, 0.5}, {0.75, 2.5}, 1.0, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 0.75);
+    EXPECT_DOUBLE_EQ(result.y, 0.75);
+}
+
+TEST_F(MapTest, FiniteExtremeDestinationDoesNotSkipWall) {
+    const auto result =
+            map.resolve_movement({0.5, 1.5}, {std::numeric_limits<double>::max(), 1.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 0.75);
+    EXPECT_DOUBLE_EQ(result.y, 1.5);
+}
+
+TEST_F(MapTest, DecimalBodySizesKeepWallContactsValidAndStable) {
+    const double widths[] = {0.2, 0.3, 0.6, 0.7, 0.9};
+    for (const double width: widths) {
+        const auto left = map.resolve_movement({0.5, 1.5}, {2.5, 1.5}, width, 0.5);
+        const auto right = map.resolve_movement({2.5, 1.5}, {0.5, 1.5}, width, 0.5);
+
+        EXPECT_DOUBLE_EQ(left.x, 1.0 - width / 2.0);
+        EXPECT_DOUBLE_EQ(right.x, 2.0 + width / 2.0);
+        EXPECT_TRUE(map.can_occupy(left, width, 0.5));
+        EXPECT_TRUE(map.can_occupy(right, width, 0.5));
+        EXPECT_DOUBLE_EQ(map.resolve_movement(left, {2.5, 1.5}, width, 0.5).x, left.x);
+        EXPECT_DOUBLE_EQ(map.resolve_movement(right, {0.5, 1.5}, width, 0.5).x, right.x);
+
+        const auto top = map.resolve_movement({1.5, 0.5}, {1.5, 2.5}, 0.5, width);
+        const auto bottom = map.resolve_movement({1.5, 2.5}, {1.5, 0.5}, 0.5, width);
+
+        EXPECT_DOUBLE_EQ(top.y, 1.0 - width / 2.0);
+        EXPECT_DOUBLE_EQ(bottom.y, 2.0 + width / 2.0);
+        EXPECT_TRUE(map.can_occupy(top, 0.5, width));
+        EXPECT_TRUE(map.can_occupy(bottom, 0.5, width));
+    }
+}
+
+TEST_F(MapTest, RejectsInvalidInitialPosition) {
+    EXPECT_THROW(map.resolve_movement({1.5, 1.5}, {0.5, 0.5}, 0.5, 0.5), std::invalid_argument);
+    EXPECT_THROW(map.resolve_movement({-1.0, 0.5}, {0.5, 0.5}, 0.5, 0.5), std::invalid_argument);
+}
+
+TEST_F(MapTest, RejectsInvalidBodyDimensionsForMovement) {
+    EXPECT_THROW(map.resolve_movement({0.5, 0.5}, {0.75, 0.5}, 0.0, 0.5), std::invalid_argument);
+    EXPECT_THROW(map.resolve_movement({0.5, 0.5}, {0.75, 0.5}, 0.5, -1.0), std::invalid_argument);
+}
+
+TEST_F(MapTest, RejectsNonFiniteMovementDestination) {
+    const double invalid_values[] = {std::numeric_limits<double>::quiet_NaN(),
+                                     std::numeric_limits<double>::infinity(),
+                                     -std::numeric_limits<double>::infinity()};
+    for (const double value: invalid_values) {
+        EXPECT_THROW(map.resolve_movement({0.5, 0.5}, {value, 0.5}, 0.5, 0.5),
+                     std::invalid_argument);
+        EXPECT_THROW(map.resolve_movement({0.5, 0.5}, {0.5, value}, 0.5, 0.5),
+                     std::invalid_argument);
+    }
+}
+
+TEST(MapMovementTest, StopsAtNearestWallInEitherDirection) {
+    const Map map{{{TileType::Walkable, TileType::Blocked, TileType::Walkable, TileType::Blocked,
+                    TileType::Walkable}}};
+
+    const auto right = map.resolve_movement({0.5, 0.5}, {4.5, 0.5}, 0.5, 0.5);
+    const auto left = map.resolve_movement({4.5, 0.5}, {0.5, 0.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(right.x, 0.75);
+    EXPECT_DOUBLE_EQ(left.x, 4.25);
+}
+
+TEST(MapMovementTest, CannotPassBetweenTwoBlockedCornerTiles) {
+    const Map map{
+            {{TileType::Walkable, TileType::Blocked}, {TileType::Blocked, TileType::Walkable}}};
+
+    const auto result = map.resolve_movement({0.5, 0.5}, {1.5, 1.5}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 0.75);
+    EXPECT_DOUBLE_EQ(result.y, 0.75);
+    EXPECT_TRUE(map.can_occupy(result, 0.5, 0.5));
+}
+
+TEST(MapMovementTest, RespectsDifferentMapWidthAndHeight) {
+    const Map map{{{TileType::Walkable, TileType::Walkable, TileType::Walkable}}};
+
+    const auto result = map.resolve_movement({0.5, 0.5}, {100.0, 100.0}, 0.5, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 2.75);
+    EXPECT_DOUBLE_EQ(result.y, 0.75);
+}
+
+TEST(MapMovementTest, DecimalContactDoesNotOverlapWallThroughRounding) {
+    const Map map{{{TileType::Blocked, TileType::Walkable}}};
+
+    const auto result = map.resolve_movement({1.5, 0.5}, {0.5, 0.5}, 0.8, 0.5);
+
+    EXPECT_DOUBLE_EQ(result.x, 1.4);
+    EXPECT_GE(result.x - 0.4, 1.0);
+    EXPECT_TRUE(map.can_occupy(result, 0.8, 0.5));
+    EXPECT_DOUBLE_EQ(map.resolve_movement(result, {0.5, 0.5}, 0.8, 0.5).x, result.x);
+}
+
 }
