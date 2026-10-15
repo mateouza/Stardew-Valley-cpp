@@ -321,4 +321,85 @@ TEST(MapMovementTest, DecimalContactDoesNotOverlapWallThroughRounding) {
     EXPECT_DOUBLE_EQ(map.resolve_movement(result, {0.5, 0.5}, 0.8, 0.5).x, result.x);
 }
 
+TEST(MapMovementTest, CannotCrossCornerMovingDownLeftWithDecimalBody) {
+    const Map map{
+            {{TileType::Blocked, TileType::Walkable}, {TileType::Walkable, TileType::Blocked}}};
+
+    const auto result = map.resolve_movement({1.5, 0.5}, {0.5, 1.5}, 0.6, 0.6);
+
+    EXPECT_DOUBLE_EQ(result.x, 1.3);
+    EXPECT_DOUBLE_EQ(result.y, 0.7);
+    EXPECT_TRUE(map.can_occupy(result, 0.6, 0.6));
 }
+
+TEST(MapMovementTest, CannotCrossCornerMovingUpLeftWithDecimalBody) {
+    const Map map{
+            {{TileType::Walkable, TileType::Blocked}, {TileType::Blocked, TileType::Walkable}}};
+
+    const auto result = map.resolve_movement({1.5, 1.5}, {0.5, 0.5}, 0.6, 0.6);
+
+    EXPECT_DOUBLE_EQ(result.x, 1.3);
+    EXPECT_DOUBLE_EQ(result.y, 1.3);
+    EXPECT_TRUE(map.can_occupy(result, 0.6, 0.6));
+}
+
+TEST(MapMovementTest, CannotCrossCornerMovingUpRightWithDecimalBody) {
+    const Map map{
+            {{TileType::Blocked, TileType::Walkable}, {TileType::Walkable, TileType::Blocked}}};
+
+    const auto result = map.resolve_movement({0.5, 1.5}, {1.5, 0.5}, 0.6, 0.6);
+
+    EXPECT_DOUBLE_EQ(result.x, 0.7);
+    EXPECT_DOUBLE_EQ(result.y, 1.3);
+    EXPECT_TRUE(map.can_occupy(result, 0.6, 0.6));
+}
+
+TEST(MapMovementTest, WallContactRemainsValidAcrossTinySlidingSteps) {
+    const Map map{{{TileType::Blocked, TileType::Walkable}}};
+    auto position = map.resolve_movement({1.5, 0.5}, {0.5, 0.5}, 0.8, 0.6);
+    const double initial_x = position.x;
+
+    for (int step = 0; step < 1000; ++step) {
+        position = map.resolve_movement(position, {position.x - 0.00001, position.y + 0.0001}, 0.8,
+                                        0.6);
+        ASSERT_TRUE(map.can_occupy(position, 0.8, 0.6));
+    }
+
+    EXPECT_DOUBLE_EQ(position.x, initial_x);
+    EXPECT_NEAR(position.y, 0.6, 1e-12);
+}
+
+TEST(MapMovementTest, RepeatedTinyFreeMovementsDoNotGetCancelled) {
+    const Map map{{{TileType::Walkable, TileType::Walkable, TileType::Walkable}}};
+    Position position{0.5, 0.5};
+
+    for (int step = 0; step < 1000; ++step) {
+        position = map.resolve_movement(position, {position.x + 0.00001, position.y}, 0.6, 0.6);
+        ASSERT_TRUE(map.can_occupy(position, 0.6, 0.6));
+    }
+
+    EXPECT_NEAR(position.x, 0.51, 1e-12);
+    EXPECT_DOUBLE_EQ(position.y, 0.5);
+}
+
+TEST_F(MapTest, DecimalBodyRemainsStableAtBothMapCorners) {
+    auto upper_left = map.resolve_movement({0.5, 0.5}, {-100.0, -100.0}, 0.6, 0.6);
+    auto lower_right = map.resolve_movement({2.5, 2.5}, {100.0, 100.0}, 0.6, 0.6);
+
+    for (int step = 0; step < 1000; ++step) {
+        upper_left = map.resolve_movement(upper_left,
+                                          {upper_left.x - 0.0001, upper_left.y - 0.0001}, 0.6, 0.6);
+        lower_right = map.resolve_movement(
+                lower_right, {lower_right.x + 0.0001, lower_right.y + 0.0001}, 0.6, 0.6);
+        ASSERT_TRUE(map.can_occupy(upper_left, 0.6, 0.6));
+        ASSERT_TRUE(map.can_occupy(lower_right, 0.6, 0.6));
+    }
+
+    EXPECT_DOUBLE_EQ(upper_left.x, 0.3);
+    EXPECT_DOUBLE_EQ(upper_left.y, 0.3);
+    EXPECT_DOUBLE_EQ(lower_right.x, 2.7);
+    EXPECT_DOUBLE_EQ(lower_right.y, 2.7);
+}
+
+}
+
