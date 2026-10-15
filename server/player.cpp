@@ -36,6 +36,7 @@ void Player::set_position(Position position) {
 void Player::disconnect() {
     connected = false;
     direction = {};
+    moving = false;
 }
 
 ReconnectPlayerResult Player::reconnect() {
@@ -45,6 +46,7 @@ ReconnectPlayerResult Player::reconnect() {
 
     connected = true;
     direction = {};
+    moving = false;
     return ReconnectPlayerResult::Accepted;
 }
 

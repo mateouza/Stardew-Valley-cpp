@@ -76,8 +76,7 @@ void World::disconnect_player(PlayerId player_id) {
 Position World::calculate_position(const Player& player, double distance) const {
     const auto position = player.get_position();
     const auto direction = player.get_direction();
-    if (!player.is_connected() || distance == 0.0 ||
-        (direction.horizontal == 0 && direction.vertical == 0)) {
+    if (distance == 0.0 || (direction.horizontal == 0 && direction.vertical == 0)) {
         return position;
     }
 
@@ -100,7 +99,9 @@ void World::update_world(std::chrono::duration<double> elapsed) {
     }
     for (auto& entry: players) {
         auto& player = entry.second;
-        player.set_position(calculate_position(player, distance));
+        if (player.is_connected()) {
+            player.set_position(calculate_position(player, distance));
+        }
     }
 }
 
@@ -116,3 +117,4 @@ GameState World::get_state() const {
 }
 
 }
+

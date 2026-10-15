@@ -118,6 +118,7 @@ TEST_F(PlayerTest, DisconnectClearsIntentionAndPreservesCharacter) {
 
     const auto state = player.get_state();
     EXPECT_FALSE(player.is_connected());
+    EXPECT_FALSE(state.moving);
     EXPECT_EQ(player.get_direction().horizontal, 0);
     EXPECT_EQ(player.get_direction().vertical, 0);
     EXPECT_EQ(state.id, 7u);
@@ -158,6 +159,7 @@ TEST_F(PlayerTest, ReconnectPreservesCharacterAndStartsWithoutIntention) {
 
     const auto state = player.get_state();
     EXPECT_TRUE(player.is_connected());
+    EXPECT_FALSE(state.moving);
     EXPECT_EQ(state.id, 7u);
     EXPECT_EQ(state.name, "Jose");
     EXPECT_DOUBLE_EQ(state.position.x, 2.5);
@@ -171,22 +173,19 @@ TEST_F(PlayerTest, ReconnectPreservesCharacterAndStartsWithoutIntention) {
 
 TEST_F(PlayerTest, ReconnectingConnectedPlayerPreservesIntention) {
     ASSERT_EQ(player.set_direction({1, -1}), SetDirectionResult::Accepted);
+    player.set_position({3.0, 3.5});
 
     EXPECT_EQ(player.reconnect(), ReconnectPlayerResult::AlreadyConnected);
     EXPECT_EQ(player.get_direction().horizontal, 1);
     EXPECT_EQ(player.get_direction().vertical, -1);
     EXPECT_EQ(player.get_state().facing.horizontal, 1);
     EXPECT_EQ(player.get_state().facing.vertical, -1);
+    EXPECT_TRUE(player.get_state().moving);
 }
 
-TEST_F(PlayerTest, IntentionAndConnectionDoNotRewriteLastAppliedMovement) {
+TEST_F(PlayerTest, StoppingDoesNotRewriteLastAppliedMovement) {
     player.set_position({3.0, 3.5});
     ASSERT_EQ(player.set_direction({0, 0}), SetDirectionResult::Accepted);
-    EXPECT_TRUE(player.get_state().moving);
-
-    player.disconnect();
-    EXPECT_TRUE(player.get_state().moving);
-    ASSERT_EQ(player.reconnect(), ReconnectPlayerResult::Accepted);
     EXPECT_TRUE(player.get_state().moving);
 
     player.set_position({3.0, 3.5});

@@ -182,7 +182,7 @@ TEST_F(WorldTest, ReconnectPreservesPositionAndFacingWithoutResumingMovement) {
     EXPECT_FALSE(state.moving);
 }
 
-TEST_F(WorldTest, OfflineUpdateClearsLastMovementBeforeReconnect) {
+TEST_F(WorldTest, DisconnectedPlayerStaysStillAcrossUpdatesAndReconnect) {
     const auto id = add_player();
     ASSERT_EQ(world.set_direction(id, {1, 0}), SetDirectionResult::Accepted);
     world.update_world(std::chrono::duration<double>{1.0});
@@ -193,6 +193,23 @@ TEST_F(WorldTest, OfflineUpdateClearsLastMovementBeforeReconnect) {
 
     EXPECT_DOUBLE_EQ(world.get_state().players.at(0).position.x, 3.5);
     EXPECT_FALSE(world.get_state().players.at(0).moving);
+}
+
+TEST_F(WorldTest, ImmediateReconnectDoesNotExposePreviousMovement) {
+    const auto id = add_player();
+    ASSERT_EQ(world.set_direction(id, {1, 0}), SetDirectionResult::Accepted);
+    world.update_world(std::chrono::duration<double>{1.0});
+    ASSERT_TRUE(world.get_state().players.at(0).moving);
+
+    world.disconnect_player(id);
+    ASSERT_EQ(world.reconnect_player(id), ReconnectPlayerResult::Accepted);
+
+    const auto state = world.get_state().players.at(0);
+    EXPECT_FALSE(state.moving);
+    EXPECT_DOUBLE_EQ(state.position.x, 3.5);
+    EXPECT_DOUBLE_EQ(state.position.y, 2.5);
+    EXPECT_EQ(state.facing.horizontal, 1);
+    EXPECT_EQ(state.facing.vertical, 0);
 }
 
 TEST_F(WorldTest, UnknownDirectionRequestDoesNotAffectExistingPlayer) {
@@ -425,3 +442,4 @@ TEST(WorldMovementTest, RejectsUnrepresentableDistanceBeforeUpdatingAnyPlayer) {
 }
 
 }
+
