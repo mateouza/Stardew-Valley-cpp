@@ -29,6 +29,18 @@ target_link_libraries(course_support PUBLIC Threads::Threads)
 
 target_compile_options(course_support PRIVATE -Wall -Wextra -Wpedantic)
 
+add_library(server_model STATIC
+    server/player.cpp
+    server/map.cpp
+    server/world.cpp
+)
+
+target_include_directories(server_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/server)
+
+target_link_libraries(server_model PUBLIC game_contracts)
+
+target_compile_options(server_model PRIVATE -Wall -Wextra -Wpedantic)
+
 add_library(server_core STATIC
     server/acceptor.cpp
     server/client_session.cpp
@@ -39,7 +51,7 @@ add_library(server_core STATIC
 
 target_include_directories(server_core PUBLIC server)
 
-target_link_libraries(server_core PUBLIC course_support)
+target_link_libraries(server_core PUBLIC course_support game_contracts)
 
 target_compile_options(server_core PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -48,3 +60,28 @@ add_executable(server server/main.cpp)
 target_link_libraries(server PRIVATE server_core)
 
 target_compile_options(server PRIVATE -Wall -Wextra -Wpedantic)
+
+include(CTest)
+
+if(BUILD_TESTING)
+    find_package(GTest REQUIRED)
+    include(GoogleTest)
+
+    add_executable(player_tests tests/player_test.cpp)
+    target_link_libraries(player_tests PRIVATE server_model GTest::gtest_main)
+    target_compile_options(player_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(player_tests)
+
+    add_executable(map_tests tests/map_test.cpp)
+    target_link_libraries(map_tests PRIVATE server_model GTest::gtest_main)
+    target_compile_options(map_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(map_tests)
+
+    add_executable(world_tests tests/world_test.cpp)
+    target_link_libraries(world_tests PRIVATE server_model GTest::gtest_main)
+    target_compile_options(world_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(world_tests)
+endif()
