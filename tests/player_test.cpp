@@ -208,5 +208,4 @@ TEST_F(PlayerTest, StateIsAnIndependentSnapshot) {
     player.set_position({4.0, 3.5});
     EXPECT_DOUBLE_EQ(state.position.x, 99.0);
 }
-
 }
