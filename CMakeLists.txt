@@ -84,4 +84,10 @@ if(BUILD_TESTING)
     target_compile_options(world_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(world_tests)
+
+    add_executable(server_protocol_tests tests/server_protocol_test.cpp)
+    target_link_libraries(server_protocol_tests PRIVATE server_core GTest::gtest_main)
+    target_compile_options(server_protocol_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(server_protocol_tests PROPERTIES TIMEOUT 5)
 endif()
