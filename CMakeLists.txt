@@ -45,6 +45,7 @@ add_library(server_core STATIC
     server/acceptor.cpp
     server/client_session.cpp
     server/client_receiver.cpp
+    server/game_loop.cpp
     server/server.cpp
     server/server_protocol.cpp
 )
@@ -90,4 +91,11 @@ if(BUILD_TESTING)
     target_compile_options(server_protocol_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(server_protocol_tests PROPERTIES TIMEOUT 5)
+
+    add_executable(game_loop_tests tests/game_loop_test.cpp)
+    target_link_libraries(game_loop_tests PRIVATE server_core server_model GTest::gtest_main)
+    target_compile_options(game_loop_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(game_loop_tests PROPERTIES TIMEOUT 5)
+
 endif()
