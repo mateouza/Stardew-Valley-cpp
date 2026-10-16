@@ -2,4 +2,4 @@
 
 #include <utility>
 
-ClientSession::ClientSession(Socket&& socket): socket(std::move(socket)) {}
+ClientSession::ClientSession(Socket&& socket): socket(std::move(socket)), protocol(this->socket) {}
