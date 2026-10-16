@@ -15,15 +15,13 @@ class Renderer{
         explicit Renderer(SDL2pp::Window& window);
         ~Renderer();
 
-        // Carga una textura desde un archivo y devuelve un puntero a SDL_Texture
         SDL2pp::Texture cargar_textura(const std::string& ruta);
 
-        void limpiar(); // limpia la pantalla
+        void limpiar();
         
-        // dibuja la textura en la posición (x, y) con el ancho y alto especificados
         void dibujar(SDL2pp::Texture& textura, int x, int y, int ancho, int alto); 
         
-        void presentar(); // presenta el contenido renderizado en la pantalla
+        void presentar();
 
 };
 

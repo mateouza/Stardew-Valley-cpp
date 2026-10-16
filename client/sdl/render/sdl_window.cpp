@@ -3,7 +3,7 @@
 #include <SDL.h>
 
 Uint32 SDLWindow::obtener_flags(bool pantalla_completa) {
-    Uint32 flags = SDL_WINDOW_SHOWN; // siempre mostramos la ventana
+    Uint32 flags = SDL_WINDOW_SHOWN;
     if (pantalla_completa) {
         flags |= SDL_WINDOW_FULLSCREEN;
     }

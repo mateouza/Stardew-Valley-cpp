@@ -8,13 +8,12 @@ class SDLWindow {
     private:
         SDL2pp::Window window;
 
-        // Uint32 es el tipo que declara SDL
         static Uint32 obtener_flags(bool pantalla_completa);
 
     public:
         SDLWindow(const std::string& titulo, int ancho, int alto, bool pantalla_completa);
 
-        SDL2pp::Window& obtener_handle(); // devuelve el puntero al objeto SDL_Window
+        SDL2pp::Window& obtener_handle();
 };
 
 #endif

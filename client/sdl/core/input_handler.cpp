@@ -8,11 +8,6 @@ bool InputHandler::procesar_eventos(ClientState& estado_cliente) {
             return false;
         }
     }
-
-    // Estado actual del teclado: permite que varias teclas se combinen
-    // (por ejemplo, arriba + derecha = diagonal) y que el movimiento sea
-    // continuo mientras la tecla sigue apretada.
-
     const Uint8* estado_teclado = SDL_GetKeyboardState(nullptr);
     int dx = 0;
     int dy = 0;
