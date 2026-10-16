@@ -32,6 +32,7 @@ target_compile_options(course_support PRIVATE -Wall -Wextra -Wpedantic)
 add_library(server_core STATIC
     server/acceptor.cpp
     server/client_session.cpp
+    server/client_receiver.cpp
     server/server.cpp
     server/server_protocol.cpp
 )
