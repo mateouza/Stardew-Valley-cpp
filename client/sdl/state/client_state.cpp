@@ -1,16 +1,16 @@
 #include "client_state.h"
 
-ClientState::ClientState(int x_inicial, int y_inicial) : x(x_inicial), y(y_inicial) {}
+ClientState::ClientState(double x_inicial, double y_inicial) : x(x_inicial), y(y_inicial) {}
 
-int ClientState::obtener_x() const {
+double ClientState::obtener_x() const {
     return x;
 }
 
-int ClientState::obtener_y() const {
+double ClientState::obtener_y() const {
     return y;
 }
 
-void ClientState::mover_a(int nuevo_x, int nuevo_y) {
+void ClientState::mover_a(double nuevo_x, double nuevo_y) {
     x = nuevo_x;
     y = nuevo_y;
 }
