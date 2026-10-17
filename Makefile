@@ -2,7 +2,7 @@
 
 JOBS ?= 2
 
-.PHONY: configure build test format-check lint check valgrind hooks clean
+.PHONY: configure build test format lint check valgrind hooks clean
 
 configure:
 	cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
@@ -13,14 +13,14 @@ build: configure
 test: build
 	ctest --test-dir build --output-on-failure --no-tests=error --parallel 1
 
-format-check:
+format:
 	pre-commit run clang-format --all-files
 
 lint:
 	pre-commit run cppcheck --all-files
 
 check:
-	$(MAKE) format-check
+	$(MAKE) format
 	$(MAKE) lint
 	$(MAKE) test
 

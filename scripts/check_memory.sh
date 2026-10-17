@@ -3,18 +3,25 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-shopt -s nullglob
-test_binaries=(build/*_tests)
+test_binaries=(
+    build/player_tests
+    build/map_tests
+    build/world_tests
+    build/server_protocol_tests
+    build/game_loop_tests
+)
 
-if (( ${#test_binaries[@]} == 0 )); then
-    echo "No se encontraron ejecutables de tests" >&2
-    exit 1
-fi
+for test_binary in "${test_binaries[@]}"; do
+    if [[ ! -f "$test_binary" || ! -x "$test_binary" ]]; then
+        echo "Falta el ejecutable de tests: ${test_binary}. Ejecuta make build." >&2
+        exit 1
+    fi
+done
 
 for test_binary in "${test_binaries[@]}"; do
     echo "Revisando memoria: ${test_binary}"
 
-    timeout --foreground 60s valgrind \
+    timeout --foreground --kill-after=5s 60s valgrind \
         --tool=memcheck \
         --leak-check=full \
         --show-leak-kinds=all \

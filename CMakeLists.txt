@@ -90,7 +90,11 @@ if(BUILD_TESTING)
     target_link_libraries(server_protocol_tests PRIVATE server_core GTest::gtest_main)
     target_compile_options(server_protocol_tests PRIVATE -Wall -Wextra -Wpedantic)
 
-    gtest_discover_tests(server_protocol_tests PROPERTIES TIMEOUT 5)
+    gtest_discover_tests(server_protocol_tests
+        PROPERTIES
+            TIMEOUT 5
+            RESOURCE_LOCK protocol_port_18080
+    )
 
     add_executable(game_loop_tests tests/game_loop_test.cpp)
     target_link_libraries(game_loop_tests PRIVATE server_core server_model GTest::gtest_main)

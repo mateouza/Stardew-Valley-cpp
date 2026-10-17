@@ -2,14 +2,14 @@ repos:
   - repo: local
     hooks:
       - id: clang-format
-        name: Verificar formato C++
-        entry: clang-format-18 --style=file --dry-run --Werror
+        name: clang-format
+        entry: clang-format-18 --style=file -i
         language: system
         files: '\.(cpp|h)$'
         exclude: '^common/(common_socket\.cpp|common_resolver\.cpp|common_resolvererror\.cpp|common_liberror\.cpp|socket\.h|resolver\.h|resolvererror\.h|liberror\.h|thread\.h|queue\.h)$'
 
       - id: cppcheck
-        name: Analizar codigo C++
+        name: cppcheck
         entry: cppcheck
         args:
           - --enable=warning,performance,portability
@@ -18,7 +18,7 @@ repos:
           - --error-exitcode=1
           - --library=googletest
           - --suppress=duplInheritedMember:common/queue.h
-          - --suppress=passedByValue:server/world.cpp
+          - --suppress=passedByValue:server/world.cpp:10
           - -Icommon
           - -Iserver
           - --suppress=containerOutOfBounds:tests/map_test.cpp:41
