@@ -38,7 +38,7 @@ TEST(MapConstructionTest, OwnsItsTilesIndependentlyOfTheInput) {
     std::vector<std::vector<TileType>> tiles{{TileType::Walkable}};
     const Map map{tiles};
 
-    tiles[0][0] = TileType::Blocked;
+    tiles.at(0).at(0) = TileType::Blocked;
 
     EXPECT_TRUE(map.can_occupy({0.5, 0.5}, 1.0, 1.0));
 }
