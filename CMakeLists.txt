@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(BUILD_CLIENT "Compilar el cliente gráfico (requiere SDL2 y sdl2pp)" ON)
+
 find_package(Threads REQUIRED)
 
 add_library(game_contracts INTERFACE)
@@ -62,4 +64,25 @@ if(BUILD_TESTING)
 
     gtest_discover_tests(world_tests)
 
+endif()
+
+if(BUILD_CLIENT)
+    find_package(SDL2 REQUIRED)
+    find_package(SDL2pp REQUIRED)
+
+    add_executable(stardew_client
+        client/sdl/main.cpp
+        client/sdl/render/renderer.cpp
+        client/sdl/render/sdl_window.cpp
+        client/sdl/state/client_state.cpp
+        client/sdl/core/input_handler.cpp
+    )
+
+    target_link_libraries(stardew_client PRIVATE
+        course_support
+        game_contracts
+        SDL2pp::SDL2pp
+    )
+
+    target_compile_options(stardew_client PRIVATE -Wall -Wextra -Wpedantic)
 endif()
