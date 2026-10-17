@@ -10,11 +10,9 @@ Uint32 SDLWindow::obtener_flags(bool pantalla_completa) {
     return flags;
 }
 
-SDLWindow::SDLWindow(const std::string& titulo, int ancho, int alto, bool pantalla_completa) 
-    : window(titulo, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, ancho, alto, 
-        obtener_flags(pantalla_completa)) {}
+SDLWindow::SDLWindow(const std::string& titulo, int ancho, int alto, bool pantalla_completa):
+        window(titulo, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, ancho, alto,
+               obtener_flags(pantalla_completa)) {}
 
 
-SDL2pp::Window& SDLWindow::obtener_handle() {
-    return window;
-}
+SDL2pp::Window& SDLWindow::obtener_handle() { return window; }

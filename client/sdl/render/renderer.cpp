@@ -2,8 +2,8 @@
 
 #include <SDL2/SDL_image.h>
 
-Renderer::Renderer(SDL2pp::Window& window) 
-    : renderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC) {}
+Renderer::Renderer(SDL2pp::Window& window):
+        renderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC) {}
 
 Renderer::~Renderer() = default;
 
@@ -20,6 +20,4 @@ void Renderer::dibujar(SDL2pp::Texture& textura, int x, int y, int ancho, int al
     renderer.Copy(textura, SDL2pp::NullOpt, SDL2pp::Rect(x, y, ancho, alto));
 }
 
-void Renderer::presentar() {
-    renderer.Present();
-}
+void Renderer::presentar() { renderer.Present(); }

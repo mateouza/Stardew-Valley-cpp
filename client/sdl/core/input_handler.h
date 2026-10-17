@@ -3,17 +3,18 @@
 
 #include <SDL2/SDL.h>
 
-#include "game_types.h"
 #include "../state/client_state.h"
 
-struct InputResultado{
+#include "game_types.h"
+
+struct InputResultado {
     game::MovementDirection direccion;
     bool salir;
 };
 
 class InputHandler {
-    public:
-        InputResultado procesar_eventos();
+public:
+    InputResultado procesar_eventos();
 };
 
 #endif
