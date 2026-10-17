@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(BUILD_CLIENT "Compilar el cliente gráfico (requiere SDL2 y sdl2pp)" ON)
+
 find_package(Threads REQUIRED)
 
 add_library(game_contracts INTERFACE)
@@ -85,8 +87,7 @@ if(BUILD_TESTING)
     target_compile_options(world_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(world_tests)
-
-    add_executable(server_protocol_tests tests/server_protocol_test.cpp)
+add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     target_link_libraries(server_protocol_tests PRIVATE server_core GTest::gtest_main)
     target_compile_options(server_protocol_tests PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -101,5 +102,25 @@ if(BUILD_TESTING)
     target_compile_options(game_loop_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(game_loop_tests PROPERTIES TIMEOUT 5)
+endif()
 
+if(BUILD_CLIENT)
+    find_package(SDL2 REQUIRED)
+    find_package(SDL2pp REQUIRED)
+
+    add_executable(stardew_client
+        client/sdl/main.cpp
+        client/sdl/render/renderer.cpp
+        client/sdl/render/sdl_window.cpp
+        client/sdl/state/client_state.cpp
+        client/sdl/core/input_handler.cpp
+    )
+
+    target_link_libraries(stardew_client PRIVATE
+        course_support
+        game_contracts
+        SDL2pp::SDL2pp
+    )
+
+    target_compile_options(stardew_client PRIVATE -Wall -Wextra -Wpedantic)
 endif()
