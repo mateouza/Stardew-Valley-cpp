@@ -50,11 +50,12 @@ add_library(server_core STATIC
     server/game_loop.cpp
     server/server.cpp
     server/server_protocol.cpp
+    server/match.cpp
 )
 
 target_include_directories(server_core PUBLIC server)
 
-target_link_libraries(server_core PUBLIC course_support game_contracts)
+target_link_libraries(server_core PUBLIC course_support game_contracts server_model)
 
 target_compile_options(server_core PRIVATE -Wall -Wextra -Wpedantic)
 

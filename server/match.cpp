@@ -1,0 +1,24 @@
+#include "match.h"
+
+#include <stdexcept>
+#include <utility>
+
+Match::Match(game::Map map, game::Position spawn_position, game::WorldConfig config,
+             unsigned int command_capacity, std::chrono::milliseconds tick_interval):
+        model(std::move(map), spawn_position, config),
+        commands(command_capacity),
+        game_loop(model, commands, tick_interval) {
+    if (command_capacity == 0) {
+        throw std::invalid_argument("La capacidad de la cola debe ser mayor que cero");
+    }
+}
+
+void Match::start() { game_loop.start(); }
+
+void Match::stop() { game_loop.stop(); }
+
+void Match::join() { game_loop.join(); }
+
+void Match::rethrow_if_failed() const { game_loop.rethrow_if_failed(); }
+
+Queue<PlayerCommand>& Match::get_commands() { return commands; }
