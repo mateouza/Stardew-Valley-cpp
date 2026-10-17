@@ -20,16 +20,16 @@ InputResultado InputHandler::procesar_eventos() {
     std::int8_t vertical = 0;
 
     if (teclas[SDL_SCANCODE_UP] || teclas[SDL_SCANCODE_W]) {
-        horizontal -= 1;
-    }
-    if (teclas[SDL_SCANCODE_DOWN] || teclas[SDL_SCANCODE_S]) {
-        horizontal += 1;
-    }
-    if (teclas[SDL_SCANCODE_LEFT] || teclas[SDL_SCANCODE_A]) {
         vertical -= 1;
     }
-    if (teclas[SDL_SCANCODE_RIGHT] || teclas[SDL_SCANCODE_D]) {
+    if (teclas[SDL_SCANCODE_DOWN] || teclas[SDL_SCANCODE_S]) {
         vertical += 1;
+    }
+    if (teclas[SDL_SCANCODE_LEFT] || teclas[SDL_SCANCODE_A]) {
+        horizontal -= 1;
+    }
+    if (teclas[SDL_SCANCODE_RIGHT] || teclas[SDL_SCANCODE_D]) {
+        horizontal += 1;
     }
 
     resultado.direccion = game::MovementDirection{horizontal, vertical};
