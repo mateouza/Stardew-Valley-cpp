@@ -2,14 +2,18 @@
 #define INPUT_HANDLER_H
 
 #include <SDL2/SDL.h>
+
+#include "game_types.h"
 #include "../state/client_state.h"
 
-class InputHandler {
-    private:
-        static constexpr int VELOCIDAD = 5;
+struct InputResultado{
+    game::MovementDirection direccion;
+    bool salir;
+};
 
+class InputHandler {
     public:
-        bool procesar_eventos(ClientState& estado_cliente);
+        InputResultado procesar_eventos();
 };
 
 #endif
