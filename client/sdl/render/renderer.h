@@ -12,7 +12,7 @@ class Renderer{
         SDL2pp::Renderer renderer;
     
     public:
-        explicit Renderer(SDL2pp::Window& window);
+        explicit Renderer(SDL2pp::Window& ventana);
         ~Renderer();
 
         SDL2pp::Texture cargar_textura(const std::string& ruta);

@@ -2,8 +2,6 @@
 
 #include <SDL2/SDL_image.h>
 
-#include <stdexcept>
-
 Renderer::Renderer(SDL2pp::Window& window) 
     : renderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC) {}
 
