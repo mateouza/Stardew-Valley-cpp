@@ -9,6 +9,7 @@ test_binaries=(
     build/world_tests
     build/server_protocol_tests
     build/game_loop_tests
+    build/match_tests
 )
 
 for test_binary in "${test_binaries[@]}"; do

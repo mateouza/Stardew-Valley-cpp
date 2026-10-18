@@ -103,6 +103,12 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     target_compile_options(game_loop_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(game_loop_tests PROPERTIES TIMEOUT 5)
+
+    add_executable(match_tests tests/match_test.cpp)
+    target_link_libraries(match_tests PRIVATE server_core GTest::gtest_main)
+    target_compile_options(match_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(match_tests PROPERTIES TIMEOUT 5)
 endif()
 
 if(BUILD_CLIENT)
