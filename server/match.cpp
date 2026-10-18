@@ -13,12 +13,32 @@ Match::Match(game::Map map, game::Position spawn_position, game::WorldConfig con
     }
 }
 
-void Match::start() { game_loop.start(); }
+Match::~Match() {
+    stop();
+    join();
+}
 
-void Match::stop() { game_loop.stop(); }
+void Match::start() {
+    if (started) {
+        throw std::logic_error("La partida ya fue iniciada");
+    }
 
-void Match::join() { game_loop.join(); }
+    game_loop.start();
+    started = true;
+}
 
+void Match::stop() {
+    if (started && !joined) {
+        game_loop.stop();
+    }
+}
+
+void Match::join() {
+    if (started && !joined) {
+        game_loop.join();
+        joined = true;
+    }
+}
 void Match::rethrow_if_failed() const { game_loop.rethrow_if_failed(); }
 
 Queue<PlayerCommand>& Match::get_commands() { return commands; }

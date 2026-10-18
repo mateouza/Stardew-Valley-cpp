@@ -13,11 +13,14 @@ private:
     game::World model;
     Queue<PlayerCommand> commands;
     GameLoop game_loop;
+    bool started = false;
+    bool joined = false;
 
 public:
     Match(game::Map map, game::Position spawn_position, game::WorldConfig config,
           unsigned int command_capacity, std::chrono::milliseconds tick_interval);
 
+    ~Match();
     void start();
     void stop();
     void join();
