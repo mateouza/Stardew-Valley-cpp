@@ -60,6 +60,24 @@ void GameLoop::run() {
     } catch (...) {
         failure = std::current_exception();
     }
+
+    close_commands();
+}
+
+void GameLoop::close_commands() {
+    std::lock_guard<std::mutex> lock(close_mutex);
+
+    if (commands_closed) {
+        return;
+    }
+
+    commands.close();
+    commands_closed = true;
+}
+
+void GameLoop::stop() {
+    Thread::stop();
+    close_commands();
 }
 
 void GameLoop::rethrow_if_failed() const {

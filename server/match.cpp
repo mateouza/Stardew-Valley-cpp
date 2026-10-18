@@ -36,11 +36,7 @@ void Match::stop() {
         return;
     }
 
-    if (started && !joined) {
-        game_loop.stop();
-    }
-
-    commands.close();
+    game_loop.stop();
     stopped = true;
 }
 
