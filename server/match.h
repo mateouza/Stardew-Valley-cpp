@@ -15,6 +15,7 @@ private:
     GameLoop game_loop;
     bool started = false;
     bool joined = false;
+    bool stopped = false;
 
 public:
     Match(game::Map map, game::Position spawn_position, game::WorldConfig config,

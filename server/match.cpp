@@ -23,14 +23,25 @@ void Match::start() {
         throw std::logic_error("La partida ya fue iniciada");
     }
 
+    if (stopped) {
+        throw std::logic_error("No se puede iniciar una partida cerrada");
+    }
+
     game_loop.start();
     started = true;
 }
 
 void Match::stop() {
+    if (stopped) {
+        return;
+    }
+
     if (started && !joined) {
         game_loop.stop();
     }
+
+    commands.close();
+    stopped = true;
 }
 
 void Match::join() {
