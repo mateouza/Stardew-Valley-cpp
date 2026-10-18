@@ -25,6 +25,14 @@ sudo apt install build-essential cmake git libgtest-dev clang-format-18 cppcheck
 
 Controles verificados con clang-format 18, cppcheck 2.13.0 y pre-commit 3.6.2.
 
+Para trabajar solo con el servidor y los tests sin compilar el cliente grafico SDL2PP (momentaneamente):
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBUILD_CLIENT=OFF
+```
+
+Luego usar los comandos de Make.
+
 ## Comandos
 
 Ejecutar desde la raiz del proyecto:
