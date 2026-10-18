@@ -39,6 +39,14 @@ void Match::join() {
         joined = true;
     }
 }
-void Match::rethrow_if_failed() const { game_loop.rethrow_if_failed(); }
+
+void Match::rethrow_if_failed() const {
+    if (started && !joined) {
+        throw std::logic_error(
+                "Se debe esperar el cierre de la partida antes de consultar errores");
+    }
+
+    game_loop.rethrow_if_failed();
+}
 
 Queue<PlayerCommand>& Match::get_commands() { return commands; }
