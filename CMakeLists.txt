@@ -58,7 +58,10 @@ if(BUILD_LAUNCHER)
         client/qt/lobby_error_message.cpp
         client/qt/screens/connect_screen.cpp
         client/qt/screens/main_menu_screen.cpp
+        client/qt/widgets/character_preview.cpp
+        client/qt/widgets/character_sprite.cpp
         client/qt/widgets/landscape.cpp
+        client/qt/widgets/option_selector.cpp
         client/qt/widgets/ui_helpers.cpp
     )
 
@@ -107,6 +110,16 @@ if(BUILD_TESTING)
         target_compile_options(launcher_window_tests PRIVATE -Wall -Wextra -Wpedantic)
 
         gtest_discover_tests(launcher_window_tests
+            PROPERTIES
+                ENVIRONMENT QT_QPA_PLATFORM=offscreen
+                TIMEOUT 10
+        )
+
+        add_executable(character_widgets_tests tests/character_widgets_test.cpp)
+        target_link_libraries(character_widgets_tests PRIVATE qt_launcher GTest::gtest)
+        target_compile_options(character_widgets_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+        gtest_discover_tests(character_widgets_tests
             PROPERTIES
                 ENVIRONMENT QT_QPA_PLATFORM=offscreen
                 TIMEOUT 10

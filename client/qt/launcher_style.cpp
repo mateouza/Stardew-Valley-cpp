@@ -94,6 +94,26 @@ QPushButton[variant="secondary"]:pressed {
     background-color: #dcc08e;
 }
 
+QPushButton[variant="arrow"] {
+    font-size: 13px;
+    padding: 0px;
+    border-bottom-width: 4px;
+    border-radius: 6px;
+}
+
+QPushButton[variant="arrow"]:pressed {
+    padding-top: 1px;
+    border-bottom-width: 3px;
+}
+
+QLabel[role="option_value"] {
+    font-weight: bold;
+    background-color: #fffaf0;
+    border: 2px solid #c99a66;
+    border-radius: 6px;
+    padding: 4px 6px;
+}
+
 QLineEdit {
     font-size: 16px;
     background-color: #fffaf0;
