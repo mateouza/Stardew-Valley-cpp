@@ -12,15 +12,10 @@
 #include "game_types.h"
 #include "map.h"
 #include "player.h"
+#include "world_config.h"
 
 namespace game {
 
-struct WorldConfig {
-    std::size_t max_players = 0;
-    double player_speed = 0.0;
-    double player_width = 0.0;
-    double player_height = 0.0;
-};
 
 class World: public GameModel {
 private:
