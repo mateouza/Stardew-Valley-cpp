@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(BUILD_CLIENT "Compilar el cliente gráfico (requiere SDL2 y sdl2pp)" ON)
 
 find_package(Threads REQUIRED)
+find_package(tomlplusplus 3.4 CONFIG REQUIRED)
 
 add_library(game_contracts INTERFACE)
 
@@ -34,10 +35,12 @@ add_library(server_model STATIC
     server/player.cpp
     server/map.cpp
     server/world.cpp
+    server/world_config.cpp
 )
 
 target_include_directories(server_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/server)
 target_link_libraries(server_model PUBLIC game_contracts)
+target_link_libraries(server_model PRIVATE tomlplusplus::tomlplusplus)
 target_compile_options(server_model PRIVATE -Wall -Wextra -Wpedantic)
 
 include(CTest)
@@ -63,6 +66,16 @@ if(BUILD_TESTING)
     target_compile_options(world_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(world_tests)
+
+    add_executable(world_config_tests tests/world_config_test.cpp)
+    target_link_libraries(world_config_tests PRIVATE server_model GTest::gtest_main)
+    target_compile_options(world_config_tests PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_definitions(world_config_tests PRIVATE
+        TEST_WORLD_CONFIG_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/world.toml"
+    )
+
+    gtest_discover_tests(world_config_tests)
+
 
 endif()
 
