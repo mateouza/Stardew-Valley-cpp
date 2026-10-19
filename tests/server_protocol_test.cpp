@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 
+#include "client_receiver.h"
 #include "liberror.h"
 #include "socket.h"
 
@@ -164,4 +165,35 @@ TEST(ServerProtocolTest, RejectsTruncatedDirection) {
     ServerProtocol protocol(connection);
 
     EXPECT_THROW(protocol.receive_move(), LibError);
+}
+
+TEST(ServerProtocolTest, CoordinatesReceiverStopShutdownAndJoin) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol protocol(connection);
+    Queue<PlayerCommand> commands(16);
+    ClientReceiver receiver(protocol, commands, 7);
+
+    const std::array<std::uint8_t, 3> message{0x01, 0x01, 0x00};
+    ASSERT_EQ(client.sendall(message.data(), message.size()), 3);
+
+    receiver.start();
+
+    const auto command = commands.pop();
+
+    receiver.stop();
+    EXPECT_NO_THROW(connection.shutdown(SHUT_RDWR));
+    receiver.join();
+
+    EXPECT_FALSE(receiver.is_alive());
+    EXPECT_NO_THROW(receiver.rethrow_if_failed());
+
+    EXPECT_EQ(command.player_id, 7u);
+    EXPECT_EQ(command.request.direction.horizontal, 1);
+    EXPECT_EQ(command.request.direction.vertical, 0);
+
+    EXPECT_TRUE(connection.is_stream_send_closed());
+    EXPECT_TRUE(connection.is_stream_recv_closed());
 }
