@@ -15,8 +15,10 @@ class QStackedWidget;
 
 namespace launcher {
 
+class CharacterScreen;
 class ConnectScreen;
 class MainMenuScreen;
+class NewGameScreen;
 
 // Controlador del launcher: cambia de pantalla, le pide cada operación al lobby y se cierra
 // cuando consigue un ticket de partida.
@@ -28,10 +30,21 @@ private:
     QStackedWidget* screens;
     ConnectScreen* connect_screen;
     MainMenuScreen* main_menu_screen;
+    NewGameScreen* new_game_screen;
+    CharacterScreen* character_screen;
+
+    QString username;
+    QString pending_game_name;
+    QString pending_world_id;
     std::optional<lobby::GameTicket> ticket;
 
     void show_screen(QWidget* screen);
-    void connect_to_server(const QString& username, const QString& host, const QString& port);
+    void connect_to_server(const QString& requested_username, const QString& host,
+                           const QString& port);
+    void open_new_game();
+    void choose_world(const QString& game_name, const QString& world_id, const QString& world_name);
+    void confirm_character(const lobby::CharacterDraft& character);
+    void finish(lobby::GameTicket game_ticket);
 
 protected:
     void paintEvent(QPaintEvent* event) override;

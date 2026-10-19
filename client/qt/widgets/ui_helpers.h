@@ -4,6 +4,7 @@
 #include <QString>
 
 class QFrame;
+class QHBoxLayout;
 class QLabel;
 class QPushButton;
 class QVBoxLayout;
@@ -18,7 +19,12 @@ struct Panel {
 
 QWidget* create_logo(QWidget* parent);
 
+QLabel* create_screen_title(const QString& text, QWidget* parent);
+
 Panel create_panel(int width, QWidget* parent);
+
+// Encabezado y panel centrados, con más aire abajo que arriba.
+void layout_screen(QWidget* screen, QWidget* header, QWidget* panel);
 
 QLabel* create_label(const QString& text, const char* role, QWidget* parent = nullptr);
 
@@ -28,6 +34,9 @@ QLabel* create_hint(const QString& text, QWidget* parent = nullptr);
 QLabel* create_error_label(QWidget* parent = nullptr);
 
 QPushButton* create_button(const QString& text, const char* variant, QWidget* parent = nullptr);
+
+// Botón secundario a la izquierda (volver, salir) y la acción principal a la derecha.
+QHBoxLayout* create_button_row(QPushButton* left, QPushButton* right);
 
 // Centra horizontalmente con stretches en vez de Qt::AlignHCenter: con alineación, Qt calcula la
 // altura de las etiquetas con word wrap usando el ancho de toda la fila y el panel queda cortado.

@@ -23,6 +23,12 @@ QLabel[role="logo_subtitle"] {
     color: #fff4d6;
 }
 
+QLabel[role="screen_title"] {
+    font-size: 40px;
+    font-weight: bold;
+    color: #fff4d6;
+}
+
 QFrame[role="panel"] {
     background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #fbefd5, stop: 1 #f1d9ab);
     border: 4px solid #5b3a1e;
@@ -125,6 +131,65 @@ QLineEdit {
 
 QLineEdit:focus {
     border-color: #5b3a1e;
+}
+
+QPushButton[variant="card"] {
+    color: #3b2416;
+    background-color: #fff6e0;
+    border: 3px solid #c99a66;
+    border-radius: 10px;
+    padding: 0px;
+}
+
+QPushButton[variant="card"]:hover {
+    background-color: #ffeccc;
+    border-color: #8a5a32;
+}
+
+QPushButton[variant="card"]:checked {
+    background-color: #ffe0a3;
+    border-color: #5b3a1e;
+}
+
+QPushButton[variant="card"]:pressed {
+    padding: 0px;
+    border-bottom-width: 3px;
+}
+
+QLabel[role="card_title"] {
+    font-size: 17px;
+    font-weight: bold;
+}
+
+QLabel[role="card_detail"] {
+    font-size: 13px;
+    color: #6b4a2a;
+}
+
+QScrollArea, QScrollArea > QWidget#qt_scrollarea_viewport, QScrollArea > QWidget > QWidget {
+    background: transparent;
+    border: none;
+}
+
+QScrollBar:vertical {
+    background: #ead3a8;
+    width: 12px;
+    margin: 0px;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical {
+    background: #b07a46;
+    min-height: 30px;
+    border-radius: 6px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
 }
 )";
 

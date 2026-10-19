@@ -39,6 +39,13 @@ QWidget* create_logo(QWidget* parent) {
     return logo;
 }
 
+QLabel* create_screen_title(const QString& text, QWidget* parent) {
+    QLabel* title = create_label(text, "screen_title", parent);
+    title->setAlignment(Qt::AlignCenter);
+    add_title_shadow(title);
+    return title;
+}
+
 Panel create_panel(int width, QWidget* parent) {
     auto* frame = new QFrame(parent);
     frame->setProperty("role", "panel");
@@ -48,6 +55,15 @@ Panel create_panel(int width, QWidget* parent) {
     content->setContentsMargins(30, 24, 30, 26);
     content->setSpacing(8);
     return Panel{frame, content};
+}
+
+void layout_screen(QWidget* screen, QWidget* header, QWidget* panel) {
+    auto* layout = new QVBoxLayout(screen);
+    layout->addStretch(1);
+    add_centered(layout, header);
+    layout->addSpacing(18);
+    add_centered(layout, panel);
+    layout->addStretch(2);
 }
 
 QLabel* create_label(const QString& text, const char* role, QWidget* parent) {
@@ -76,6 +92,14 @@ QPushButton* create_button(const QString& text, const char* variant, QWidget* pa
     button->setProperty("variant", variant);
     button->setCursor(Qt::PointingHandCursor);
     return button;
+}
+
+QHBoxLayout* create_button_row(QPushButton* left, QPushButton* right) {
+    auto* row = new QHBoxLayout();
+    row->addWidget(left);
+    row->addStretch();
+    row->addWidget(right);
+    return row;
 }
 
 void add_centered(QVBoxLayout* layout, QWidget* widget) {

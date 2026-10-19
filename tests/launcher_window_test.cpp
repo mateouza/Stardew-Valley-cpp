@@ -42,9 +42,22 @@ protected:
         return error_label->isVisibleTo(&window) && !error_label->text().isEmpty();
     }
 
+    void click(const char* screen_name, const char* button_name) {
+        widget<QPushButton>(screen_name, button_name)->click();
+    }
+
+    void type(const char* screen_name, const char* input_name, const QString& text) {
+        widget<QLineEdit>(screen_name, input_name)->setText(text);
+    }
+
     void connect_as(const QString& username) {
-        widget<QLineEdit>("connect_screen", "username_input")->setText(username);
-        widget<QPushButton>("connect_screen", "connect_button")->click();
+        type("connect_screen", "username_input", username);
+        click("connect_screen", "connect_button");
+    }
+
+    void open_new_game_as(const QString& username) {
+        connect_as(username);
+        click("main_menu_screen", "new_game_button");
     }
 };
 
@@ -92,6 +105,101 @@ TEST_F(LauncherWindowTest, QuitClosesWithoutTicket) {
     widget<QPushButton>("main_menu_screen", "quit_button")->click();
 
     EXPECT_FALSE(window.isVisible());
+    EXPECT_FALSE(window.get_ticket().has_value());
+}
+
+TEST_F(LauncherWindowTest, NewGameListsWorldsWithFirstOneSelected) {
+    open_new_game_as("juana");
+
+    EXPECT_EQ(current_screen(), "new_game_screen");
+    EXPECT_TRUE(widget<QPushButton>("new_game_screen", "world_valle_clasico")->isChecked());
+    EXPECT_FALSE(widget<QPushButton>("new_game_screen", "world_orilla_del_rio")->isChecked());
+    EXPECT_FALSE(widget<QPushButton>("new_game_screen", "world_colinas_altas")->isChecked());
+}
+
+TEST_F(LauncherWindowTest, ContinueRequiresGameName) {
+    open_new_game_as("juana");
+    auto* continue_button = widget<QPushButton>("new_game_screen", "continue_button");
+
+    EXPECT_FALSE(continue_button->isEnabled());
+    type("new_game_screen", "game_name_input", "   ");
+    EXPECT_FALSE(continue_button->isEnabled());
+    type("new_game_screen", "game_name_input", "Granja Girasol");
+    EXPECT_TRUE(continue_button->isEnabled());
+}
+
+TEST_F(LauncherWindowTest, CreatingGameFinishesWithSinglePlayerTicket) {
+    window.show();
+    open_new_game_as("juana");
+    type("new_game_screen", "game_name_input", "Granja Girasol");
+    click("new_game_screen", "world_orilla_del_rio");
+    click("new_game_screen", "continue_button");
+
+    ASSERT_EQ(current_screen(), "character_screen");
+    EXPECT_EQ(widget<QLineEdit>("character_screen", "character_name_input")->text(), "juana");
+    EXPECT_EQ(widget<QLabel>("character_screen", "context_label")->text(),
+              "Partida «Granja Girasol» · Mundo Orilla del Río");
+    EXPECT_EQ(widget<QPushButton>("character_screen", "confirm_button")->text(), "Crear partida");
+
+    type("character_screen", "character_name_input", "Juani");
+    click("character_screen", "confirm_button");
+
+    ASSERT_TRUE(window.get_ticket().has_value());
+    EXPECT_EQ(window.get_ticket()->game_name, "Granja Girasol");
+    EXPECT_EQ(window.get_ticket()->character.name, "Juani");
+    EXPECT_FALSE(window.get_ticket()->multiplayer);
+    EXPECT_FALSE(window.isVisible());
+}
+
+TEST_F(LauncherWindowTest, ConfirmRequiresCharacterName) {
+    open_new_game_as("juana");
+    type("new_game_screen", "game_name_input", "Granja");
+    click("new_game_screen", "continue_button");
+
+    type("character_screen", "character_name_input", "  ");
+    EXPECT_FALSE(widget<QPushButton>("character_screen", "confirm_button")->isEnabled());
+}
+
+TEST_F(LauncherWindowTest, GoingBackKeepsWhatWasEntered) {
+    open_new_game_as("juana");
+    type("new_game_screen", "game_name_input", "Granja Girasol");
+    click("new_game_screen", "continue_button");
+    type("character_screen", "character_name_input", "Juani");
+
+    click("character_screen", "back_button");
+    EXPECT_EQ(current_screen(), "new_game_screen");
+    EXPECT_EQ(widget<QLineEdit>("new_game_screen", "game_name_input")->text(), "Granja Girasol");
+
+    click("new_game_screen", "continue_button");
+    EXPECT_EQ(widget<QLineEdit>("character_screen", "character_name_input")->text(), "Juani");
+
+    click("character_screen", "back_button");
+    click("new_game_screen", "back_button");
+    EXPECT_EQ(current_screen(), "main_menu_screen");
+}
+
+class RejectingLobbyClient: public lobby::FakeLobbyClient {
+public:
+    lobby::LobbyResult<lobby::GameTicket> create_game(const std::string&, const std::string&,
+                                                      const lobby::CharacterDraft&) override {
+        return lobby::LobbyError::UnknownWorld;
+    }
+};
+
+TEST(LauncherWindowErrorsTest, ServerRejectionKeepsCharacterScreenOpen) {
+    RejectingLobbyClient lobby_client;
+    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "juana"});
+    window.findChild<QPushButton*>("connect_button")->click();
+    window.findChild<QPushButton*>("new_game_button")->click();
+    window.findChild<QLineEdit*>("game_name_input")->setText("Granja");
+    window.findChild<QPushButton*>("continue_button")->click();
+    window.findChild<QPushButton*>("confirm_button")->click();
+
+    auto* character_screen = window.findChild<QWidget*>("character_screen");
+    auto* error_label = character_screen->findChild<QLabel*>("error_label");
+    EXPECT_EQ(window.findChild<QStackedWidget*>()->currentWidget(), character_screen);
+    EXPECT_TRUE(error_label->isVisibleTo(&window));
+    EXPECT_EQ(error_label->text(), "El mundo elegido ya no está disponible.");
     EXPECT_FALSE(window.get_ticket().has_value());
 }
 

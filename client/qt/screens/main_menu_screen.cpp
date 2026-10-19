@@ -33,13 +33,7 @@ MainMenuScreen::MainMenuScreen(QWidget* parent):
     }
     panel.content->addWidget(error_label);
     panel.content->addWidget(session_label);
-
-    auto* layout = new QVBoxLayout(this);
-    layout->addStretch(1);
-    add_centered(layout, create_logo(this));
-    layout->addSpacing(20);
-    add_centered(layout, panel.frame);
-    layout->addStretch(2);
+    layout_screen(this, create_logo(this), panel.frame);
 
     connect(new_game_button, &QPushButton::clicked, this, &MainMenuScreen::new_game_requested);
     connect(join_button, &QPushButton::clicked, this, &MainMenuScreen::join_requested);

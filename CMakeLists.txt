@@ -56,13 +56,16 @@ if(BUILD_LAUNCHER)
         client/qt/launcher_style.cpp
         client/qt/launcher_window.cpp
         client/qt/lobby_error_message.cpp
+        client/qt/screens/character_screen.cpp
         client/qt/screens/connect_screen.cpp
         client/qt/screens/main_menu_screen.cpp
+        client/qt/screens/new_game_screen.cpp
         client/qt/widgets/character_preview.cpp
         client/qt/widgets/character_sprite.cpp
         client/qt/widgets/landscape.cpp
         client/qt/widgets/option_selector.cpp
         client/qt/widgets/ui_helpers.cpp
+        client/qt/widgets/world_card.cpp
     )
 
     set_target_properties(qt_launcher PROPERTIES AUTOMOC ON)

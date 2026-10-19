@@ -52,20 +52,9 @@ ConnectScreen::ConnectScreen(const LauncherOptions& options, QWidget* parent):
     address_row->addLayout(port_column, 1);
     panel.content->addLayout(address_row);
     panel.content->addWidget(error_label);
-
-    auto* buttons = new QHBoxLayout();
-    buttons->addWidget(quit_button);
-    buttons->addStretch();
-    buttons->addWidget(connect_button);
     panel.content->addSpacing(8);
-    panel.content->addLayout(buttons);
-
-    auto* layout = new QVBoxLayout(this);
-    layout->addStretch(1);
-    add_centered(layout, create_logo(this));
-    layout->addSpacing(20);
-    add_centered(layout, panel.frame);
-    layout->addStretch(2);
+    panel.content->addLayout(create_button_row(quit_button, connect_button));
+    layout_screen(this, create_logo(this), panel.frame);
 
     for (QLineEdit* input: {username_input, host_input, port_input}) {
         connect(input, &QLineEdit::textChanged, this, &ConnectScreen::update_connect_button);
