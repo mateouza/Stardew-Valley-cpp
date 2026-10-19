@@ -58,6 +58,7 @@ if(BUILD_LAUNCHER)
         client/qt/lobby_error_message.cpp
         client/qt/screens/character_screen.cpp
         client/qt/screens/connect_screen.cpp
+        client/qt/screens/join_screen.cpp
         client/qt/screens/main_menu_screen.cpp
         client/qt/screens/new_game_screen.cpp
         client/qt/widgets/character_preview.cpp

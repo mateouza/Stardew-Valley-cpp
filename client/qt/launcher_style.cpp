@@ -133,6 +133,13 @@ QLineEdit:focus {
     border-color: #5b3a1e;
 }
 
+QLineEdit[role="invite_code"] {
+    font-family: "DejaVu Sans Mono";
+    font-size: 28px;
+    font-weight: bold;
+    padding: 8px 10px;
+}
+
 QPushButton[variant="card"] {
     color: #3b2416;
     background-color: #fff6e0;

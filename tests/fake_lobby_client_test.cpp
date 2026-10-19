@@ -191,18 +191,22 @@ TEST_F(FakeLobbyClientTest, JoinsSharedGameAsMultiplayer) {
 
     EXPECT_EQ(ticket.game_name, "Granja de Pandamos");
     EXPECT_TRUE(ticket.multiplayer);
-    EXPECT_EQ(std::get<JoinableGameInfo>(client.find_game(FakeLobbyClient::DEMO_INVITE_CODE))
-                      .player_count,
-              3u);
 
     const auto games = saved_games();
     ASSERT_EQ(games.size(), 1u);
     EXPECT_EQ(games[0].game_id, ticket.game_id);
+
+    connect_as("MateCapo");
+    EXPECT_EQ(std::get<JoinableGameInfo>(client.find_game(FakeLobbyClient::DEMO_INVITE_CODE))
+                      .player_count,
+              3u);
 }
 
 TEST_F(FakeLobbyClientTest, RejectsJoiningTwice) {
     connect_as("dipa");
 
+    EXPECT_EQ(error_of(client.find_game(FakeLobbyClient::DEMO_INVITE_CODE)),
+              LobbyError::AlreadyJoined);
     EXPECT_EQ(error_of(client.join_game(FakeLobbyClient::DEMO_INVITE_CODE, make_character())),
               LobbyError::AlreadyJoined);
 }
@@ -215,6 +219,7 @@ TEST_F(FakeLobbyClientTest, RejectsJoiningFullGame) {
     }
 
     connect_as("quinto");
+    EXPECT_EQ(error_of(client.find_game(FakeLobbyClient::DEMO_INVITE_CODE)), LobbyError::GameFull);
     EXPECT_EQ(error_of(client.join_game(FakeLobbyClient::DEMO_INVITE_CODE, make_character())),
               LobbyError::GameFull);
 }

@@ -59,6 +59,13 @@ protected:
         connect_as(username);
         click("main_menu_screen", "new_game_button");
     }
+
+    void look_up_code_as(const QString& username, const QString& invite_code) {
+        connect_as(username);
+        click("main_menu_screen", "join_button");
+        type("join_screen", "invite_code_input", invite_code);
+        click("join_screen", "find_game_button");
+    }
 };
 
 TEST_F(LauncherWindowTest, StartsOnConnectScreenWithoutTicket) {
@@ -176,6 +183,56 @@ TEST_F(LauncherWindowTest, GoingBackKeepsWhatWasEntered) {
     click("character_screen", "back_button");
     click("new_game_screen", "back_button");
     EXPECT_EQ(current_screen(), "main_menu_screen");
+}
+
+TEST_F(LauncherWindowTest, JoiningWithInviteCodeFinishesWithMultiplayerTicket) {
+    look_up_code_as("juana", "valle1");
+
+    ASSERT_EQ(current_screen(), "character_screen");
+    EXPECT_EQ(widget<QLabel>("character_screen", "context_label")->text(),
+              "Te unís a «Granja de Pandamos», de Pandamos · 2/4 jugadores");
+    EXPECT_EQ(widget<QPushButton>("character_screen", "confirm_button")->text(),
+              "Unirme a la partida");
+
+    click("character_screen", "confirm_button");
+
+    ASSERT_TRUE(window.get_ticket().has_value());
+    EXPECT_EQ(window.get_ticket()->game_name, "Granja de Pandamos");
+    EXPECT_EQ(window.get_ticket()->character.name, "juana");
+    EXPECT_TRUE(window.get_ticket()->multiplayer);
+}
+
+TEST_F(LauncherWindowTest, UnknownInviteCodeShowsError) {
+    look_up_code_as("juana", "NOEXISTE");
+
+    EXPECT_EQ(current_screen(), "join_screen");
+    EXPECT_TRUE(shows_error("join_screen"));
+}
+
+TEST_F(LauncherWindowTest, JoiningOwnGameShowsError) {
+    look_up_code_as("dipa", "VALLE1");
+
+    EXPECT_EQ(current_screen(), "join_screen");
+    EXPECT_EQ(widget<QLabel>("join_screen", "error_label")->text(),
+              "Ya formás parte de esa partida. Entrá desde «Retomar partida».");
+}
+
+TEST_F(LauncherWindowTest, InviteCodeIsUppercasedWhileTyping) {
+    connect_as("juana");
+    click("main_menu_screen", "join_button");
+
+    widget<QLineEdit>("join_screen", "invite_code_input")->insert("valle1");
+
+    EXPECT_EQ(widget<QLineEdit>("join_screen", "invite_code_input")->text(), "VALLE1");
+}
+
+TEST_F(LauncherWindowTest, BackFromCharacterReturnsToJoinScreen) {
+    look_up_code_as("juana", "VALLE1");
+
+    click("character_screen", "back_button");
+
+    EXPECT_EQ(current_screen(), "join_screen");
+    EXPECT_EQ(widget<QLineEdit>("join_screen", "invite_code_input")->text(), "VALLE1");
 }
 
 class RejectingLobbyClient: public lobby::FakeLobbyClient {

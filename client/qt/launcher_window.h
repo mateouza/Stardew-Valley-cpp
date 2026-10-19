@@ -17,6 +17,7 @@ namespace launcher {
 
 class CharacterScreen;
 class ConnectScreen;
+class JoinScreen;
 class MainMenuScreen;
 class NewGameScreen;
 
@@ -26,16 +27,22 @@ class LauncherWindow: public QWidget {
     Q_OBJECT
 
 private:
+    // La pantalla de personaje se comparte: esto indica si al confirmar se crea o se une.
+    enum class CharacterPurpose { NewGame, JoinGame };
+
     lobby::LobbyClient& lobby_client;
     QStackedWidget* screens;
     ConnectScreen* connect_screen;
     MainMenuScreen* main_menu_screen;
     NewGameScreen* new_game_screen;
+    JoinScreen* join_screen;
     CharacterScreen* character_screen;
 
     QString username;
+    CharacterPurpose character_purpose = CharacterPurpose::NewGame;
     QString pending_game_name;
     QString pending_world_id;
+    QString pending_invite_code;
     std::optional<lobby::GameTicket> ticket;
 
     void show_screen(QWidget* screen);
@@ -43,6 +50,9 @@ private:
                            const QString& port);
     void open_new_game();
     void choose_world(const QString& game_name, const QString& world_id, const QString& world_name);
+    void open_join();
+    void look_up_invite_code(const QString& invite_code);
+    void leave_character_screen();
     void confirm_character(const lobby::CharacterDraft& character);
     void finish(lobby::GameTicket game_ticket);
 

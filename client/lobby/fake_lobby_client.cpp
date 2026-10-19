@@ -213,6 +213,14 @@ LobbyResult<JoinableGameInfo> FakeLobbyClient::find_game(const std::string& invi
         return LobbyError::InvalidInviteCode;
     }
 
+    if (is_member(*game)) {
+        return LobbyError::AlreadyJoined;
+    }
+
+    if (game->characters.size() >= MAX_PLAYERS_PER_GAME) {
+        return LobbyError::GameFull;
+    }
+
     return JoinableGameInfo{game->id, game->name, game->owner, game->characters.size(),
                             MAX_PLAYERS_PER_GAME};
 }
