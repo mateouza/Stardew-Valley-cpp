@@ -186,3 +186,15 @@ TEST(TickSchedulerTest, AcceptsLargestWholeMillisecondIntervalWithinClockRange) 
     EXPECT_EQ(scheduler.get_wait_time(),
               std::chrono::duration_cast<std::chrono::steady_clock::duration>(max_interval));
 }
+
+TEST(TickSchedulerTest, RejectsAccumulationOverflowWithoutChangingPendingTime) {
+    TickScheduler scheduler(std::chrono::milliseconds{20});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{15}), 0u);
+
+    EXPECT_THROW(scheduler.advance(std::chrono::steady_clock::duration::max()),
+                 std::overflow_error);
+
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{5});
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{5}), 1u);
+}
