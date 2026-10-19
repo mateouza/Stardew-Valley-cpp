@@ -171,3 +171,18 @@ TEST(TickSchedulerTest, RejectsNegativeElapsedWithoutChangingPendingTime) {
     EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{5});
     EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{5}), 1u);
 }
+
+TEST(TickSchedulerTest, RejectsIntervalOutsideClockRange) {
+    EXPECT_THROW((TickScheduler{std::chrono::milliseconds::max()}), std::invalid_argument);
+}
+
+TEST(TickSchedulerTest, AcceptsLargestWholeMillisecondIntervalWithinClockRange) {
+    const auto max_interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::duration::max());
+
+    TickScheduler scheduler(max_interval);
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{0}), 0u);
+    EXPECT_EQ(scheduler.get_wait_time(),
+              std::chrono::duration_cast<std::chrono::steady_clock::duration>(max_interval));
+}
