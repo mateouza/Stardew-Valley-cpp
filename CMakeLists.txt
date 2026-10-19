@@ -40,6 +40,13 @@ target_include_directories(server_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/serve
 target_link_libraries(server_model PUBLIC game_contracts)
 target_compile_options(server_model PRIVATE -Wall -Wextra -Wpedantic)
 
+add_library(client_lobby STATIC
+    client/lobby/fake_lobby_client.cpp
+)
+
+target_include_directories(client_lobby PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/client)
+target_compile_options(client_lobby PRIVATE -Wall -Wextra -Wpedantic)
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -63,6 +70,12 @@ if(BUILD_TESTING)
     target_compile_options(world_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(world_tests)
+
+    add_executable(fake_lobby_client_tests tests/fake_lobby_client_test.cpp)
+    target_link_libraries(fake_lobby_client_tests PRIVATE client_lobby GTest::gtest_main)
+    target_compile_options(fake_lobby_client_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(fake_lobby_client_tests)
 
 endif()
 
