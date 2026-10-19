@@ -60,7 +60,13 @@ void GameLoop::run() {
                 break;
             }
 
-            std::this_thread::sleep_until(previous_time + scheduler.get_wait_time());
+            const auto wait_time = scheduler.get_wait_time();
+
+            if (previous_time > std::chrono::steady_clock::time_point::max() - wait_time) {
+                throw std::overflow_error("El plazo de espera supera el rango representable");
+            }
+
+            std::this_thread::sleep_until(previous_time + wait_time);
         }
     } catch (const ClosedQueue&) {
     } catch (...) {

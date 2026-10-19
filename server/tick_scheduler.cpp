@@ -2,11 +2,20 @@
 
 #include <stdexcept>
 
-TickScheduler::TickScheduler(std::chrono::milliseconds tick_interval):
-        tick_interval(tick_interval) {
+TickScheduler::TickScheduler(std::chrono::milliseconds tick_interval): tick_interval{} {
     if (tick_interval.count() <= 0) {
         throw std::invalid_argument("El intervalo de actualizacion debe ser positivo");
     }
+
+    const auto max_interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::duration::max());
+
+    if (tick_interval > max_interval) {
+        throw std::invalid_argument("El intervalo de actualizacion supera el rango permitido");
+    }
+
+    this->tick_interval =
+            std::chrono::duration_cast<std::chrono::steady_clock::duration>(tick_interval);
 }
 
 std::size_t TickScheduler::advance(std::chrono::steady_clock::duration elapsed) {
