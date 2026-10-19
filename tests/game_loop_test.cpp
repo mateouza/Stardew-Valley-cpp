@@ -7,6 +7,7 @@
 
 #include "gtest/gtest.h"
 
+#include "tick_scheduler.h"
 #include "world.h"
 
 TEST(GameLoopTest, RejectsNonPositiveTickInterval) {
@@ -108,4 +109,65 @@ TEST(GameLoopTest, ProcessesAtMost128CommandsBeforeUpdating) {
     EXPECT_EQ(remaining.request.direction.vertical, 0);
     EXPECT_THROW(commands.try_pop(remaining), ClosedQueue);
     EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
+}
+
+TEST(TickSchedulerTest, RejectsNonPositiveInterval) {
+    EXPECT_THROW((TickScheduler{std::chrono::milliseconds{0}}), std::invalid_argument);
+    EXPECT_THROW((TickScheduler{std::chrono::milliseconds{-1}}), std::invalid_argument);
+}
+
+TEST(TickSchedulerTest, WaitsUntilACompleteTickIsAccumulated) {
+    TickScheduler scheduler(std::chrono::milliseconds{20});
+
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{20});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{15}), 0u);
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{5});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{5}), 1u);
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{20});
+}
+
+TEST(TickSchedulerTest, RecoversSeveralStepsAndPreservesRemainder) {
+    TickScheduler scheduler(std::chrono::milliseconds{20});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{45}), 2u);
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{15});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{15}), 1u);
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{20});
+}
+
+TEST(TickSchedulerTest, LimitsRecoveryAndDiscardsOnlyCompleteExcessTicks) {
+    TickScheduler scheduler(std::chrono::milliseconds{20});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{147}), 5u);
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{13});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{0}), 0u);
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{13});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{13}), 1u);
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{20});
+}
+
+TEST(TickSchedulerTest, PreservesFractionsSmallerThanOneMillisecond) {
+    TickScheduler scheduler(std::chrono::milliseconds{20});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::microseconds{19900}), 0u);
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::microseconds{100});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::microseconds{100}), 1u);
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{20});
+}
+
+TEST(TickSchedulerTest, RejectsNegativeElapsedWithoutChangingPendingTime) {
+    TickScheduler scheduler(std::chrono::milliseconds{20});
+
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{15}), 0u);
+
+    EXPECT_THROW(scheduler.advance(std::chrono::milliseconds{-1}), std::invalid_argument);
+
+    EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{5});
+    EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{5}), 1u);
 }
