@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <thread>
 
+#include "tick_scheduler.h"
+
 GameLoop::GameLoop(game::GameModel& model, Queue<PlayerCommand>& commands,
                    std::chrono::milliseconds tick_interval):
         model(model), commands(commands), tick_interval(tick_interval) {
@@ -31,30 +33,34 @@ void GameLoop::process_commands() {
 
 void GameLoop::run() {
     try {
+        TickScheduler scheduler(tick_interval);
         const std::chrono::duration<double> elapsed = tick_interval;
-        auto next_tick = std::chrono::steady_clock::now() + tick_interval;
+        auto previous_time = std::chrono::steady_clock::now();
 
         while (should_keep_running()) {
-            std::this_thread::sleep_until(next_tick);
-
-            if (!should_keep_running()) {
-                break;
-            }
-
-            process_commands();
-
-            if (!should_keep_running()) {
-                break;
-            }
-
-            model.update_world(elapsed);
-
-            next_tick += tick_interval;
-
             const auto now = std::chrono::steady_clock::now();
-            if (next_tick < now) {
-                next_tick = now + tick_interval;
+            const auto steps = scheduler.advance(now - previous_time);
+            previous_time = now;
+
+            for (std::size_t step = 0; step < steps; ++step) {
+                if (!should_keep_running()) {
+                    break;
+                }
+
+                process_commands();
+
+                if (!should_keep_running()) {
+                    break;
+                }
+
+                model.update_world(elapsed);
             }
+
+            if (!should_keep_running()) {
+                break;
+            }
+
+            std::this_thread::sleep_until(previous_time + scheduler.get_wait_time());
         }
     } catch (const ClosedQueue&) {
     } catch (...) {
