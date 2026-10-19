@@ -20,6 +20,7 @@ class ConnectScreen;
 class JoinScreen;
 class MainMenuScreen;
 class NewGameScreen;
+class ResumeScreen;
 
 // Controlador del launcher: cambia de pantalla, le pide cada operación al lobby y se cierra
 // cuando consigue un ticket de partida.
@@ -37,6 +38,7 @@ private:
     NewGameScreen* new_game_screen;
     JoinScreen* join_screen;
     CharacterScreen* character_screen;
+    ResumeScreen* resume_screen;
 
     QString username;
     CharacterPurpose character_purpose = CharacterPurpose::NewGame;
@@ -52,6 +54,8 @@ private:
     void choose_world(const QString& game_name, const QString& world_id, const QString& world_name);
     void open_join();
     void look_up_invite_code(const QString& invite_code);
+    void open_resume();
+    void resume_game(const QString& game_id);
     void leave_character_screen();
     void confirm_character(const lobby::CharacterDraft& character);
     void finish(lobby::GameTicket game_ticket);

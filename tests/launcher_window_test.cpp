@@ -235,6 +235,43 @@ TEST_F(LauncherWindowTest, BackFromCharacterReturnsToJoinScreen) {
     EXPECT_EQ(widget<QLineEdit>("join_screen", "invite_code_input")->text(), "VALLE1");
 }
 
+TEST_F(LauncherWindowTest, ResumeListsGamesWithMultiplayerBadge) {
+    connect_as("dipa");
+    click("main_menu_screen", "resume_button");
+
+    ASSERT_EQ(current_screen(), "resume_screen");
+    auto* shared_farm = widget<QPushButton>("resume_screen", "saved_game_partida-1");
+    auto* solo_farm = widget<QPushButton>("resume_screen", "saved_game_partida-2");
+    EXPECT_EQ(shared_farm->findChild<QLabel*>("badge")->text(), "Multijugador");
+    EXPECT_EQ(solo_farm->findChild<QLabel*>("badge")->text(), "Un jugador");
+    EXPECT_FALSE(widget<QLabel>("resume_screen", "empty_label")->isVisibleTo(&window));
+}
+
+TEST_F(LauncherWindowTest, SelectingSavedGameFinishesWithTicket) {
+    connect_as("dipa");
+    click("main_menu_screen", "resume_button");
+
+    click("resume_screen", "saved_game_partida-2");
+
+    ASSERT_TRUE(window.get_ticket().has_value());
+    EXPECT_EQ(window.get_ticket()->game_name, "Huerta de Dipa");
+    EXPECT_EQ(window.get_ticket()->character.name, "Dipa");
+    EXPECT_FALSE(window.get_ticket()->multiplayer);
+}
+
+TEST_F(LauncherWindowTest, UserWithoutGamesSeesEmptyMessage) {
+    connect_as("juana");
+    click("main_menu_screen", "resume_button");
+
+    EXPECT_EQ(current_screen(), "resume_screen");
+    EXPECT_TRUE(widget<QLabel>("resume_screen", "empty_label")->isVisibleTo(&window));
+    EXPECT_FALSE(widget<QLabel>("resume_screen", "intro_label")->isVisibleTo(&window));
+    EXPECT_FALSE(widget<QWidget>("resume_screen", "games_scroll")->isVisibleTo(&window));
+
+    click("resume_screen", "back_button");
+    EXPECT_EQ(current_screen(), "main_menu_screen");
+}
+
 class RejectingLobbyClient: public lobby::FakeLobbyClient {
 public:
     lobby::LobbyResult<lobby::GameTicket> create_game(const std::string&, const std::string&,

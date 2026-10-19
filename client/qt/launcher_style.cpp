@@ -173,6 +173,27 @@ QLabel[role="card_detail"] {
     color: #6b4a2a;
 }
 
+QLabel[role="card_action"] {
+    font-weight: bold;
+    color: #8a5a32;
+}
+
+QLabel[role="badge_multiplayer"], QLabel[role="badge_single"] {
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff8e8;
+    border-radius: 6px;
+    padding: 2px 8px;
+}
+
+QLabel[role="badge_multiplayer"] {
+    background-color: #4f8f3f;
+}
+
+QLabel[role="badge_single"] {
+    background-color: #8a6a4a;
+}
+
 QScrollArea, QScrollArea > QWidget#qt_scrollarea_viewport, QScrollArea > QWidget > QWidget {
     background: transparent;
     border: none;

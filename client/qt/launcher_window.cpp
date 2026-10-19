@@ -14,6 +14,7 @@
 #include "qt/screens/join_screen.h"
 #include "qt/screens/main_menu_screen.h"
 #include "qt/screens/new_game_screen.h"
+#include "qt/screens/resume_screen.h"
 #include "qt/widgets/landscape.h"
 
 #include "lobby_error_message.h"
@@ -43,14 +44,15 @@ LauncherWindow::LauncherWindow(lobby::LobbyClient& lobby_client, const LauncherO
         main_menu_screen(new MainMenuScreen(screens)),
         new_game_screen(new NewGameScreen(screens)),
         join_screen(new JoinScreen(screens)),
-        character_screen(new CharacterScreen(screens)) {
+        character_screen(new CharacterScreen(screens)),
+        resume_screen(new ResumeScreen(screens)) {
     setWindowTitle("Stardew Valley");
     resize(1024, 720);
     setMinimumSize(900, 660);
 
     for (QWidget* screen:
          std::initializer_list<QWidget*>{connect_screen, main_menu_screen, new_game_screen,
-                                         join_screen, character_screen}) {
+                                         join_screen, character_screen, resume_screen}) {
         screens->addWidget(screen);
     }
 
@@ -66,6 +68,8 @@ LauncherWindow::LauncherWindow(lobby::LobbyClient& lobby_client, const LauncherO
     connect(main_menu_screen, &MainMenuScreen::new_game_requested, this,
             &LauncherWindow::open_new_game);
     connect(main_menu_screen, &MainMenuScreen::join_requested, this, &LauncherWindow::open_join);
+    connect(main_menu_screen, &MainMenuScreen::resume_requested, this,
+            &LauncherWindow::open_resume);
     connect(main_menu_screen, &MainMenuScreen::quit_requested, this, &QWidget::close);
     connect(new_game_screen, &NewGameScreen::back_requested, this, back_to_menu);
     connect(new_game_screen, &NewGameScreen::continue_requested, this,
@@ -73,6 +77,8 @@ LauncherWindow::LauncherWindow(lobby::LobbyClient& lobby_client, const LauncherO
     connect(join_screen, &JoinScreen::back_requested, this, back_to_menu);
     connect(join_screen, &JoinScreen::invite_code_submitted, this,
             &LauncherWindow::look_up_invite_code);
+    connect(resume_screen, &ResumeScreen::back_requested, this, back_to_menu);
+    connect(resume_screen, &ResumeScreen::game_selected, this, &LauncherWindow::resume_game);
     connect(character_screen, &CharacterScreen::back_requested, this,
             &LauncherWindow::leave_character_screen);
     connect(character_screen, &CharacterScreen::confirm_requested, this,
@@ -149,6 +155,30 @@ void LauncherWindow::look_up_invite_code(const QString& invite_code) {
                          QString::number(game.player_count), QString::number(game.max_players)),
             "Unirme a la partida");
     show_screen(character_screen);
+}
+
+void LauncherWindow::open_resume() {
+    const BusyCursor busy;
+    const auto games = lobby_client.list_saved_games();
+    if (const auto* error = std::get_if<lobby::LobbyError>(&games)) {
+        main_menu_screen->show_error(lobby_error_message(*error));
+        return;
+    }
+
+    main_menu_screen->show_error("");
+    resume_screen->set_games(std::get<std::vector<lobby::SavedGameInfo>>(games));
+    show_screen(resume_screen);
+}
+
+void LauncherWindow::resume_game(const QString& game_id) {
+    const BusyCursor busy;
+    auto result = lobby_client.resume_game(game_id.toStdString());
+    if (const auto* error = std::get_if<lobby::LobbyError>(&result)) {
+        resume_screen->show_error(lobby_error_message(*error));
+        return;
+    }
+
+    finish(std::get<lobby::GameTicket>(std::move(result)));
 }
 
 void LauncherWindow::leave_character_screen() {

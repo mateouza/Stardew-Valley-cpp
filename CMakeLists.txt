@@ -61,10 +61,12 @@ if(BUILD_LAUNCHER)
         client/qt/screens/join_screen.cpp
         client/qt/screens/main_menu_screen.cpp
         client/qt/screens/new_game_screen.cpp
+        client/qt/screens/resume_screen.cpp
         client/qt/widgets/character_preview.cpp
         client/qt/widgets/character_sprite.cpp
         client/qt/widgets/landscape.cpp
         client/qt/widgets/option_selector.cpp
+        client/qt/widgets/saved_game_card.cpp
         client/qt/widgets/ui_helpers.cpp
         client/qt/widgets/world_card.cpp
     )
