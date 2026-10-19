@@ -442,4 +442,3 @@ TEST(WorldMovementTest, RejectsUnrepresentableDistanceBeforeUpdatingAnyPlayer) {
 }
 
 }
-

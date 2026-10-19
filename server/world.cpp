@@ -117,4 +117,3 @@ GameState World::get_state() const {
 }
 
 }
-

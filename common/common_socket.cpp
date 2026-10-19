@@ -198,7 +198,7 @@ Socket::Socket(Socket&& other) {
     /* Nos copiamos del otro socket... */
     this->skt = other.skt;
     this->closed = other.closed;
-    this->stream_status = other.stream_status;
+    this->stream_status = other.stream_status.load();
 
     /* ...pero luego le sacamos al otro socket
      * el ownership del recurso.
@@ -237,7 +237,7 @@ Socket& Socket::operator=(Socket&& other) {
     /* Ahora hacemos los mismos pasos que en el move constructor */
     this->skt = other.skt;
     this->closed = other.closed;
-    this->stream_status = other.stream_status;
+    this->stream_status = other.stream_status.load();
     other.skt = -1;
     other.closed = true;
     other.stream_status = STREAM_BOTH_CLOSED;
@@ -429,9 +429,13 @@ void Socket::shutdown(int how) {
     }
 }
 
-bool Socket::is_stream_send_closed() const { return stream_status & STREAM_SEND_CLOSED; }
+bool Socket::is_stream_send_closed() const {
+    return stream_status.load() & STREAM_SEND_CLOSED;
+}
 
-bool Socket::is_stream_recv_closed() const { return stream_status & STREAM_RECV_CLOSED; }
+bool Socket::is_stream_recv_closed() const {
+    return stream_status.load() & STREAM_RECV_CLOSED;
+}
 
 int Socket::close() {
     chk_skt_or_fail();
