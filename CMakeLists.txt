@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(BUILD_CLIENT "Compilar el cliente gráfico (requiere SDL2 y sdl2pp)" ON)
+option(BUILD_LAUNCHER "Compilar el launcher Qt (requiere Qt6 Widgets)" ON)
 
 find_package(Threads REQUIRED)
 
@@ -47,6 +48,29 @@ add_library(client_lobby STATIC
 target_include_directories(client_lobby PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/client)
 target_compile_options(client_lobby PRIVATE -Wall -Wextra -Wpedantic)
 
+if(BUILD_LAUNCHER)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+
+    add_library(qt_launcher STATIC
+        client/qt/launcher.cpp
+        client/qt/launcher_style.cpp
+        client/qt/launcher_window.cpp
+        client/qt/lobby_error_message.cpp
+        client/qt/screens/connect_screen.cpp
+        client/qt/screens/main_menu_screen.cpp
+        client/qt/widgets/landscape.cpp
+        client/qt/widgets/ui_helpers.cpp
+    )
+
+    set_target_properties(qt_launcher PROPERTIES AUTOMOC ON)
+    target_link_libraries(qt_launcher PUBLIC client_lobby Qt6::Widgets)
+    target_compile_options(qt_launcher PRIVATE -Wall -Wextra -Wpedantic)
+
+    add_executable(stardew_launcher client/qt/main.cpp)
+    target_link_libraries(stardew_launcher PRIVATE qt_launcher)
+    target_compile_options(stardew_launcher PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -76,6 +100,18 @@ if(BUILD_TESTING)
     target_compile_options(fake_lobby_client_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(fake_lobby_client_tests)
+
+    if(BUILD_LAUNCHER)
+        add_executable(launcher_window_tests tests/launcher_window_test.cpp)
+        target_link_libraries(launcher_window_tests PRIVATE qt_launcher GTest::gtest)
+        target_compile_options(launcher_window_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+        gtest_discover_tests(launcher_window_tests
+            PROPERTIES
+                ENVIRONMENT QT_QPA_PLATFORM=offscreen
+                TIMEOUT 10
+        )
+    endif()
 
 endif()
 
