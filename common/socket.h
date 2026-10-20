@@ -1,6 +1,8 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
+#include <atomic>
+
 /*
  * TDA Socket.
  * Por simplificación este TDA se enfocará solamente
@@ -10,7 +12,7 @@ class Socket {
 private:
     int skt;
     bool closed;
-    int stream_status;
+    std::atomic<int> stream_status;
 
     /*
      * Construye el socket pasándole directamente el file descriptor.
