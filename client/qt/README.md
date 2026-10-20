@@ -8,7 +8,7 @@ para que arranque el cliente SDL.
 ## Estructura
 
 | Carpeta | Contenido |
-|---|---|
+| --- | --- |
 | `client/lobby/` | Contrato con el servidor, **sin Qt**: tipos (`lobby_types.h`), interfaz `LobbyClient` y `FakeLobbyClient`, que simula al servidor en memoria. Biblioteca `client_lobby`. |
 | `client/qt/` | `run_launcher()` (`launcher.h`), la ventana controladora (`launcher_window`), la hoja de estilo y los mensajes de error. Biblioteca `qt_launcher`. |
 | `client/qt/screens/` | Una clase por pantalla. Solo emiten señales; la ventana decide a qué pantalla ir y qué pedirle al lobby. |
@@ -78,7 +78,7 @@ el protocolo. Las pantallas no cambian. Cada método es una petición y su respu
 llamadas son bloqueantes y la ventana muestra el cursor de espera mientras tanto.
 
 | Método | Respuesta si sale bien | Errores (`lobby::LobbyError`) |
-|---|---|---|
+| --- | --- | --- |
 | `connect(host, puerto, usuario)` | — | `ServerUnavailable`, `InvalidUsername` |
 | `list_worlds()` | mundos: id, nombre y descripción | `ServerUnavailable` |
 | `list_saved_games()` | partidas del usuario: id, nombre, personaje y si es multijugador | `ServerUnavailable` |
