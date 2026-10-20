@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -319,4 +320,140 @@ TEST(ServerProtocolTest, ReceiverRequestsClosureWhenCommandsQueueIsFull) {
     EXPECT_EQ(movement->request.direction.vertical, 1);
 
     EXPECT_FALSE(commands.try_pop(remaining));
+}
+
+TEST(ServerProtocolTest, SendsAcceptedJoinWithPlayerIdInNetworkOrder) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol protocol(connection);
+    protocol.send_join_response(JoinResponse{game::PlayerId{0x01020304}});
+    connection.shutdown(SHUT_WR);
+
+    std::array<std::uint8_t, 6> received{};
+    ASSERT_EQ(client.recvall(received.data(), received.size()), 6);
+
+    const std::array<std::uint8_t, 6> expected{0x02, 0x00, 0x01, 0x02, 0x03, 0x04};
+    EXPECT_EQ(received, expected);
+
+    std::uint8_t extra{};
+    EXPECT_EQ(client.recvall(&extra, sizeof(extra)), 0);
+}
+
+TEST(ServerProtocolTest, SendsAcceptedJoinWithPlayerIdZero) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol protocol(connection);
+    protocol.send_join_response(JoinResponse{game::PlayerId{0}});
+    connection.shutdown(SHUT_WR);
+
+    std::array<std::uint8_t, 6> received{};
+    ASSERT_EQ(client.recvall(received.data(), received.size()), 6);
+
+    const std::array<std::uint8_t, 6> expected{0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
+    EXPECT_EQ(received, expected);
+}
+
+TEST(ServerProtocolTest, SendsGameFullWithoutPlayerId) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol protocol(connection);
+    protocol.send_join_response(JoinResponse{game::AddPlayerError::GameFull});
+    connection.shutdown(SHUT_WR);
+
+    std::array<std::uint8_t, 2> received{};
+    ASSERT_EQ(client.recvall(received.data(), received.size()), 2);
+
+    const std::array<std::uint8_t, 2> expected{0x02, 0x01};
+    EXPECT_EQ(received, expected);
+
+    std::uint8_t extra{};
+    EXPECT_EQ(client.recvall(&extra, sizeof(extra)), 0);
+}
+
+TEST(ServerProtocolTest, SendsEmptyGameState) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol protocol(connection);
+    protocol.send_game_state(game::GameState{});
+    connection.shutdown(SHUT_WR);
+
+    std::array<std::uint8_t, 5> received{};
+    ASSERT_EQ(client.recvall(received.data(), received.size()), 5);
+
+    const std::array<std::uint8_t, 5> expected{0x03, 0x00, 0x00, 0x00, 0x00};
+    EXPECT_EQ(received, expected);
+
+    std::uint8_t extra{};
+    EXPECT_EQ(client.recvall(&extra, sizeof(extra)), 0);
+}
+
+TEST(ServerProtocolTest, SendsPlayerNameDecimalPositionFacingAndMovement) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    game::GameState state;
+    state.players.push_back({7, "Ana", {2.5, 3.25}, {-1, 1}, true});
+
+    ServerProtocol protocol(connection);
+    protocol.send_game_state(state);
+    connection.shutdown(SHUT_WR);
+
+    std::array<std::uint8_t, 35> received{};
+    ASSERT_EQ(client.recvall(received.data(), received.size()), 35);
+
+    const std::array<std::uint8_t, 35> expected{
+            0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00,
+            0x03, 0x41, 0x6E, 0x61, 0x40, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x40, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x01, 0x01};
+
+    EXPECT_EQ(received, expected);
+
+    std::uint8_t extra{};
+    EXPECT_EQ(client.recvall(&extra, sizeof(extra)), 0);
+}
+
+TEST(ServerProtocolTest, RejectsNonFinitePositionBeforeSendingAnyBytes) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    game::GameState state;
+    state.players.push_back({7, "Ana", {2.5, 3.25}, {0, 1}, false});
+    state.players.push_back(
+            {8, "Jose", {std::numeric_limits<double>::infinity(), 1.0}, {0, 1}, false});
+
+    ServerProtocol protocol(connection);
+
+    EXPECT_THROW(protocol.send_game_state(state), std::invalid_argument);
+    connection.shutdown(SHUT_WR);
+
+    std::uint8_t byte{};
+    EXPECT_EQ(client.recvall(&byte, sizeof(byte)), 0);
+}
+
+TEST(ServerProtocolTest, RejectsInvalidFacingBeforeSendingAnyBytes) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    game::GameState state;
+    state.players.push_back({7, "Ana", {2.5, 3.25}, {0, 1}, false});
+    state.players.push_back({8, "Jose", {1.0, 1.0}, {2, 0}, false});
+
+    ServerProtocol protocol(connection);
+
+    EXPECT_THROW(protocol.send_game_state(state), std::invalid_argument);
+    connection.shutdown(SHUT_WR);
+
+    std::uint8_t byte{};
+    EXPECT_EQ(client.recvall(&byte, sizeof(byte)), 0);
 }
