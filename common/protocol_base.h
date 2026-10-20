@@ -16,6 +16,7 @@ protected:
     static constexpr std::uint8_t JOIN_RESPONSE_MESSAGE = 0x02;
     static constexpr std::uint8_t JOIN_ACCEPTED = 0x00;
     static constexpr std::uint8_t JOIN_GAME_FULL = 0x01;
+    static constexpr std::uint8_t GAME_STATE_MESSAGE = 0x03;
 
     explicit ProtocolBase(Socket& socket);
     ~ProtocolBase() = default;
