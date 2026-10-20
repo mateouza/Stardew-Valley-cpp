@@ -25,7 +25,7 @@ ConnectScreen::ConnectScreen(const LauncherOptions& options, QWidget* parent):
     setFocusProxy(username_input);
 
     username_input->setObjectName("username_input");
-    username_input->setPlaceholderText("Ej: Pandamos");
+    username_input->setPlaceholderText("Ej: Juanceto01");
     username_input->setMaxLength(static_cast<int>(lobby::MAX_USERNAME_LENGTH));
     username_input->setValidator(
             new QRegularExpressionValidator(QRegularExpression("[A-Za-z0-9_]*"), username_input));
