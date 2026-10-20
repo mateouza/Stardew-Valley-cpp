@@ -6,6 +6,7 @@
 #include <string>
 
 #include "client_receiver.h"
+#include "client_sender.h"
 #include "match_command.h"
 #include "queue.h"
 #include "server_protocol.h"
@@ -18,11 +19,13 @@ private:
     ServerProtocol protocol;
     std::shared_ptr<SessionChannel> channel;
     std::unique_ptr<ClientReceiver> receiver;
+    std::unique_ptr<ClientSender> sender;
     std::exception_ptr failure;
 
     bool started = false;
     bool stopped = false;
-    bool joined = false;
+    bool receiver_joinable = false;
+    bool sender_joinable = false;
 
 public:
     explicit ClientSession(Socket&& socket);

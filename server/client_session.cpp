@@ -30,15 +30,22 @@ void ClientSession::start(Queue<MatchCommand>& commands, const std::string& name
 
     try {
         receiver = std::make_unique<ClientReceiver>(protocol, commands, this->channel);
+        sender = std::make_unique<ClientSender>(protocol, this->channel);
 
         if (!commands.try_push(AddPlayerCommand{name, this->channel})) {
             throw std::runtime_error("La cola de comandos de la partida esta llena");
         }
 
         receiver->start();
+        receiver_joinable = true;
+
+        sender->start();
+        sender_joinable = true;
+
         started = true;
     } catch (...) {
         stop();
+        join();
         throw;
     }
 }
@@ -54,8 +61,12 @@ void ClientSession::stop() {
         channel->request_close();
     }
 
-    if (started) {
+    if (receiver_joinable) {
         receiver->stop();
+    }
+
+    if (sender_joinable) {
+        sender->stop();
     }
 
     try {
@@ -66,9 +77,14 @@ void ClientSession::stop() {
 }
 
 void ClientSession::join() {
-    if (started && !joined) {
+    if (receiver_joinable) {
         receiver->join();
-        joined = true;
+        receiver_joinable = false;
+    }
+
+    if (sender_joinable) {
+        sender->join();
+        sender_joinable = false;
     }
 }
 
@@ -77,11 +93,11 @@ bool ClientSession::has_finished() const {
         return stopped;
     }
 
-    return !receiver->is_alive();
+    return !receiver->is_alive() || !sender->is_alive();
 }
 
 void ClientSession::rethrow_if_failed() const {
-    if (started && !joined) {
+    if (receiver_joinable || sender_joinable) {
         throw std::logic_error("Se debe esperar el cierre de la sesion antes de consultar errores");
     }
 
@@ -89,7 +105,11 @@ void ClientSession::rethrow_if_failed() const {
         std::rethrow_exception(failure);
     }
 
-    if (started) {
+    if (receiver) {
         receiver->rethrow_if_failed();
+    }
+
+    if (sender) {
+        sender->rethrow_if_failed();
     }
 }
