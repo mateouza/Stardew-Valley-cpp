@@ -2,6 +2,7 @@
 
 #include <array>
 #include <stdexcept>
+#include <variant>
 
 ServerProtocol::ServerProtocol(Socket& socket): ProtocolBase(socket) {}
 
@@ -34,4 +35,23 @@ std::optional<game::MoveRequest> ServerProtocol::receive_move() {
 
     return game::MoveRequest{game::MovementDirection{decode_direction(direction[0]),
                                                      decode_direction(direction[1])}};
+}
+
+void ServerProtocol::send_join_response(const JoinResponse& response) {
+    if (const auto* player_id = std::get_if<game::PlayerId>(&response.result)) {
+        const std::array<std::uint8_t, 2> header{JOIN_RESPONSE_MESSAGE, JOIN_ACCEPTED};
+
+        send_bytes(header.data(), header.size());
+        send_uint32(*player_id);
+        return;
+    }
+
+    const auto* error = std::get_if<game::AddPlayerError>(&response.result);
+
+    if (!error || *error != game::AddPlayerError::GameFull) {
+        throw std::invalid_argument("Resultado de ingreso invalido");
+    }
+
+    const std::array<std::uint8_t, 2> header{JOIN_RESPONSE_MESSAGE, JOIN_GAME_FULL};
+    send_bytes(header.data(), header.size());
 }

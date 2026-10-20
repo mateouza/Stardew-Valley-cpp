@@ -6,6 +6,7 @@
 
 #include "game_command.h"
 #include "protocol_base.h"
+#include "server_message.h"
 
 class ServerProtocol: public ProtocolBase {
 private:
@@ -15,6 +16,7 @@ public:
     explicit ServerProtocol(Socket& socket);
 
     std::optional<game::MoveRequest> receive_move();
+    void send_join_response(const JoinResponse& response);
 };
 
 #endif
