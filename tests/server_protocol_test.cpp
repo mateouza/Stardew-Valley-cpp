@@ -540,3 +540,42 @@ TEST(ServerProtocolTest, SenderSendsRejectionBeforeRequestingClosure) {
     EXPECT_FALSE(sender.is_alive());
     EXPECT_NO_THROW(sender.rethrow_if_failed());
 }
+
+TEST(ServerProtocolTest, SessionSendsJoinResponseAndGameState) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    Queue<MatchCommand> commands(16);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+    ClientSession session(std::move(connection));
+
+    session.start(commands, "Mateo", channel);
+
+    const auto admission_command = commands.pop();
+
+    ASSERT_TRUE(channel->get_outgoing_queue().try_push(JoinResponse{game::PlayerId{3}}));
+    ASSERT_TRUE(channel->get_outgoing_queue().try_push(game::GameState{}));
+
+    std::array<std::uint8_t, 11> received{};
+    const auto received_size = client.recvall(received.data(), received.size());
+
+    session.stop();
+    session.join();
+
+    const auto* admission = std::get_if<AddPlayerCommand>(&admission_command);
+    ASSERT_NE(admission, nullptr);
+    EXPECT_EQ(admission->name, "Mateo");
+    EXPECT_EQ(admission->channel, channel);
+
+    const std::array<std::uint8_t, 11> expected{0x02, 0x00, 0x00, 0x00, 0x00, 0x03,
+                                                0x03, 0x00, 0x00, 0x00, 0x00};
+
+    EXPECT_EQ(received_size, 11);
+    EXPECT_EQ(received, expected);
+    EXPECT_TRUE(channel->is_closing());
+    EXPECT_TRUE(session.has_finished());
+    EXPECT_NO_THROW(session.rethrow_if_failed());
+    EXPECT_NO_THROW(session.stop());
+    EXPECT_NO_THROW(session.join());
+}
