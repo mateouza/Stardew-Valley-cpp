@@ -27,7 +27,11 @@ public:
 
     Queue<ServerMessage>& get_outgoing_queue() { return outgoing_queue; }
 
-    void request_close() { closing.store(true); }
+    void request_close() {
+        if (!closing.exchange(true)) {
+            outgoing_queue.close();
+        }
+    }
 
     bool is_closing() const { return closing.load(); }
 };
