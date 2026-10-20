@@ -10,6 +10,7 @@ test_binaries=(
     build/world_config_tests
     build/server_protocol_tests
     build/game_loop_tests
+    build/world_game_loop_tests
     build/match_tests
 )
 
