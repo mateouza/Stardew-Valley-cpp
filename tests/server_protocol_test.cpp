@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 
 #include "client_receiver.h"
+#include "client_sender.h"
 #include "client_session.h"
 #include "liberror.h"
 #include "socket.h"
@@ -456,4 +457,86 @@ TEST(ServerProtocolTest, RejectsInvalidFacingBeforeSendingAnyBytes) {
 
     std::uint8_t byte{};
     EXPECT_EQ(client.recvall(&byte, sizeof(byte)), 0);
+}
+
+TEST(ServerProtocolTest, SenderSendsJoinResponseAndGameStateInOrder) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol protocol(connection);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+    ClientSender sender(protocol, channel);
+
+    ASSERT_TRUE(channel->get_outgoing_queue().try_push(JoinResponse{game::PlayerId{3}}));
+    ASSERT_TRUE(channel->get_outgoing_queue().try_push(game::GameState{}));
+
+    sender.start();
+
+    std::array<std::uint8_t, 11> received{};
+    const auto received_size = client.recvall(received.data(), received.size());
+
+    sender.stop();
+    EXPECT_NO_THROW(connection.shutdown(SHUT_RDWR));
+    sender.join();
+
+    const std::array<std::uint8_t, 11> expected{0x02, 0x00, 0x00, 0x00, 0x00, 0x03,
+                                                0x03, 0x00, 0x00, 0x00, 0x00};
+
+    EXPECT_EQ(received_size, 11);
+    EXPECT_EQ(received, expected);
+    EXPECT_FALSE(sender.is_alive());
+    EXPECT_TRUE(channel->is_closing());
+    EXPECT_NO_THROW(sender.rethrow_if_failed());
+}
+
+TEST(ServerProtocolTest, SenderCanStopWithAnEmptyQueue) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol protocol(connection);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+    ClientSender sender(protocol, channel);
+
+    sender.start();
+    sender.stop();
+    EXPECT_NO_THROW(connection.shutdown(SHUT_RDWR));
+    sender.join();
+
+    EXPECT_FALSE(sender.is_alive());
+    EXPECT_TRUE(channel->is_closing());
+    EXPECT_NO_THROW(sender.rethrow_if_failed());
+    EXPECT_NO_THROW(sender.stop());
+}
+
+TEST(ServerProtocolTest, SenderSendsRejectionBeforeRequestingClosure) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol protocol(connection);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+    ClientSender sender(protocol, channel);
+
+    ASSERT_TRUE(
+            channel->get_outgoing_queue().try_push(JoinResponse{game::AddPlayerError::GameFull}));
+
+    sender.start();
+    sender.join();
+
+    connection.shutdown(SHUT_WR);
+
+    std::array<std::uint8_t, 2> received{};
+    ASSERT_EQ(client.recvall(received.data(), received.size()), 2);
+
+    const std::array<std::uint8_t, 2> expected{0x02, 0x01};
+    EXPECT_EQ(received, expected);
+
+    std::uint8_t extra{};
+    EXPECT_EQ(client.recvall(&extra, sizeof(extra)), 0);
+
+    EXPECT_TRUE(channel->is_closing());
+    EXPECT_FALSE(sender.is_alive());
+    EXPECT_NO_THROW(sender.rethrow_if_failed());
 }
