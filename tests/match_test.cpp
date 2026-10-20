@@ -5,6 +5,8 @@
 
 #include "gtest/gtest.h"
 
+#include "player_command.h"
+
 TEST(MatchTest, StopsAndJoinsOnDestruction) {
     Match match(game::Map{{{game::TileType::Walkable}}}, {0.5, 0.5}, {1, 1.0, 0.5, 0.5}, 16,
                 std::chrono::milliseconds{1});
