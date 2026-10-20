@@ -47,6 +47,7 @@ add_library(server_core STATIC
     server/acceptor.cpp
     server/client_session.cpp
     server/client_receiver.cpp
+    server/client_sender.cpp
     server/game_loop.cpp
     server/server.cpp
     server/server_protocol.cpp
