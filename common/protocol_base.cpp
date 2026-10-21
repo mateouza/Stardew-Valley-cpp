@@ -68,3 +68,40 @@ void ProtocolBase::send_string(const std::string& value) {
     send_uint32(length);
     send_bytes(value.data(), length);
 }
+
+std::uint32_t ProtocolBase::receive_uint32() {
+    std::uint32_t network_value{};
+    receive_bytes(&network_value, sizeof(network_value));
+
+    return ntohl(network_value);
+}
+
+double ProtocolBase::receive_double() {
+    static_assert(sizeof(double) == sizeof(std::uint64_t));
+    static_assert(std::numeric_limits<double>::is_iec559);
+
+    const std::uint64_t high = receive_uint32();
+    const std::uint64_t low = receive_uint32();
+    const std::uint64_t bits = (high << 32) | low;
+
+    const double value = std::bit_cast<double>(bits);
+
+    if (!std::isfinite(value)) {
+        throw std::runtime_error("La coordenada recibida debe ser finita");
+    }
+
+    return value;
+}
+
+std::string ProtocolBase::receive_string(std::uint32_t max_length) {
+    const auto length = receive_uint32();
+
+    if (length > max_length) {
+        throw std::length_error("El texto recibido supera la longitud permitida");
+    }
+
+    std::string value(length, '\0');
+    receive_bytes(value.data(), length);
+
+    return value;
+}

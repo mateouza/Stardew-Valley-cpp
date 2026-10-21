@@ -27,6 +27,9 @@ protected:
     void send_uint32(std::uint32_t value);
     void send_double(double value);
     void send_string(const std::string& value);
+    std::uint32_t receive_uint32();
+    double receive_double();
+    std::string receive_string(std::uint32_t max_length);
 };
 
 #endif
