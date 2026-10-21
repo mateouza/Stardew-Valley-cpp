@@ -93,7 +93,7 @@ bool ClientSession::has_finished() const {
         return stopped;
     }
 
-    return !receiver->is_alive() || !sender->is_alive();
+    return channel->is_closing() || !receiver->is_alive() || !sender->is_alive();
 }
 
 void ClientSession::rethrow_if_failed() const {
