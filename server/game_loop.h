@@ -36,6 +36,8 @@ private:
     void run() override;
     void close_commands();
     void close_sessions();
+    void publish_state();
+    void close_pending_channels();
 
 public:
     GameLoop(game::GameModel& model, Queue<MatchCommand>& commands,

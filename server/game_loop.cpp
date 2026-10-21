@@ -121,6 +121,7 @@ void GameLoop::run() {
                 }
 
                 model.update_world(elapsed);
+                publish_state();
             }
 
             if (!should_keep_running()) {
@@ -141,6 +142,7 @@ void GameLoop::run() {
     }
 
     close_commands();
+    close_pending_channels();
     close_sessions();
 }
 
@@ -169,6 +171,44 @@ void GameLoop::close_sessions() {
     }
 
     sessions.clear();
+}
+
+void GameLoop::publish_state() {
+    if (sessions.empty()) {
+        return;
+    }
+
+    const ServerMessage message = model.get_state();
+
+    for (const auto& session: sessions) {
+        const auto& channel = session.second.channel;
+
+        if (channel->is_closing()) {
+            continue;
+        }
+
+        try {
+            if (!channel->get_outgoing_queue().try_push(message)) {
+                channel->request_close();
+            }
+        } catch (const ClosedQueue&) {
+            channel->request_close();
+        }
+    }
+}
+
+void GameLoop::close_pending_channels() {
+    try {
+        MatchCommand command;
+
+        while (commands.try_pop(command)) {
+            const auto* entry = std::get_if<AddPlayerCommand>(&command);
+
+            if (entry && entry->channel) {
+                entry->channel->request_close();
+            }
+        }
+    } catch (const ClosedQueue&) {}
 }
 
 void GameLoop::stop() {
