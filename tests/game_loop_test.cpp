@@ -109,14 +109,6 @@ TEST(GameLoopTest, ProcessesAtMost128CommandsBeforeUpdating) {
     EXPECT_EQ(world.updates, 1u);
 
     MatchCommand remaining;
-    ASSERT_TRUE(commands.try_pop(remaining));
-
-    const auto* movement = std::get_if<PlayerCommand>(&remaining);
-    ASSERT_NE(movement, nullptr);
-    EXPECT_EQ(movement->session_id, command.session_id);
-    EXPECT_EQ(movement->request.direction.horizontal, 1);
-    EXPECT_EQ(movement->request.direction.vertical, 0);
-
     EXPECT_THROW(commands.try_pop(remaining), ClosedQueue);
     EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
 }
@@ -261,4 +253,106 @@ TEST(GameLoopTest, RepliesWithGameFullWhenThereIsNoCapacity) {
     EXPECT_EQ(*error, game::AddPlayerError::GameFull);
 
     EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
+}
+
+class PublishingWorld: public game::World {
+private:
+    std::size_t updates = 0;
+
+public:
+    PublishingWorld():
+            game::World(game::Map{{{game::TileType::Walkable, game::TileType::Walkable}}},
+                        {0.5, 0.5}, game::WorldConfig{1, 1.0, 0.5, 0.5}) {}
+
+    void update_world(std::chrono::duration<double> elapsed) override {
+        ++updates;
+
+        if (updates == 2) {
+            throw std::runtime_error("Fin de la prueba de publicacion");
+        }
+
+        game::World::update_world(elapsed);
+    }
+};
+
+TEST(GameLoopTest, PublishesStateAfterApplyingMovement) {
+    PublishingWorld world;
+    Queue<MatchCommand> commands(16);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", channel}));
+    ASSERT_TRUE(
+            commands.try_push(PlayerCommand{7, game::MoveRequest{game::MovementDirection{1, 0}}}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{20});
+
+    game_loop.start();
+    game_loop.join();
+
+    ServerMessage message;
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+    ASSERT_TRUE(std::holds_alternative<JoinResponse>(message));
+
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+
+    const auto* state = std::get_if<game::GameState>(&message);
+    ASSERT_NE(state, nullptr);
+    ASSERT_EQ(state->players.size(), 1u);
+
+    const auto& player = state->players.front();
+
+    EXPECT_EQ(player.id, 0u);
+    EXPECT_EQ(player.name, "Mateo");
+    EXPECT_DOUBLE_EQ(player.position.x, 0.52);
+    EXPECT_DOUBLE_EQ(player.position.y, 0.5);
+    EXPECT_EQ(player.facing.horizontal, 1);
+    EXPECT_EQ(player.facing.vertical, 0);
+    EXPECT_TRUE(player.moving);
+
+    EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
+    EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
+}
+
+class PendingJoinFailureWorld: public game::World {
+public:
+    PendingJoinFailureWorld():
+            game::World(game::Map{{{game::TileType::Walkable}}}, {0.5, 0.5},
+                        game::WorldConfig{1, 1.0, 0.5, 0.5}) {}
+
+    void update_world(std::chrono::duration<double>) override {
+        throw std::runtime_error("Fallo de prueba con ingreso pendiente");
+    }
+};
+
+TEST(GameLoopTest, ClosesPendingJoinChannelWhenUpdateFails) {
+    PendingJoinFailureWorld world;
+    Queue<MatchCommand> commands(256);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+
+    for (std::size_t index = 0; index < 128; ++index) {
+        ASSERT_TRUE(commands.try_push(
+                PlayerCommand{7, game::MoveRequest{game::MovementDirection{1, 0}}}));
+    }
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", channel}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{1});
+
+    game_loop.start();
+    game_loop.join();
+
+    EXPECT_TRUE(channel->is_closing());
+
+    ServerMessage message;
+    EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
+
+    MatchCommand pending;
+    EXPECT_THROW(commands.try_pop(pending), ClosedQueue);
+
+    try {
+        game_loop.rethrow_if_failed();
+        ADD_FAILURE() << "No se propago el fallo del modelo";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(), "Fallo de prueba con ingreso pendiente");
+    }
 }
