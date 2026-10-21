@@ -3,7 +3,7 @@
 
 #include <variant>
 
-#include "game_model.h"
+#include "game_results.h"
 #include "game_state.h"
 
 struct JoinResponse {
