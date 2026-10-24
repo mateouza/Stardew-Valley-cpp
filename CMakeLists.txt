@@ -53,6 +53,7 @@ add_library(server_core STATIC
     server/server_protocol.cpp
     server/match.cpp
     server/tick_scheduler.cpp
+    server/match_manager.cpp
 )
 
 target_include_directories(server_core PUBLIC server)
