@@ -17,6 +17,12 @@ protected:
     static constexpr std::uint8_t JOIN_ACCEPTED = 0x00;
     static constexpr std::uint8_t JOIN_GAME_FULL = 0x01;
     static constexpr std::uint8_t GAME_STATE_MESSAGE = 0x03;
+    static constexpr std::uint32_t MAX_PLAYER_NAME_BYTES = 256;
+    static constexpr std::uint32_t MAX_PLAYERS_PER_STATE = 1024;
+    static constexpr std::uint8_t CREATE_MATCH_MESSAGE = 0x04;
+    static constexpr std::uint8_t JOIN_MATCH_MESSAGE = 0x05;
+    static constexpr std::uint32_t MAX_MATCH_NAME_BYTES = 256;
+    static constexpr std::uint32_t MAX_INVITATION_CODE_BYTES = 256;
 
     explicit ProtocolBase(Socket& socket);
     ~ProtocolBase() = default;

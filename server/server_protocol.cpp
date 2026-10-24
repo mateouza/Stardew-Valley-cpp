@@ -59,12 +59,12 @@ void ServerProtocol::send_join_response(const JoinResponse& response) {
 }
 
 void ServerProtocol::validate_game_state(const game::GameState& state) {
-    if (state.players.size() > std::numeric_limits<std::uint32_t>::max()) {
+    if (state.players.size() > MAX_PLAYERS_PER_STATE) {
         throw std::length_error("La cantidad de jugadores supera el limite del protocolo");
     }
 
     for (const auto& player: state.players) {
-        if (player.name.size() > std::numeric_limits<std::uint32_t>::max()) {
+        if (player.name.size() > MAX_PLAYER_NAME_BYTES) {
             throw std::length_error("El nombre supera la longitud permitida por el protocolo");
         }
 
@@ -101,5 +101,40 @@ void ServerProtocol::send_game_state(const game::GameState& state) {
 
     for (const auto& player: state.players) {
         send_player_state(player);
+    }
+}
+
+std::optional<LobbyRequest> ServerProtocol::receive_lobby_request() {
+    const auto message_type = receive_first_byte();
+
+    if (!message_type) {
+        return std::nullopt;
+    }
+
+    switch (*message_type) {
+        case CREATE_MATCH_MESSAGE: {
+            CreateMatchRequest request{receive_string(MAX_MATCH_NAME_BYTES),
+                                       receive_string(MAX_PLAYER_NAME_BYTES)};
+
+            if (request.match_name.empty() || request.player_name.empty()) {
+                throw std::runtime_error("Los nombres no pueden estar vacios");
+            }
+
+            return LobbyRequest{request};
+        }
+
+        case JOIN_MATCH_MESSAGE: {
+            JoinMatchRequest request{receive_string(MAX_INVITATION_CODE_BYTES),
+                                     receive_string(MAX_PLAYER_NAME_BYTES)};
+
+            if (request.invitation_code.empty() || request.player_name.empty()) {
+                throw std::runtime_error("El codigo y el nombre no pueden estar vacios");
+            }
+
+            return LobbyRequest{request};
+        }
+
+        default:
+            throw std::runtime_error("Tipo de pedido de lobby inesperado");
     }
 }

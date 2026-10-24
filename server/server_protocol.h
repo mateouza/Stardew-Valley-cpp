@@ -6,6 +6,7 @@
 
 #include "game_command.h"
 #include "game_state.h"
+#include "lobby_request.h"
 #include "protocol_base.h"
 #include "server_message.h"
 
@@ -21,6 +22,7 @@ public:
     std::optional<game::MoveRequest> receive_move();
     void send_join_response(const JoinResponse& response);
     void send_game_state(const game::GameState& state);
+    std::optional<LobbyRequest> receive_lobby_request();
 };
 
 #endif

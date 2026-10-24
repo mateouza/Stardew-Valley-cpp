@@ -67,6 +67,16 @@ target_link_libraries(server PRIVATE server_core)
 
 target_compile_options(server PRIVATE -Wall -Wextra -Wpedantic)
 
+add_library(client_network STATIC
+    client/network/client_protocol.cpp
+)
+
+target_include_directories(client_network PUBLIC client/network)
+
+target_link_libraries(client_network PUBLIC course_support game_contracts)
+
+target_compile_options(client_network PRIVATE -Wall -Wextra -Wpedantic)
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -91,7 +101,11 @@ if(BUILD_TESTING)
 
     gtest_discover_tests(world_tests)
 add_executable(server_protocol_tests tests/server_protocol_test.cpp)
-    target_link_libraries(server_protocol_tests PRIVATE server_core GTest::gtest_main)
+    target_link_libraries(server_protocol_tests PRIVATE
+        server_core
+        client_network
+        GTest::gtest_main
+    )
     target_compile_options(server_protocol_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(server_protocol_tests
@@ -126,6 +140,7 @@ if(BUILD_CLIENT)
     )
 
     target_link_libraries(stardew_client PRIVATE
+        client_network
         course_support
         game_contracts
         SDL2pp::SDL2pp
