@@ -12,6 +12,7 @@
 
 #include "gtest/gtest.h"
 
+#include "client_protocol.h"
 #include "client_receiver.h"
 #include "client_sender.h"
 #include "client_session.h"
@@ -578,4 +579,135 @@ TEST(ServerProtocolTest, SessionSendsJoinResponseAndGameState) {
     EXPECT_NO_THROW(session.rethrow_if_failed());
     EXPECT_NO_THROW(session.stop());
     EXPECT_NO_THROW(session.join());
+}
+
+class ClientServerProtocolTest: public ::testing::Test {
+protected:
+    Socket listener;
+    Socket client;
+    Socket connection;
+    ClientProtocol client_protocol;
+    ServerProtocol server_protocol;
+
+    ClientServerProtocolTest():
+            listener("18080"),
+            client("127.0.0.1", "18080"),
+            connection(listener.accept()),
+            client_protocol(client),
+            server_protocol(connection) {}
+};
+
+TEST_F(ClientServerProtocolTest, TransfersCreateMatchRequest) {
+    client_protocol.send_create_match(CreateMatchRequest{"Granja de amigos", "Mateo"});
+
+    const auto request = server_protocol.receive_lobby_request();
+
+    ASSERT_TRUE(request.has_value());
+
+    const auto* create = std::get_if<CreateMatchRequest>(&*request);
+    ASSERT_NE(create, nullptr);
+    EXPECT_EQ(create->match_name, "Granja de amigos");
+    EXPECT_EQ(create->player_name, "Mateo");
+}
+
+TEST_F(ClientServerProtocolTest, TransfersJoinMatchRequest) {
+    client_protocol.send_join_match(JoinMatchRequest{"ABC123", "Jose"});
+
+    const auto request = server_protocol.receive_lobby_request();
+
+    ASSERT_TRUE(request.has_value());
+
+    const auto* join = std::get_if<JoinMatchRequest>(&*request);
+    ASSERT_NE(join, nullptr);
+    EXPECT_EQ(join->invitation_code, "ABC123");
+    EXPECT_EQ(join->player_name, "Jose");
+}
+
+TEST_F(ClientServerProtocolTest, TransfersMovement) {
+    client_protocol.send_move(game::MoveRequest{game::MovementDirection{-1, 1}});
+
+    const auto request = server_protocol.receive_move();
+
+    ASSERT_TRUE(request.has_value());
+    EXPECT_EQ(request->direction.horizontal, -1);
+    EXPECT_EQ(request->direction.vertical, 1);
+}
+
+TEST_F(ClientServerProtocolTest, TransfersJoinResponseAndStateInOrder) {
+    server_protocol.send_join_response(JoinResponse{game::PlayerId{0x01020304}});
+
+    game::GameState state;
+    state.players.push_back(game::PlayerState{0x01020304, "Jose", {-2.5, 3.25}, {-1, 1}, true});
+
+    server_protocol.send_game_state(state);
+    connection.shutdown(SHUT_WR);
+
+    const auto first = client_protocol.receive_message();
+    ASSERT_TRUE(first.has_value());
+
+    const auto* response = std::get_if<JoinResponse>(&*first);
+    ASSERT_NE(response, nullptr);
+
+    const auto* player_id = std::get_if<game::PlayerId>(&response->result);
+    ASSERT_NE(player_id, nullptr);
+    EXPECT_EQ(*player_id, 0x01020304u);
+
+    const auto second = client_protocol.receive_message();
+    ASSERT_TRUE(second.has_value());
+
+    const auto* received = std::get_if<game::GameState>(&*second);
+    ASSERT_NE(received, nullptr);
+    ASSERT_EQ(received->players.size(), 1u);
+
+    const auto& player = received->players.front();
+    EXPECT_EQ(player.id, 0x01020304u);
+    EXPECT_EQ(player.name, "Jose");
+    EXPECT_DOUBLE_EQ(player.position.x, -2.5);
+    EXPECT_DOUBLE_EQ(player.position.y, 3.25);
+    EXPECT_EQ(player.facing.horizontal, -1);
+    EXPECT_EQ(player.facing.vertical, 1);
+    EXPECT_TRUE(player.moving);
+
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, TransfersGameFullResponse) {
+    server_protocol.send_join_response(JoinResponse{game::AddPlayerError::GameFull});
+
+    const auto message = client_protocol.receive_message();
+    ASSERT_TRUE(message.has_value());
+
+    const auto* response = std::get_if<JoinResponse>(&*message);
+    ASSERT_NE(response, nullptr);
+
+    const auto* error = std::get_if<game::AddPlayerError>(&response->result);
+    ASSERT_NE(error, nullptr);
+    EXPECT_EQ(*error, game::AddPlayerError::GameFull);
+}
+
+TEST_F(ClientServerProtocolTest, ReturnsNoLobbyRequestOnEndOfStream) {
+    client.shutdown(SHUT_WR);
+
+    EXPECT_FALSE(server_protocol.receive_lobby_request().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, RejectsUnknownServerMessage) {
+    const std::array<std::uint8_t, 1> message{0x7F};
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 1);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsInvalidCreateBeforeSendingAnyBytes) {
+    EXPECT_THROW(client_protocol.send_create_match(CreateMatchRequest{"", "Mateo"}),
+                 std::invalid_argument);
+
+    EXPECT_THROW(
+            client_protocol.send_create_match(CreateMatchRequest{"Granja", std::string(257, 'a')}),
+            std::length_error);
+
+    client.shutdown(SHUT_WR);
+
+    EXPECT_FALSE(server_protocol.receive_lobby_request().has_value());
 }
