@@ -61,7 +61,7 @@ CharacterScreen::CharacterScreen(QWidget* parent):
     preview->setObjectName("character_preview");
     preview->setFixedSize(180, 252);
     name_input->setObjectName("character_name_input");
-    name_input->setPlaceholderText("Ej: Juana");
+    name_input->setPlaceholderText("Ej: Juanceto01");
     name_input->setMaxLength(static_cast<int>(lobby::MAX_CHARACTER_NAME_LENGTH));
     skin_selector->setObjectName("skin_selector");
     hair_style_selector->setObjectName("hair_style_selector");
