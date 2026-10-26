@@ -9,7 +9,7 @@ para que arranque el cliente SDL.
 
 | Carpeta | Contenido |
 | --- | --- |
-| `client/lobby/` | Contrato con el servidor, **sin Qt**: tipos (`lobby_types.h`), interfaz `LobbyClient` y `FakeLobbyClient`, que simula al servidor en memoria. Biblioteca `client_lobby`. |
+| `client/lobby/` | Contrato con el servidor, **sin Qt**: tipos (`lobby_types.h`), interfaz `LobbyClient`, `FakeLobbyClient` (simula al servidor en memoria), validación compartida (`lobby_validation`) y `LobbyWorker`, el hilo que ejecuta los pedidos. Biblioteca `client_lobby`. |
 | `client/qt/` | `run_launcher()` (`launcher.h`), la ventana controladora (`launcher_window`), la hoja de estilo y los mensajes de error. Biblioteca `qt_launcher`. |
 | `client/qt/screens/` | Una clase por pantalla. Solo emiten señales; la ventana decide a qué pantalla ir y qué pedirle al lobby. |
 | `client/qt/widgets/` | Fondo, sprite del personaje, selectores, tarjetas y helpers de UI. |
@@ -36,47 +36,57 @@ ctest --test-dir build --output-on-failure
 - Los del lobby (`fake_lobby_client_tests`, `lobby_validation_tests` y `lobby_worker_tests`) no dependen de Qt y se compilan siempre.
 - `make valgrind` revisa todos; los de Qt, solo si existen.
 
-## Datos de prueba
+## Qué es demostración y qué falta
 
-Mientras el protocolo no tenga mensajes de lobby, `stardew_launcher` usa `FakeLobbyClient`:
+`stardew_launcher` usa `FakeLobbyClient`, que simula al servidor en memoria mientras el
+protocolo no tenga mensajes de lobby. Sirve para desarrollar y probar las pantallas, pero no es
+la funcionalidad real:
 
-- Cualquier nombre de usuario válido se conecta (letras, números y `_`, hasta 16).
+- Lo creado en una ejecución se pierde al cerrar.
+- `create_game()` no crea una partida (`Match`) en el servidor.
+- Las partidas creadas no tienen código de invitación, y la interfaz no tiene una operación para
+  generarlo. Unirse solo funciona con la partida precargada `VALLE1`.
+- No hay creación ni unión real entre dos clientes.
+- Al elegir una partida, `stardew_launcher` imprime el ticket y termina: todavía no arranca el juego.
+
+Datos precargados:
+
+- Cualquier nombre de usuario válido se conecta.
 - Código de invitación: **`VALLE1`** ("Granja de Juanceto03", 2 de 4 jugadores).
 - `Juanceto01` tiene dos partidas guardadas: una multijugador y una individual. `Juanceto03` tiene una.
 - Hay tres mundos: Valle Clásico, Orilla del Río y Colinas Altas.
 
-Lo creado en una ejecución no se guarda: se pierde al cerrar.
+Los mundos, las opciones de apariencia y el máximo de 4 jugadores son datos de demostración, no
+reglas del servidor: se acuerdan con infraestructura y con el modelo.
 
-## Integración con el cliente SDL
+## Pedidos al lobby sin bloquear la interfaz
 
-La `QApplication` vive solo dentro de `run_launcher()`, así que al volver se puede inicializar
-SDL en el mismo proceso. En `client/sdl/main.cpp`:
+`LobbyClient` es síncrono: cada método es un pedido bloqueante con su respuesta. La ventana
+nunca lo llama directamente:
 
-```cpp
-#include "lobby/fake_lobby_client.h"
-#include "qt/launcher.h"
+1. `LauncherWindow` arma un pedido (`lobby_requests.h`) y lo encola en `LobbyWorker`.
+   Deshabilita las pantallas y arranca un `QTimer`.
+2. `LobbyWorker`, un `Thread` de la cátedra, saca los pedidos de su `Queue` de a uno y llama al
+   `LobbyClient`.
+3. Cada 20 ms el `QTimer` hace `try_pop` de la cola de respuestas. Cuando llega una, la ventana
+   rehabilita las pantallas y la procesa. Los widgets se tocan solo desde el hilo de Qt.
+4. Al destruirse la ventana, el worker cierra su cola, llama a `LobbyClient::interrupt()` y hace
+   `join`. No quedan hilos sueltos ni respuestas dirigidas a widgets destruidos.
 
-int main(int argc, char* argv[]) {
-    lobby::FakeLobbyClient lobby_client;  // reemplazar por el cliente real cuando exista
-    const std::optional<lobby::GameTicket> ticket =
-            launcher::run_launcher(argc, argv, lobby_client, launcher::LauncherOptions{});
-    if (!ticket) {
-        return EXIT_SUCCESS;  // cerró el launcher sin elegir partida
-    }
+Una implementación real de `LobbyClient` tiene que:
 
-    // Recién acá se inicializa SDL. El ticket trae game_id, game_name, multiplayer y el
-    // personaje (nombre e índices de apariencia definidos en lobby/lobby_types.h).
-}
-```
+- No lanzar excepciones: un corte de conexión se devuelve como `ServerUnavailable`.
+- Implementar `interrupt()`: se llama desde otro hilo y hace terminar enseguida la operación en
+  curso y las siguientes, por ejemplo con `shutdown` del socket.
+- Validar sus parámetros aunque la UI ya lo haga.
 
-Y en `CMakeLists.txt`, agregar `qt_launcher` a `target_link_libraries(stardew_client ...)`.
-El target existe con `BUILD_LAUNCHER` en `ON`, que es el valor por defecto.
+Falta acordar con infraestructura cuánto puede tardar cada operación y los límites en bytes de
+cada campo del protocolo, que hay que controlar antes de reservar memoria.
 
-## Implementación real del lobby
+## Contrato del lobby (provisorio)
 
-Hay que escribir una clase que herede de `lobby::LobbyClient` y hable con el servidor usando
-el protocolo. Las pantallas no cambian. Cada método es una petición y su respuesta; las
-llamadas son bloqueantes y la ventana muestra el cursor de espera mientras tanto.
+Son los métodos que usa la ventana y que implementa el fake. No son mensajes de protocolo: el
+formato, los tamaños de los campos y las reglas se acuerdan con quienes hacen el servidor.
 
 | Método | Respuesta si sale bien | Errores (`lobby::LobbyError`) |
 | --- | --- | --- |
@@ -88,19 +98,52 @@ llamadas son bloqueantes y la ventana muestra el cursor de espera mientras tanto
 | `join_game(código, personaje)` | `GameTicket` multijugador | los de `find_game`, más los de personaje |
 | `resume_game(id)` | `GameTicket` | `UnknownGame` |
 
-El servidor valida. La UI solo limita largos, filtra caracteres y deshabilita botones:
+Las reglas están en `lobby_validation.h`, sin Qt; las usan el fake y las pantallas, así que
+aceptan exactamente lo mismo:
 
 - Usuario: `[A-Za-z0-9_]{1,16}`, porque se usa para los mensajes privados del chat (`@usuario`).
-- Partida: de 1 a 24 caracteres. Personaje: de 1 a 16. Se cuentan caracteres, no bytes, y se recortan los espacios de los extremos.
+- Puerto: un número entre 1 y 65535, sin signo ni espacios.
+- Partida (1 a 24 caracteres) y personaje (1 a 16): letras `A-Z` y `a-z`, `áéíóúüñ` y sus
+  mayúsculas, dígitos, espacio, guion y apóstrofo. Un carácter es un punto de código; con esta
+  lista coincide con lo que cuenta Qt. Se recortan solo los espacios de los extremos y se
+  rechaza el UTF-8 mal formado.
 - Índices de apariencia menores a las cantidades de `lobby_types.h`.
 - El código de invitación no distingue mayúsculas de minúsculas.
 
-`FakeLobbyClient` implementa exactamente estas reglas y sus tests sirven de especificación.
-Después del lobby, la misma conexión se usa para jugar, así que la clase real tiene que
-compartir el socket con el cliente.
+## Decisiones pendientes
 
-Para charlar con el corrector: el enunciado no dice cómo se identifica a un jugador entre
-sesiones. Acá se asume que el nombre de usuario es único en el servidor.
+**Identidad y recuperación de personajes.** Hoy, cualquiera que se conecte como `Juanceto01` ve
+sus partidas: el fake no comprueba nada más. Hay cuatro identificadores distintos:
+
+- el nombre de usuario, con el que se conecta y lo mencionan en el chat;
+- el nombre del personaje, el que se ve en el juego;
+- el identificador de la conexión, la sesión en el servidor;
+- el identificador del jugador dentro de la partida (`game::PlayerId`).
+
+Que el nombre de usuario sea único no alcanza para autorizar que una conexión recupere un
+personaje, así que `resume_game()` es provisorio. Pregunta para el corrector: «¿Qué mecanismo
+debe acreditar que una conexión puede recuperar un personaje existente? ¿Alcanza con el nombre
+de usuario para el alcance del TP?»
+
+**Paso de Qt a SDL2pp.** `run_launcher()` devuelve el ticket y destruye la `QApplication`
+antes de volver, así que SDL puede inicializarse después en el mismo proceso. Falta acordar con
+Kika y con quien implemente la red del cliente:
+
+- quién es dueño de la conexión y cómo sigue abierta después de cerrar el launcher;
+- qué datos necesita el cliente SDL además de los del ticket (partida, personaje y si es multijugador).
+
+No se agrega un socket al ticket ni se abre una segunda conexión sin acordarlo.
+
+## Qué prueban los tests
+
+- Ventana: navegación entre pantallas y errores, con el fake; teclado, pegado y Enter en los
+  campos con reglas; respuesta demorada y cierre con un pedido pendiente.
+- Fake y validación: las reglas del contrato, incluido el UTF-8 inválido.
+- Worker: orden de los pedidos, que no bloquea y que se interrumpe al destruirse.
+- Widgets: sprite y selectores.
+
+No prueban sockets, persistencia ni comunicación real con el servidor. Cada capa va a necesitar
+sus propias pruebas y, después, una de integración.
 
 ## Convenciones de la UI
 
