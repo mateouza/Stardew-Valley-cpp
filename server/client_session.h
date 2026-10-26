@@ -3,12 +3,15 @@
 
 #include <exception>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "client_receiver.h"
 #include "client_sender.h"
+#include "lobby_request.h"
 #include "match_command.h"
 #include "queue.h"
+#include "server_message.h"
 #include "server_protocol.h"
 #include "session_channel.h"
 #include "socket.h"
@@ -40,6 +43,9 @@ public:
     void join();
     bool has_finished() const;
     void rethrow_if_failed() const;
+    std::optional<LobbyRequest> receive_lobby_request();
+    void send_match_response(const MatchResponse& response);
+    void shutdown_connection();
 };
 
 #endif

@@ -113,3 +113,21 @@ void ClientSession::rethrow_if_failed() const {
         sender->rethrow_if_failed();
     }
 }
+
+std::optional<LobbyRequest> ClientSession::receive_lobby_request() {
+    if (started) {
+        throw std::logic_error("La sesion ya inicio su participacion");
+    }
+
+    return protocol.receive_lobby_request();
+}
+
+void ClientSession::send_match_response(const MatchResponse& response) {
+    if (started) {
+        throw std::logic_error("La sesion ya inicio su participacion");
+    }
+
+    protocol.send_match_response(response);
+}
+
+void ClientSession::shutdown_connection() { socket.shutdown(SHUT_RDWR); }
