@@ -1,6 +1,7 @@
 #include "qt/launcher_window.h"
 
 #include <QApplication>
+#include <QClipboard>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -215,6 +216,58 @@ TEST_F(LauncherWindowTest, GoingBackKeepsWhatWasEntered) {
     click("character_screen", "back_button");
     click("new_game_screen", "back_button");
     EXPECT_EQ(current_screen(), "main_menu_screen");
+}
+
+TEST_F(LauncherWindowTest, CharacterNameAcceptsOnlyListedCharacters) {
+    window.show();
+    open_new_game_as("juana");
+    type("new_game_screen", "game_name_input", "Granja");
+    click("new_game_screen", "continue_button");
+    auto* name_input = widget<QLineEdit>("character_screen", "character_name_input");
+    name_input->clear();
+
+    // keyClicks solo simula teclas ASCII; así se manda cada tecla con su texto, como un teclado
+    // en español.
+    for (const QChar c: QString::fromUtf8("Peñón_")) {
+        QTest::sendKeyEvent(QTest::Click, name_input, Qt::Key_unknown, QString(c), Qt::NoModifier);
+    }
+    name_input->insert(QString::fromUtf8("🙂"));
+
+    EXPECT_EQ(name_input->text(), QString::fromUtf8("Peñón"));
+    EXPECT_TRUE(widget<QPushButton>("character_screen", "confirm_button")->isEnabled());
+}
+
+TEST_F(LauncherWindowTest, PastedGameNameFollowsTheSameRules) {
+    open_new_game_as("juana");
+    auto* game_name_input = widget<QLineEdit>("new_game_screen", "game_name_input");
+
+    QApplication::clipboard()->setText(QString::fromUtf8("Granja 🙂"));
+    game_name_input->paste();
+    EXPECT_TRUE(game_name_input->text().isEmpty());
+
+    QApplication::clipboard()->setText(QString::fromUtf8("Huerta de Peñón"));
+    game_name_input->paste();
+    EXPECT_EQ(game_name_input->text(), QString::fromUtf8("Huerta de Peñón"));
+}
+
+TEST_F(LauncherWindowTest, LongGameNameIsCutAtTheLimit) {
+    open_new_game_as("juana");
+    auto* game_name_input = widget<QLineEdit>("new_game_screen", "game_name_input");
+
+    game_name_input->insert(
+            QString(static_cast<int>(lobby::MAX_GAME_NAME_LENGTH) + 1, QChar(0xF1)));
+
+    EXPECT_EQ(game_name_input->text().size(), static_cast<qsizetype>(lobby::MAX_GAME_NAME_LENGTH));
+    EXPECT_TRUE(widget<QPushButton>("new_game_screen", "continue_button")->isEnabled());
+}
+
+TEST_F(LauncherWindowTest, UsernameWithUnderscoreIsNotCopiedAsCharacterName) {
+    open_new_game_as("Mate_Capo");
+    type("new_game_screen", "game_name_input", "Granja");
+    click("new_game_screen", "continue_button");
+
+    EXPECT_TRUE(widget<QLineEdit>("character_screen", "character_name_input")->text().isEmpty());
+    EXPECT_FALSE(widget<QPushButton>("character_screen", "confirm_button")->isEnabled());
 }
 
 TEST_F(LauncherWindowTest, JoiningWithInviteCodeFinishesWithMultiplayerTicket) {

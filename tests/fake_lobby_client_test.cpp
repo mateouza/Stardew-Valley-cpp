@@ -156,6 +156,21 @@ TEST_F(FakeLobbyClientTest, CountsNameLengthInCharactersNotBytes) {
               LobbyError::InvalidCharacterName);
 }
 
+TEST_F(FakeLobbyClientTest, RejectsMalformedOrUnlistedNames) {
+    connect_as("juana");
+    const std::string stray_continuations(1000, '\x80');
+
+    EXPECT_EQ(error_of(client.create_game(stray_continuations, "valle_clasico", make_character())),
+              LobbyError::InvalidGameName);
+    EXPECT_EQ(error_of(client.create_game("Granja 🙂", "valle_clasico", make_character())),
+              LobbyError::InvalidGameName);
+    EXPECT_EQ(error_of(client.create_game("Granja", "valle_clasico",
+                                          make_character(stray_continuations))),
+              LobbyError::InvalidCharacterName);
+    EXPECT_EQ(error_of(client.create_game("Granja", "valle_clasico", make_character("\tJuana"))),
+              LobbyError::InvalidCharacterName);
+}
+
 TEST_F(FakeLobbyClientTest, RejectsUnknownWorld) {
     connect_as("juana");
 

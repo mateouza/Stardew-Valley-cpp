@@ -2,10 +2,12 @@
 #define CLIENT_QT_WIDGETS_UI_HELPERS_H_
 
 #include <QString>
+#include <cstddef>
 
 class QFrame;
 class QHBoxLayout;
 class QLabel;
+class QLineEdit;
 class QPushButton;
 class QVBoxLayout;
 class QWidget;
@@ -43,6 +45,9 @@ QHBoxLayout* create_button_row(QPushButton* left, QPushButton* right);
 void add_centered(QVBoxLayout* layout, QWidget* widget);
 
 void add_field(QVBoxLayout* layout, const QString& caption, QWidget* field);
+
+// Deja escribir o pegar solo los caracteres de lobby::count_name_characters(), hasta max_length.
+void set_name_rules(QLineEdit* input, std::size_t max_length);
 
 void set_error(QLabel* error_label, const QString& message);
 

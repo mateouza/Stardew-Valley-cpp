@@ -10,6 +10,7 @@
 #include <QVBoxLayout>
 #include <cstddef>
 
+#include "lobby/lobby_validation.h"
 #include "qt/widgets/ui_helpers.h"
 #include "qt/widgets/world_card.h"
 
@@ -27,7 +28,7 @@ NewGameScreen::NewGameScreen(QWidget* parent):
 
     game_name_input->setObjectName("game_name_input");
     game_name_input->setPlaceholderText("Ej: Granja Los Girasoles");
-    game_name_input->setMaxLength(static_cast<int>(lobby::MAX_GAME_NAME_LENGTH));
+    set_name_rules(game_name_input, lobby::MAX_GAME_NAME_LENGTH);
     continue_button->setObjectName("continue_button");
 
     QPushButton* back_button = create_button("Volver", "secondary", this);
@@ -86,7 +87,7 @@ void NewGameScreen::reset(const std::vector<lobby::WorldInfo>& available_worlds)
 void NewGameScreen::show_error(const QString& message) { set_error(error_label, message); }
 
 void NewGameScreen::update_continue_button() {
-    continue_button->setEnabled(!game_name_input->text().trimmed().isEmpty() &&
+    continue_button->setEnabled(lobby::is_valid_game_name(game_name_input->text().toStdString()) &&
                                 world_buttons->checkedId() >= 0);
 }
 

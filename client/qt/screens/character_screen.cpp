@@ -13,6 +13,7 @@
 #include <optional>
 #include <vector>
 
+#include "lobby/lobby_validation.h"
 #include "qt/widgets/character_options.h"
 #include "qt/widgets/character_preview.h"
 #include "qt/widgets/option_selector.h"
@@ -62,7 +63,7 @@ CharacterScreen::CharacterScreen(QWidget* parent):
     preview->setFixedSize(180, 252);
     name_input->setObjectName("character_name_input");
     name_input->setPlaceholderText("Ej: Juanceto01");
-    name_input->setMaxLength(static_cast<int>(lobby::MAX_CHARACTER_NAME_LENGTH));
+    set_name_rules(name_input, lobby::MAX_CHARACTER_NAME_LENGTH);
     skin_selector->setObjectName("skin_selector");
     hair_style_selector->setObjectName("hair_style_selector");
     hair_color_selector->setObjectName("hair_color_selector");
@@ -141,11 +142,13 @@ void CharacterScreen::randomize_appearance() {
 }
 
 void CharacterScreen::update_confirm_button() {
-    confirm_button->setEnabled(!name_input->text().trimmed().isEmpty());
+    confirm_button->setEnabled(lobby::is_valid_character_name(name_input->text().toStdString()));
 }
 
 void CharacterScreen::reset_character(const QString& default_name) {
-    name_input->setText(default_name.left(static_cast<int>(lobby::MAX_CHARACTER_NAME_LENGTH)));
+    // El usuario puede tener "_", que no se admite en nombres de personaje: ahí arranca vacío.
+    const bool usable = lobby::is_valid_character_name(default_name.toStdString());
+    name_input->setText(usable ? default_name : QString());
     randomize_appearance();
     set_error(error_label, "");
 }

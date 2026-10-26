@@ -5,13 +5,31 @@
 #include <QGraphicsDropShadowEffect>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QValidator>
 #include <QWidget>
+
+#include "lobby/lobby_validation.h"
 
 namespace launcher {
 
 namespace {
+
+class NameValidator: public QValidator {
+private:
+    std::size_t max_length;
+
+public:
+    NameValidator(std::size_t max_length, QObject* parent):
+            QValidator(parent), max_length(max_length) {}
+
+    State validate(QString& input, int& /*position*/) const override {
+        const auto length = lobby::count_name_characters(input.toStdString());
+        return length && *length <= max_length ? Acceptable : Invalid;
+    }
+};
 
 void add_title_shadow(QWidget* widget) {
     auto* shadow = new QGraphicsDropShadowEffect(widget);
@@ -114,6 +132,13 @@ void add_field(QVBoxLayout* layout, const QString& caption, QWidget* field) {
     layout->addSpacing(4);
     layout->addWidget(create_label(caption, "field_label"));
     layout->addWidget(field);
+}
+
+void set_name_rules(QLineEdit* input, std::size_t max_length) {
+    // Con los caracteres admitidos, cada uno ocupa una unidad de QString: el límite de Qt corta lo
+    // que se pega y el validator rechaza lo que no está en la lista.
+    input->setMaxLength(static_cast<int>(max_length));
+    input->setValidator(new NameValidator(max_length, input));
 }
 
 void set_error(QLabel* error_label, const QString& message) {

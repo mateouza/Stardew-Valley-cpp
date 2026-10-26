@@ -1,7 +1,6 @@
 #include "fake_lobby_client.h"
 
 #include <algorithm>
-#include <string_view>
 #include <utility>
 
 #include "lobby_validation.h"
@@ -10,28 +9,6 @@ namespace lobby {
 
 namespace {
 
-std::string trim(const std::string& text) {
-    const auto first = text.find_first_not_of(" \t");
-    if (first == std::string::npos) {
-        return "";
-    }
-
-    const auto last = text.find_last_not_of(" \t");
-    return text.substr(first, last - first + 1);
-}
-
-std::size_t utf8_length(std::string_view text) {
-    return std::count_if(text.begin(), text.end(),
-                         [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; });
-}
-
-bool is_valid_name(std::string_view name, std::size_t max_length) {
-    const bool has_control_characters = std::any_of(
-            name.begin(), name.end(), [](char c) { return static_cast<unsigned char>(c) < 0x20; });
-
-    return !name.empty() && utf8_length(name) <= max_length && !has_control_characters;
-}
-
 bool is_valid_appearance(const CharacterAppearance& appearance) {
     return appearance.skin_tone < SKIN_TONE_COUNT && appearance.hair_style < HAIR_STYLE_COUNT &&
            appearance.hair_color < HAIR_COLOR_COUNT && appearance.shirt_color < SHIRT_COLOR_COUNT &&
@@ -39,7 +16,7 @@ bool is_valid_appearance(const CharacterAppearance& appearance) {
 }
 
 std::optional<LobbyError> validate_character(const CharacterDraft& character) {
-    if (!is_valid_name(character.name, MAX_CHARACTER_NAME_LENGTH)) {
+    if (!is_valid_character_name(character.name)) {
         return LobbyError::InvalidCharacterName;
     }
 
@@ -51,7 +28,7 @@ std::optional<LobbyError> validate_character(const CharacterDraft& character) {
 }
 
 std::string normalize_invite_code(const std::string& invite_code) {
-    std::string normalized = trim(invite_code);
+    std::string normalized = trim_spaces(invite_code);
     std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](char c) {
         return (c >= 'a' && c <= 'z') ? static_cast<char>(c - 'a' + 'A') : c;
     });
@@ -130,7 +107,7 @@ GameTicket FakeLobbyClient::make_ticket(const StoredGame& game) const {
 
 std::optional<LobbyError> FakeLobbyClient::connect(const std::string& host, const std::string& port,
                                                    const std::string& requested_username) {
-    if (trim(host).empty() || !is_valid_port(port)) {
+    if (trim_spaces(host).empty() || !is_valid_port(port)) {
         return LobbyError::ServerUnavailable;
     }
 
@@ -172,8 +149,8 @@ LobbyResult<GameTicket> FakeLobbyClient::create_game(const std::string& game_nam
         return LobbyError::ServerUnavailable;
     }
 
-    const std::string name = trim(game_name);
-    if (!is_valid_name(name, MAX_GAME_NAME_LENGTH)) {
+    const std::string name = trim_spaces(game_name);
+    if (!is_valid_game_name(name)) {
         return LobbyError::InvalidGameName;
     }
 
@@ -181,7 +158,7 @@ LobbyResult<GameTicket> FakeLobbyClient::create_game(const std::string& game_nam
         return LobbyError::UnknownWorld;
     }
 
-    CharacterDraft draft{trim(character.name), character.appearance};
+    CharacterDraft draft{trim_spaces(character.name), character.appearance};
     if (auto error = validate_character(draft)) {
         return *error;
     }
@@ -232,7 +209,7 @@ LobbyResult<GameTicket> FakeLobbyClient::join_game(const std::string& invite_cod
         return LobbyError::GameFull;
     }
 
-    CharacterDraft draft{trim(character.name), character.appearance};
+    CharacterDraft draft{trim_spaces(character.name), character.appearance};
     if (auto error = validate_character(draft)) {
         return *error;
     }
