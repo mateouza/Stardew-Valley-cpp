@@ -6,7 +6,9 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QString>
+#include <QTest>
 #include <QtGlobal>
+#include <optional>
 #include <ostream>
 #include <stdexcept>
 #include <string>
@@ -82,19 +84,49 @@ TEST_F(LauncherWindowTest, EnablesConnectOnlyWithUsername) {
     EXPECT_TRUE(connect_button->isEnabled());
 }
 
-TEST_F(LauncherWindowTest, ShowsServerErrorAndStaysOnConnectScreen) {
-    widget<QLineEdit>("connect_screen", "port_input")->setText("puerto");
-    connect_as("juana");
+TEST_F(LauncherWindowTest, EnablesConnectOnlyWithPortInRange) {
+    type("connect_screen", "username_input", "juana");
+    auto* connect_button = widget<QPushButton>("connect_screen", "connect_button");
 
-    EXPECT_EQ(current_screen(), "connect_screen");
-    EXPECT_TRUE(shows_error("connect_screen"));
+    for (const char* port: {"0", "65536", "99999", "abc", ""}) {
+        type("connect_screen", "port_input", port);
+        EXPECT_FALSE(connect_button->isEnabled()) << port;
+    }
+    for (const char* port: {"1", "65535"}) {
+        type("connect_screen", "port_input", port);
+        EXPECT_TRUE(connect_button->isEnabled()) << port;
+    }
 }
 
-TEST_F(LauncherWindowTest, ShowsUsernameErrorFromServer) {
-    connect_as("con espacio");
+TEST_F(LauncherWindowTest, TypingInPortKeepsOnlyDigits) {
+    window.show();
+    auto* port_input = widget<QLineEdit>("connect_screen", "port_input");
+    port_input->clear();
+
+    QTest::keyClicks(port_input, "8a0-8 0");
+
+    EXPECT_EQ(port_input->text(), "8080");
+}
+
+TEST_F(LauncherWindowTest, EnterWithPortOutOfRangeDoesNotConnect) {
+    window.show();
+    type("connect_screen", "username_input", "juana");
+    type("connect_screen", "port_input", "0");
+
+    QTest::keyClick(widget<QLineEdit>("connect_screen", "port_input"), Qt::Key_Return);
 
     EXPECT_EQ(current_screen(), "connect_screen");
-    EXPECT_TRUE(shows_error("connect_screen"));
+    EXPECT_FALSE(shows_error("connect_screen"));
+}
+
+TEST_F(LauncherWindowTest, EnterWithValidPortConnects) {
+    window.show();
+    type("connect_screen", "username_input", "juana");
+    type("connect_screen", "port_input", "65535");
+
+    QTest::keyClick(widget<QLineEdit>("connect_screen", "port_input"), Qt::Key_Return);
+
+    EXPECT_EQ(current_screen(), "main_menu_screen");
 }
 
 TEST_F(LauncherWindowTest, ConnectingShowsMainMenuWithSession) {
@@ -270,6 +302,43 @@ TEST_F(LauncherWindowTest, UserWithoutGamesSeesEmptyMessage) {
 
     click("resume_screen", "back_button");
     EXPECT_EQ(current_screen(), "main_menu_screen");
+}
+
+class ConnectRejectingLobbyClient: public lobby::FakeLobbyClient {
+private:
+    lobby::LobbyError error;
+
+public:
+    explicit ConnectRejectingLobbyClient(lobby::LobbyError error): error(error) {}
+
+    std::optional<lobby::LobbyError> connect(const std::string&, const std::string&,
+                                             const std::string&) override {
+        return error;
+    }
+};
+
+QLabel* connect_error_label(const LauncherWindow& window) {
+    return window.findChild<QWidget*>("connect_screen")->findChild<QLabel*>("error_label");
+}
+
+TEST(LauncherWindowErrorsTest, ServerUnavailableKeepsConnectScreenOpen) {
+    ConnectRejectingLobbyClient lobby_client(lobby::LobbyError::ServerUnavailable);
+    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "juana"});
+    window.findChild<QPushButton*>("connect_button")->click();
+
+    EXPECT_EQ(window.findChild<QStackedWidget*>()->currentWidget()->objectName(), "connect_screen");
+    EXPECT_TRUE(connect_error_label(window)->isVisibleTo(&window));
+    EXPECT_EQ(connect_error_label(window)->text(),
+              "No se pudo conectar con el servidor. Revisá la dirección y el puerto.");
+}
+
+TEST(LauncherWindowErrorsTest, UsernameRejectedByServerShowsItsMessage) {
+    ConnectRejectingLobbyClient lobby_client(lobby::LobbyError::InvalidUsername);
+    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "juana"});
+    window.findChild<QPushButton*>("connect_button")->click();
+
+    EXPECT_EQ(window.findChild<QStackedWidget*>()->currentWidget()->objectName(), "connect_screen");
+    EXPECT_TRUE(connect_error_label(window)->text().startsWith("El nombre de usuario"));
 }
 
 class RejectingLobbyClient: public lobby::FakeLobbyClient {

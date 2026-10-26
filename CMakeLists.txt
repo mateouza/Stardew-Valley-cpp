@@ -46,6 +46,7 @@ target_compile_options(server_model PRIVATE -Wall -Wextra -Wpedantic)
 
 add_library(client_lobby STATIC
     client/lobby/fake_lobby_client.cpp
+    client/lobby/lobby_validation.cpp
 )
 
 target_include_directories(client_lobby PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/client)
@@ -154,9 +155,17 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
 
     gtest_discover_tests(fake_lobby_client_tests)
 
+    add_executable(lobby_validation_tests tests/lobby_validation_test.cpp)
+    target_link_libraries(lobby_validation_tests PRIVATE client_lobby GTest::gtest_main)
+    target_compile_options(lobby_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(lobby_validation_tests)
+
     if(BUILD_LAUNCHER)
+        find_package(Qt6 REQUIRED COMPONENTS Test)
+
         add_executable(launcher_window_tests tests/launcher_window_test.cpp)
-        target_link_libraries(launcher_window_tests PRIVATE qt_launcher GTest::gtest)
+        target_link_libraries(launcher_window_tests PRIVATE qt_launcher Qt6::Test GTest::gtest)
         target_compile_options(launcher_window_tests PRIVATE -Wall -Wextra -Wpedantic)
 
         gtest_discover_tests(launcher_window_tests

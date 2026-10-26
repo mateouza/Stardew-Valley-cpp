@@ -1,7 +1,6 @@
 #include "connect_screen.h"
 
 #include <QHBoxLayout>
-#include <QIntValidator>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -10,6 +9,7 @@
 #include <QVBoxLayout>
 
 #include "lobby/lobby_types.h"
+#include "lobby/lobby_validation.h"
 #include "qt/widgets/ui_helpers.h"
 
 namespace launcher {
@@ -31,7 +31,9 @@ ConnectScreen::ConnectScreen(const LauncherOptions& options, QWidget* parent):
             new QRegularExpressionValidator(QRegularExpression("[A-Za-z0-9_]*"), username_input));
     host_input->setObjectName("host_input");
     port_input->setObjectName("port_input");
-    port_input->setValidator(new QIntValidator(1, 65535, port_input));
+    // Solo filtra lo que se escribe; si el puerto es válido lo decide lobby::is_valid_port().
+    port_input->setValidator(
+            new QRegularExpressionValidator(QRegularExpression("[0-9]{0,5}"), port_input));
     connect_button->setObjectName("connect_button");
 
     QPushButton* quit_button = create_button("Salir", "secondary", this);
@@ -66,9 +68,10 @@ ConnectScreen::ConnectScreen(const LauncherOptions& options, QWidget* parent):
 }
 
 void ConnectScreen::update_connect_button() {
-    connect_button->setEnabled(!username_input->text().trimmed().isEmpty() &&
-                               !host_input->text().trimmed().isEmpty() &&
-                               !port_input->text().trimmed().isEmpty());
+    connect_button->setEnabled(
+            lobby::is_valid_username(username_input->text().trimmed().toStdString()) &&
+            !host_input->text().trimmed().isEmpty() &&
+            lobby::is_valid_port(port_input->text().trimmed().toStdString()));
 }
 
 void ConnectScreen::submit() {

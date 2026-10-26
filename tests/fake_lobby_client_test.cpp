@@ -52,6 +52,18 @@ TEST_F(FakeLobbyClientTest, RejectsMissingServerAddress) {
     EXPECT_EQ(client.connect("localhost", "puerto", "juana"), LobbyError::ServerUnavailable);
 }
 
+TEST_F(FakeLobbyClientTest, RejectsPortsOutOfRangeOrNotNumeric) {
+    for (const char* port: {"0", "65536", "99999", "abc", "80a", " 8080"}) {
+        EXPECT_EQ(client.connect("localhost", port, "juana"), LobbyError::ServerUnavailable)
+                << port;
+    }
+}
+
+TEST_F(FakeLobbyClientTest, AcceptsPortsAtRangeLimits) {
+    EXPECT_EQ(client.connect("localhost", "1", "juana"), std::nullopt);
+    EXPECT_EQ(client.connect("localhost", "65535", "juana"), std::nullopt);
+}
+
 TEST_F(FakeLobbyClientTest, RejectsInvalidUsernames) {
     const std::string usernames[] = {"", "con espacio", "ñandu", "@dipa",
                                      std::string(MAX_USERNAME_LENGTH + 1, 'a')};

@@ -4,6 +4,8 @@
 #include <string_view>
 #include <utility>
 
+#include "lobby_validation.h"
+
 namespace lobby {
 
 namespace {
@@ -28,20 +30,6 @@ bool is_valid_name(std::string_view name, std::size_t max_length) {
             name.begin(), name.end(), [](char c) { return static_cast<unsigned char>(c) < 0x20; });
 
     return !name.empty() && utf8_length(name) <= max_length && !has_control_characters;
-}
-
-bool is_username_character(char c) {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
-}
-
-bool is_valid_username(std::string_view username) {
-    return !username.empty() && username.size() <= MAX_USERNAME_LENGTH &&
-           std::all_of(username.begin(), username.end(), is_username_character);
-}
-
-bool is_valid_port(std::string_view port) {
-    return !port.empty() && port.size() <= 5 &&
-           std::all_of(port.begin(), port.end(), [](char c) { return c >= '0' && c <= '9'; });
 }
 
 bool is_valid_appearance(const CharacterAppearance& appearance) {
@@ -142,7 +130,7 @@ GameTicket FakeLobbyClient::make_ticket(const StoredGame& game) const {
 
 std::optional<LobbyError> FakeLobbyClient::connect(const std::string& host, const std::string& port,
                                                    const std::string& requested_username) {
-    if (trim(host).empty() || !is_valid_port(trim(port))) {
+    if (trim(host).empty() || !is_valid_port(port)) {
         return LobbyError::ServerUnavailable;
     }
 
