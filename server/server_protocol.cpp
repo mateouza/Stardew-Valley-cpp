@@ -138,3 +138,20 @@ std::optional<LobbyRequest> ServerProtocol::receive_lobby_request() {
             throw std::runtime_error("Tipo de pedido de lobby inesperado");
     }
 }
+
+void ServerProtocol::send_match_response(const MatchResponse& response) {
+    if (response.invitation_code &&
+        (response.invitation_code->empty() ||
+         response.invitation_code->size() > MAX_INVITATION_CODE_BYTES)) {
+        throw std::invalid_argument("El codigo de invitacion es invalido");
+    }
+
+    const std::array<std::uint8_t, 2> header{
+            MATCH_RESPONSE_MESSAGE, response.invitation_code ? MATCH_FOUND : MATCH_NOT_FOUND};
+
+    send_bytes(header.data(), header.size());
+
+    if (response.invitation_code) {
+        send_string(*response.invitation_code);
+    }
+}

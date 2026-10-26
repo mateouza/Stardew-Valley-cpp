@@ -24,6 +24,11 @@ void ClientSender::send_message(const ServerMessage& message) {
         return;
     }
 
+    if (const auto* response = std::get_if<MatchResponse>(&message)) {
+        protocol.send_match_response(*response);
+        return;
+    }
+
     protocol.send_game_state(std::get<game::GameState>(message));
 }
 

@@ -23,6 +23,7 @@ public:
     void send_join_response(const JoinResponse& response);
     void send_game_state(const game::GameState& state);
     std::optional<LobbyRequest> receive_lobby_request();
+    void send_match_response(const MatchResponse& response);
 };
 
 #endif

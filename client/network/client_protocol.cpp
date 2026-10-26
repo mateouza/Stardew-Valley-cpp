@@ -99,6 +99,8 @@ std::optional<ServerMessage> ClientProtocol::receive_message() {
             return ServerMessage{receive_join_response()};
         case GAME_STATE_MESSAGE:
             return ServerMessage{receive_game_state()};
+        case MATCH_RESPONSE_MESSAGE:
+            return ServerMessage{receive_match_response()};
         default:
             throw std::runtime_error("Tipo de mensaje recibido inesperado");
     }
@@ -134,4 +136,27 @@ void ClientProtocol::send_join_match(const JoinMatchRequest& request) {
     send_bytes(&message_type, sizeof(message_type));
     send_string(request.invitation_code);
     send_string(request.player_name);
+}
+
+MatchResponse ClientProtocol::receive_match_response() {
+    std::uint8_t status{};
+    receive_bytes(&status, sizeof(status));
+
+    switch (status) {
+        case MATCH_FOUND: {
+            auto code = receive_string(MAX_INVITATION_CODE_BYTES);
+
+            if (code.empty()) {
+                throw std::runtime_error("El codigo recibido no puede estar vacio");
+            }
+
+            return MatchResponse{code};
+        }
+
+        case MATCH_NOT_FOUND:
+            return MatchResponse{std::nullopt};
+
+        default:
+            throw std::runtime_error("Resultado de seleccion de partida invalido");
+    }
 }
