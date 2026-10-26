@@ -9,6 +9,7 @@
 #include <QString>
 #include <QTest>
 #include <QtGlobal>
+#include <memory>
 #include <optional>
 #include <ostream>
 #include <stdexcept>
@@ -16,6 +17,8 @@
 
 #include "gtest/gtest.h"
 #include "lobby/fake_lobby_client.h"
+
+#include "blocking_lobby_client.h"
 
 void PrintTo(const QString& text, std::ostream* os) { *os << '"' << text.toStdString() << '"'; }
 
@@ -430,6 +433,43 @@ TEST(LauncherWindowErrorsTest, ServerRejectionKeepsCharacterScreenOpen) {
     EXPECT_TRUE(error_label->isVisibleTo(&window));
     EXPECT_EQ(error_label->text(), "El mundo elegido ya no está disponible.");
     EXPECT_FALSE(window.get_ticket().has_value());
+}
+
+TEST(LauncherWindowAsyncTest, DelayedResponseDoesNotBlockTheWindow) {
+    lobby::BlockingLobbyClient lobby_client;
+    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "Juanceto02"});
+    auto* screens = window.findChild<QStackedWidget*>();
+
+    // click() vuelve aunque el servidor no conteste: el pedido quedó esperando en otro hilo.
+    window.findChild<QPushButton*>("connect_button")->click();
+    ASSERT_TRUE(lobby_client.wait_until_started());
+    QTest::qWait(50);
+
+    EXPECT_TRUE(window.is_waiting_for_lobby());
+    EXPECT_FALSE(screens->isEnabled());
+    EXPECT_EQ(screens->currentWidget()->objectName(), "connect_screen");
+
+    lobby_client.release();
+    ASSERT_TRUE(lobby_answered(window));
+    EXPECT_TRUE(screens->isEnabled());
+    EXPECT_EQ(screens->currentWidget()->objectName(), "main_menu_screen");
+}
+
+TEST(LauncherWindowAsyncTest, ClosingWithAPendingRequestInterruptsItAndCleansUp) {
+    lobby::BlockingLobbyClient lobby_client;
+    auto window = std::make_unique<LauncherWindow>(
+            lobby_client, LauncherOptions{"localhost", "8080", "Juanceto02"});
+    window->show();
+    window->findChild<QPushButton*>("connect_button")->click();
+    ASSERT_TRUE(lobby_client.wait_until_started());
+
+    window->close();
+    EXPECT_FALSE(window->get_ticket().has_value());
+
+    // Si el pedido no se interrumpiera, el destructor esperaría al hilo para siempre y vencería
+    // el timeout de ctest.
+    window.reset();
+    EXPECT_TRUE(lobby_client.was_interrupted());
 }
 
 TEST(LauncherWindowOptionsTest, PrefillsConnectionFields) {
