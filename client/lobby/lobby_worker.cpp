@@ -1,5 +1,6 @@
 #include "lobby_worker.h"
 
+#include <stdexcept>
 #include <variant>
 
 namespace lobby {
@@ -46,7 +47,9 @@ public:
 
 }
 
-LobbyWorker::LobbyWorker(LobbyClient& client): client(client) { start(); }
+LobbyWorker::LobbyWorker(LobbyClient& client): client(client), requests(MAX_PENDING_REQUESTS) {
+    start();
+}
 
 void LobbyWorker::run() {
     try {
@@ -58,7 +61,11 @@ void LobbyWorker::run() {
     } catch (const ClosedQueue&) {}
 }
 
-void LobbyWorker::submit(const LobbyRequest& request) { requests.push(request); }
+void LobbyWorker::submit(const LobbyRequest& request) {
+    if (!requests.try_push(request)) {
+        throw std::runtime_error("La cola de pedidos al lobby está llena");
+    }
+}
 
 bool LobbyWorker::try_pop_response(LobbyResponse& response) { return responses.try_pop(response); }
 

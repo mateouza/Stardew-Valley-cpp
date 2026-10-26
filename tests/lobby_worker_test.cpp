@@ -3,6 +3,7 @@
 #include <chrono>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <thread>
 #include <variant>
 #include <vector>
@@ -84,6 +85,20 @@ TEST(LobbyWorkerTest, DestroyingInterruptsThePendingRequestAndJoins) {
     worker.reset();
 
     EXPECT_TRUE(client.was_interrupted());
+}
+
+TEST(LobbyWorkerTest, SubmitNeverWaitsAndFailsWhenTheQueueIsFull) {
+    BlockingLobbyClient client;
+    LobbyWorker worker(client);
+    worker.submit(ConnectRequest{"localhost", "8080", "Juanceto02"});
+    ASSERT_TRUE(client.wait_until_started());
+
+    // El worker quedó bloqueado en el primer pedido: los siguientes se acumulan en la cola.
+    for (unsigned int i = 0; i < LobbyWorker::MAX_PENDING_REQUESTS; ++i) {
+        worker.submit(ListWorldsRequest{});
+    }
+
+    EXPECT_THROW(worker.submit(ListWorldsRequest{}), std::runtime_error);
 }
 
 TEST(LobbyWorkerTest, CanBeStoppedMoreThanOnce) {

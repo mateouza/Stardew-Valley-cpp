@@ -20,8 +20,12 @@ private:
     void run() override;
 
 public:
+    // La ventana manda de a un pedido, porque deshabilita las pantallas mientras espera.
+    static constexpr unsigned int MAX_PENDING_REQUESTS = 8;
+
     explicit LobbyWorker(LobbyClient& client);
 
+    // No espera nunca. Si ya hay MAX_PENDING_REQUESTS sin atender, lanza std::runtime_error.
     void submit(const LobbyRequest& request);
 
     // Devuelve false si todavía no hay ninguna respuesta.
