@@ -31,7 +31,7 @@ cmake --build build -j4
 ctest --test-dir build --output-on-failure
 ```
 
-- `-DBUILD_CLIENT=OFF` evita necesitar SDL2pp. El launcher se compila con `BUILD_LAUNCHER`, que está en `ON` por defecto. Con `-DBUILD_LAUNCHER=OFF` no se busca Qt.
+- `-DBUILD_CLIENT=OFF` evita necesitar SDL2pp. El launcher se compila con `BUILD_LAUNCHER` y el editor de mapas (`stardew_editor`) con `BUILD_EDITOR`; las dos están en `ON` por defecto. Con las dos en `OFF` no se busca Qt.
 - Los tests del launcher (`launcher_window_tests` y `character_widgets_tests`) usan Qt en modo `offscreen`, así que no necesitan pantalla.
 - Los del lobby (`fake_lobby_client_tests`, `lobby_validation_tests` y `lobby_worker_tests`) no dependen de Qt y se compilan siempre.
 - `make valgrind` revisa todos; los de Qt, solo si existen.

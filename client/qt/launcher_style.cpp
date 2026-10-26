@@ -11,6 +11,10 @@ QWidget {
     color: #3b2416;
 }
 
+QMainWindow[role="editor"] {
+    background-color: #fbefd5;
+}
+
 QLabel[role="logo_title"] {
     font-size: 56px;
     font-weight: bold;

@@ -25,13 +25,13 @@ sudo apt install build-essential cmake git libgtest-dev clang-format-18 cppcheck
 
 Controles verificados con clang-format 18, cppcheck 2.13.0 y pre-commit 3.6.2.
 
-Para trabajar solo con el servidor y los tests, sin compilar el cliente grafico SDL2pp ni el launcher Qt (momentaneamente):
+Para trabajar solo con el servidor y los tests, sin compilar el cliente grafico SDL2pp, el launcher Qt ni el editor de mapas (momentaneamente):
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBUILD_CLIENT=OFF -DBUILD_LAUNCHER=OFF
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBUILD_CLIENT=OFF -DBUILD_LAUNCHER=OFF -DBUILD_EDITOR=OFF
 ```
 
-Asi no se buscan Qt ni SDL. Las dependencias del launcher estan en `client/qt/README.md`.
+Asi no se buscan Qt ni SDL. Las dependencias del launcher y del editor estan en `client/qt/README.md`.
 
 Luego usar los comandos de Make.
 

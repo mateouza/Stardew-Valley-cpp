@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(BUILD_CLIENT "Compilar el cliente gráfico (requiere SDL2 y sdl2pp)" ON)
 option(BUILD_LAUNCHER "Compilar el launcher Qt (requiere Qt6 Widgets)" ON)
+option(BUILD_EDITOR "Compilar el editor de mapas Qt (requiere Qt6 Widgets)" ON)
 
 find_package(Threads REQUIRED)
 
@@ -54,12 +55,22 @@ target_include_directories(client_lobby PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/clien
 target_link_libraries(client_lobby PUBLIC game_contracts Threads::Threads)
 target_compile_options(client_lobby PRIVATE -Wall -Wextra -Wpedantic)
 
-if(BUILD_LAUNCHER)
+if(BUILD_LAUNCHER OR BUILD_EDITOR)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
+    # Hoja de estilo y helpers que comparten el launcher y el editor.
+    add_library(qt_ui STATIC
+        client/qt/launcher_style.cpp
+        client/qt/widgets/ui_helpers.cpp
+    )
+
+    target_link_libraries(qt_ui PUBLIC client_lobby Qt6::Widgets)
+    target_compile_options(qt_ui PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(BUILD_LAUNCHER)
     add_library(qt_launcher STATIC
         client/qt/launcher.cpp
-        client/qt/launcher_style.cpp
         client/qt/launcher_window.cpp
         client/qt/lobby_error_message.cpp
         client/qt/screens/character_screen.cpp
@@ -73,17 +84,31 @@ if(BUILD_LAUNCHER)
         client/qt/widgets/landscape.cpp
         client/qt/widgets/option_selector.cpp
         client/qt/widgets/saved_game_card.cpp
-        client/qt/widgets/ui_helpers.cpp
         client/qt/widgets/world_card.cpp
     )
 
     set_target_properties(qt_launcher PROPERTIES AUTOMOC ON)
-    target_link_libraries(qt_launcher PUBLIC client_lobby Qt6::Widgets)
+    target_link_libraries(qt_launcher PUBLIC qt_ui client_lobby Qt6::Widgets)
     target_compile_options(qt_launcher PRIVATE -Wall -Wextra -Wpedantic)
 
     add_executable(stardew_launcher client/qt/main.cpp)
     target_link_libraries(stardew_launcher PRIVATE qt_launcher)
     target_compile_options(stardew_launcher PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(BUILD_EDITOR)
+    add_library(qt_editor STATIC
+        editor/qt/editor_window.cpp
+    )
+
+    set_target_properties(qt_editor PROPERTIES AUTOMOC ON)
+    target_include_directories(qt_editor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(qt_editor PUBLIC qt_ui Qt6::Widgets)
+    target_compile_options(qt_editor PRIVATE -Wall -Wextra -Wpedantic)
+
+    add_executable(stardew_editor editor/main.cpp)
+    target_link_libraries(stardew_editor PRIVATE qt_editor)
+    target_compile_options(stardew_editor PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 add_library(server_core STATIC
     server/acceptor.cpp
