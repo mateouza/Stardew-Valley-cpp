@@ -74,6 +74,9 @@ target_compile_options(server PRIVATE -Wall -Wextra -Wpedantic)
 
 add_library(client_network STATIC
     client/network/client_protocol.cpp
+    client/network/network_sender.cpp
+    client/network/network_receiver.cpp
+    client/network/network_client.cpp
 )
 
 target_include_directories(client_network PUBLIC client/network)
