@@ -40,7 +40,7 @@ private:
 
 public:
     static constexpr const char* DEMO_INVITE_CODE = "VALLE1";
-    static constexpr const char* DEMO_USERS = "Pandamos, dipa";
+    static constexpr const char* DEMO_USERS = "Juanceto03, Juanceto01";
     static constexpr std::size_t MAX_PLAYERS_PER_GAME = 4;
 
     explicit FakeLobbyClient(bool with_demo_games = true);

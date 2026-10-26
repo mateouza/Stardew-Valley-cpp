@@ -51,15 +51,15 @@ FakeLobbyClient::FakeLobbyClient(bool with_demo_games):
 
 void FakeLobbyClient::seed_demo_games() {
     StoredGame& shared_farm =
-            store_game("Granja de Pandamos", "valle_clasico", "Pandamos", DEMO_INVITE_CODE);
-    shared_farm.characters.emplace("Pandamos",
-                                   CharacterDraft{"Pandamos", CharacterAppearance{1, 2, 0, 1, 0}});
-    shared_farm.characters.emplace("dipa",
-                                   CharacterDraft{"Dipa", CharacterAppearance{3, 1, 3, 4, 2}});
+            store_game("Granja de Juanceto03", "valle_clasico", "Juanceto03", DEMO_INVITE_CODE);
+    shared_farm.characters.emplace(
+            "Juanceto03", CharacterDraft{"Juanceto03", CharacterAppearance{1, 2, 0, 1, 0}});
+    shared_farm.characters.emplace(
+            "Juanceto01", CharacterDraft{"Juanceto01", CharacterAppearance{3, 1, 3, 4, 2}});
 
-    StoredGame& solo_farm = store_game("Huerta de Dipa", "orilla_del_rio", "dipa", "");
-    solo_farm.characters.emplace("dipa",
-                                 CharacterDraft{"Dipa", CharacterAppearance{3, 1, 3, 2, 1}});
+    StoredGame& solo_farm = store_game("Huerta de Juanceto01", "orilla_del_rio", "Juanceto01", "");
+    solo_farm.characters.emplace("Juanceto01",
+                                 CharacterDraft{"Juanceto01", CharacterAppearance{3, 1, 3, 2, 1}});
 }
 
 bool FakeLobbyClient::has_world(const std::string& world_id) const {

@@ -81,12 +81,12 @@ TEST_F(LauncherWindowTest, EnablesConnectOnlyWithUsername) {
     auto* connect_button = widget<QPushButton>("connect_screen", "connect_button");
     EXPECT_FALSE(connect_button->isEnabled());
 
-    widget<QLineEdit>("connect_screen", "username_input")->setText("juana");
+    widget<QLineEdit>("connect_screen", "username_input")->setText("Juanceto02");
     EXPECT_TRUE(connect_button->isEnabled());
 }
 
 TEST_F(LauncherWindowTest, EnablesConnectOnlyWithPortInRange) {
-    type("connect_screen", "username_input", "juana");
+    type("connect_screen", "username_input", "Juanceto02");
     auto* connect_button = widget<QPushButton>("connect_screen", "connect_button");
 
     for (const char* port: {"0", "65536", "99999", "abc", ""}) {
@@ -111,7 +111,7 @@ TEST_F(LauncherWindowTest, TypingInPortKeepsOnlyDigits) {
 
 TEST_F(LauncherWindowTest, EnterWithPortOutOfRangeDoesNotConnect) {
     window.show();
-    type("connect_screen", "username_input", "juana");
+    type("connect_screen", "username_input", "Juanceto02");
     type("connect_screen", "port_input", "0");
 
     QTest::keyClick(widget<QLineEdit>("connect_screen", "port_input"), Qt::Key_Return);
@@ -122,7 +122,7 @@ TEST_F(LauncherWindowTest, EnterWithPortOutOfRangeDoesNotConnect) {
 
 TEST_F(LauncherWindowTest, EnterWithValidPortConnects) {
     window.show();
-    type("connect_screen", "username_input", "juana");
+    type("connect_screen", "username_input", "Juanceto02");
     type("connect_screen", "port_input", "65535");
 
     QTest::keyClick(widget<QLineEdit>("connect_screen", "port_input"), Qt::Key_Return);
@@ -131,16 +131,16 @@ TEST_F(LauncherWindowTest, EnterWithValidPortConnects) {
 }
 
 TEST_F(LauncherWindowTest, ConnectingShowsMainMenuWithSession) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     EXPECT_EQ(current_screen(), "main_menu_screen");
     EXPECT_EQ(widget<QLabel>("main_menu_screen", "session_label")->text(),
-              "Usuario: juana · Servidor: localhost:8080");
+              "Usuario: Juanceto02 · Servidor: localhost:8080");
 }
 
 TEST_F(LauncherWindowTest, QuitClosesWithoutTicket) {
     window.show();
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     widget<QPushButton>("main_menu_screen", "quit_button")->click();
 
@@ -149,7 +149,7 @@ TEST_F(LauncherWindowTest, QuitClosesWithoutTicket) {
 }
 
 TEST_F(LauncherWindowTest, NewGameListsWorldsWithFirstOneSelected) {
-    open_new_game_as("juana");
+    open_new_game_as("Juanceto02");
 
     EXPECT_EQ(current_screen(), "new_game_screen");
     EXPECT_TRUE(widget<QPushButton>("new_game_screen", "world_valle_clasico")->isChecked());
@@ -158,7 +158,7 @@ TEST_F(LauncherWindowTest, NewGameListsWorldsWithFirstOneSelected) {
 }
 
 TEST_F(LauncherWindowTest, ContinueRequiresGameName) {
-    open_new_game_as("juana");
+    open_new_game_as("Juanceto02");
     auto* continue_button = widget<QPushButton>("new_game_screen", "continue_button");
 
     EXPECT_FALSE(continue_button->isEnabled());
@@ -170,29 +170,29 @@ TEST_F(LauncherWindowTest, ContinueRequiresGameName) {
 
 TEST_F(LauncherWindowTest, CreatingGameFinishesWithSinglePlayerTicket) {
     window.show();
-    open_new_game_as("juana");
+    open_new_game_as("Juanceto02");
     type("new_game_screen", "game_name_input", "Granja Girasol");
     click("new_game_screen", "world_orilla_del_rio");
     click("new_game_screen", "continue_button");
 
     ASSERT_EQ(current_screen(), "character_screen");
-    EXPECT_EQ(widget<QLineEdit>("character_screen", "character_name_input")->text(), "juana");
+    EXPECT_EQ(widget<QLineEdit>("character_screen", "character_name_input")->text(), "Juanceto02");
     EXPECT_EQ(widget<QLabel>("character_screen", "context_label")->text(),
               "Partida «Granja Girasol» · Mundo Orilla del Río");
     EXPECT_EQ(widget<QPushButton>("character_screen", "confirm_button")->text(), "Crear partida");
 
-    type("character_screen", "character_name_input", "Juani");
+    type("character_screen", "character_name_input", "Juanceto01");
     click("character_screen", "confirm_button");
 
     ASSERT_TRUE(window.get_ticket().has_value());
     EXPECT_EQ(window.get_ticket()->game_name, "Granja Girasol");
-    EXPECT_EQ(window.get_ticket()->character.name, "Juani");
+    EXPECT_EQ(window.get_ticket()->character.name, "Juanceto01");
     EXPECT_FALSE(window.get_ticket()->multiplayer);
     EXPECT_FALSE(window.isVisible());
 }
 
 TEST_F(LauncherWindowTest, ConfirmRequiresCharacterName) {
-    open_new_game_as("juana");
+    open_new_game_as("Juanceto02");
     type("new_game_screen", "game_name_input", "Granja");
     click("new_game_screen", "continue_button");
 
@@ -201,17 +201,17 @@ TEST_F(LauncherWindowTest, ConfirmRequiresCharacterName) {
 }
 
 TEST_F(LauncherWindowTest, GoingBackKeepsWhatWasEntered) {
-    open_new_game_as("juana");
+    open_new_game_as("Juanceto02");
     type("new_game_screen", "game_name_input", "Granja Girasol");
     click("new_game_screen", "continue_button");
-    type("character_screen", "character_name_input", "Juani");
+    type("character_screen", "character_name_input", "Juanceto01");
 
     click("character_screen", "back_button");
     EXPECT_EQ(current_screen(), "new_game_screen");
     EXPECT_EQ(widget<QLineEdit>("new_game_screen", "game_name_input")->text(), "Granja Girasol");
 
     click("new_game_screen", "continue_button");
-    EXPECT_EQ(widget<QLineEdit>("character_screen", "character_name_input")->text(), "Juani");
+    EXPECT_EQ(widget<QLineEdit>("character_screen", "character_name_input")->text(), "Juanceto01");
 
     click("character_screen", "back_button");
     click("new_game_screen", "back_button");
@@ -220,7 +220,7 @@ TEST_F(LauncherWindowTest, GoingBackKeepsWhatWasEntered) {
 
 TEST_F(LauncherWindowTest, CharacterNameAcceptsOnlyListedCharacters) {
     window.show();
-    open_new_game_as("juana");
+    open_new_game_as("Juanceto02");
     type("new_game_screen", "game_name_input", "Granja");
     click("new_game_screen", "continue_button");
     auto* name_input = widget<QLineEdit>("character_screen", "character_name_input");
@@ -228,30 +228,30 @@ TEST_F(LauncherWindowTest, CharacterNameAcceptsOnlyListedCharacters) {
 
     // keyClicks solo simula teclas ASCII; así se manda cada tecla con su texto, como un teclado
     // en español.
-    for (const QChar c: QString::fromUtf8("Peñón_")) {
+    for (const QChar c: QString::fromUtf8("Montaña_")) {
         QTest::sendKeyEvent(QTest::Click, name_input, Qt::Key_unknown, QString(c), Qt::NoModifier);
     }
     name_input->insert(QString::fromUtf8("🙂"));
 
-    EXPECT_EQ(name_input->text(), QString::fromUtf8("Peñón"));
+    EXPECT_EQ(name_input->text(), QString::fromUtf8("Montaña"));
     EXPECT_TRUE(widget<QPushButton>("character_screen", "confirm_button")->isEnabled());
 }
 
 TEST_F(LauncherWindowTest, PastedGameNameFollowsTheSameRules) {
-    open_new_game_as("juana");
+    open_new_game_as("Juanceto02");
     auto* game_name_input = widget<QLineEdit>("new_game_screen", "game_name_input");
 
     QApplication::clipboard()->setText(QString::fromUtf8("Granja 🙂"));
     game_name_input->paste();
     EXPECT_TRUE(game_name_input->text().isEmpty());
 
-    QApplication::clipboard()->setText(QString::fromUtf8("Huerta de Peñón"));
+    QApplication::clipboard()->setText(QString::fromUtf8("Huerta de Montaña"));
     game_name_input->paste();
-    EXPECT_EQ(game_name_input->text(), QString::fromUtf8("Huerta de Peñón"));
+    EXPECT_EQ(game_name_input->text(), QString::fromUtf8("Huerta de Montaña"));
 }
 
 TEST_F(LauncherWindowTest, LongGameNameIsCutAtTheLimit) {
-    open_new_game_as("juana");
+    open_new_game_as("Juanceto02");
     auto* game_name_input = widget<QLineEdit>("new_game_screen", "game_name_input");
 
     game_name_input->insert(
@@ -262,7 +262,7 @@ TEST_F(LauncherWindowTest, LongGameNameIsCutAtTheLimit) {
 }
 
 TEST_F(LauncherWindowTest, UsernameWithUnderscoreIsNotCopiedAsCharacterName) {
-    open_new_game_as("Mate_Capo");
+    open_new_game_as("Juanceto_02");
     type("new_game_screen", "game_name_input", "Granja");
     click("new_game_screen", "continue_button");
 
@@ -271,31 +271,31 @@ TEST_F(LauncherWindowTest, UsernameWithUnderscoreIsNotCopiedAsCharacterName) {
 }
 
 TEST_F(LauncherWindowTest, JoiningWithInviteCodeFinishesWithMultiplayerTicket) {
-    look_up_code_as("juana", "valle1");
+    look_up_code_as("Juanceto02", "valle1");
 
     ASSERT_EQ(current_screen(), "character_screen");
     EXPECT_EQ(widget<QLabel>("character_screen", "context_label")->text(),
-              "Te unís a «Granja de Pandamos», de Pandamos · 2/4 jugadores");
+              "Te unís a «Granja de Juanceto03», de Juanceto03 · 2/4 jugadores");
     EXPECT_EQ(widget<QPushButton>("character_screen", "confirm_button")->text(),
               "Unirme a la partida");
 
     click("character_screen", "confirm_button");
 
     ASSERT_TRUE(window.get_ticket().has_value());
-    EXPECT_EQ(window.get_ticket()->game_name, "Granja de Pandamos");
-    EXPECT_EQ(window.get_ticket()->character.name, "juana");
+    EXPECT_EQ(window.get_ticket()->game_name, "Granja de Juanceto03");
+    EXPECT_EQ(window.get_ticket()->character.name, "Juanceto02");
     EXPECT_TRUE(window.get_ticket()->multiplayer);
 }
 
 TEST_F(LauncherWindowTest, UnknownInviteCodeShowsError) {
-    look_up_code_as("juana", "NOEXISTE");
+    look_up_code_as("Juanceto02", "NOEXISTE");
 
     EXPECT_EQ(current_screen(), "join_screen");
     EXPECT_TRUE(shows_error("join_screen"));
 }
 
 TEST_F(LauncherWindowTest, JoiningOwnGameShowsError) {
-    look_up_code_as("dipa", "VALLE1");
+    look_up_code_as("Juanceto01", "VALLE1");
 
     EXPECT_EQ(current_screen(), "join_screen");
     EXPECT_EQ(widget<QLabel>("join_screen", "error_label")->text(),
@@ -303,7 +303,7 @@ TEST_F(LauncherWindowTest, JoiningOwnGameShowsError) {
 }
 
 TEST_F(LauncherWindowTest, InviteCodeIsUppercasedWhileTyping) {
-    connect_as("juana");
+    connect_as("Juanceto02");
     click("main_menu_screen", "join_button");
 
     widget<QLineEdit>("join_screen", "invite_code_input")->insert("valle1");
@@ -312,7 +312,7 @@ TEST_F(LauncherWindowTest, InviteCodeIsUppercasedWhileTyping) {
 }
 
 TEST_F(LauncherWindowTest, BackFromCharacterReturnsToJoinScreen) {
-    look_up_code_as("juana", "VALLE1");
+    look_up_code_as("Juanceto02", "VALLE1");
 
     click("character_screen", "back_button");
 
@@ -321,7 +321,7 @@ TEST_F(LauncherWindowTest, BackFromCharacterReturnsToJoinScreen) {
 }
 
 TEST_F(LauncherWindowTest, ResumeListsGamesWithMultiplayerBadge) {
-    connect_as("dipa");
+    connect_as("Juanceto01");
     click("main_menu_screen", "resume_button");
 
     ASSERT_EQ(current_screen(), "resume_screen");
@@ -333,19 +333,19 @@ TEST_F(LauncherWindowTest, ResumeListsGamesWithMultiplayerBadge) {
 }
 
 TEST_F(LauncherWindowTest, SelectingSavedGameFinishesWithTicket) {
-    connect_as("dipa");
+    connect_as("Juanceto01");
     click("main_menu_screen", "resume_button");
 
     click("resume_screen", "saved_game_partida-2");
 
     ASSERT_TRUE(window.get_ticket().has_value());
-    EXPECT_EQ(window.get_ticket()->game_name, "Huerta de Dipa");
-    EXPECT_EQ(window.get_ticket()->character.name, "Dipa");
+    EXPECT_EQ(window.get_ticket()->game_name, "Huerta de Juanceto01");
+    EXPECT_EQ(window.get_ticket()->character.name, "Juanceto01");
     EXPECT_FALSE(window.get_ticket()->multiplayer);
 }
 
 TEST_F(LauncherWindowTest, UserWithoutGamesSeesEmptyMessage) {
-    connect_as("juana");
+    connect_as("Juanceto02");
     click("main_menu_screen", "resume_button");
 
     EXPECT_EQ(current_screen(), "resume_screen");
@@ -376,7 +376,7 @@ QLabel* connect_error_label(const LauncherWindow& window) {
 
 TEST(LauncherWindowErrorsTest, ServerUnavailableKeepsConnectScreenOpen) {
     ConnectRejectingLobbyClient lobby_client(lobby::LobbyError::ServerUnavailable);
-    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "juana"});
+    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "Juanceto02"});
     window.findChild<QPushButton*>("connect_button")->click();
 
     EXPECT_EQ(window.findChild<QStackedWidget*>()->currentWidget()->objectName(), "connect_screen");
@@ -387,7 +387,7 @@ TEST(LauncherWindowErrorsTest, ServerUnavailableKeepsConnectScreenOpen) {
 
 TEST(LauncherWindowErrorsTest, UsernameRejectedByServerShowsItsMessage) {
     ConnectRejectingLobbyClient lobby_client(lobby::LobbyError::InvalidUsername);
-    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "juana"});
+    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "Juanceto02"});
     window.findChild<QPushButton*>("connect_button")->click();
 
     EXPECT_EQ(window.findChild<QStackedWidget*>()->currentWidget()->objectName(), "connect_screen");
@@ -404,7 +404,7 @@ public:
 
 TEST(LauncherWindowErrorsTest, ServerRejectionKeepsCharacterScreenOpen) {
     RejectingLobbyClient lobby_client;
-    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "juana"});
+    LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "Juanceto02"});
     window.findChild<QPushButton*>("connect_button")->click();
     window.findChild<QPushButton*>("new_game_button")->click();
     window.findChild<QLineEdit*>("game_name_input")->setText("Granja");
@@ -421,11 +421,11 @@ TEST(LauncherWindowErrorsTest, ServerRejectionKeepsCharacterScreenOpen) {
 
 TEST(LauncherWindowOptionsTest, PrefillsConnectionFields) {
     lobby::FakeLobbyClient lobby_client;
-    LauncherWindow window(lobby_client, LauncherOptions{"10.0.0.5", "9000", "dipa"});
+    LauncherWindow window(lobby_client, LauncherOptions{"10.0.0.5", "9000", "Juanceto01"});
 
     EXPECT_EQ(window.findChild<QLineEdit*>("host_input")->text(), "10.0.0.5");
     EXPECT_EQ(window.findChild<QLineEdit*>("port_input")->text(), "9000");
-    EXPECT_EQ(window.findChild<QLineEdit*>("username_input")->text(), "dipa");
+    EXPECT_EQ(window.findChild<QLineEdit*>("username_input")->text(), "Juanceto01");
 }
 
 }

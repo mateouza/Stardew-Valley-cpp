@@ -36,7 +36,7 @@ TEST(UsernameValidationTest, AcceptsLettersDigitsAndUnderscore) {
 TEST(UsernameValidationTest, RejectsEmptyLongOrOtherCharacters) {
     EXPECT_FALSE(is_valid_username(""));
     EXPECT_FALSE(is_valid_username(std::string(MAX_USERNAME_LENGTH + 1, 'a')));
-    for (const char* username: {"con espacio", "ñandu", "@dipa", "a-b"}) {
+    for (const char* username: {"con espacio", "ñandu", "@Juanceto01", "a-b"}) {
         EXPECT_FALSE(is_valid_username(username)) << username;
     }
 }
@@ -51,9 +51,9 @@ std::string repeat(const std::string& text, std::size_t times) {
 
 TEST(NameValidationTest, CountsAdmittedCharactersNotBytes) {
     EXPECT_EQ(count_name_characters(""), 0u);
-    EXPECT_EQ(count_name_characters("Peñón"), 5u);
+    EXPECT_EQ(count_name_characters("Montaña"), 7u);
     EXPECT_EQ(count_name_characters("áéíóúüñÁÉÍÓÚÜÑ"), 14u);
-    EXPECT_EQ(count_name_characters("Ana-Lía O'Brien 2"), 17u);
+    EXPECT_EQ(count_name_characters("Juanceto-01 O'Lía"), 17u);
 }
 
 TEST(NameValidationTest, RejectsMalformedUtf8) {
@@ -80,7 +80,7 @@ TEST(NameValidationTest, RejectsCharactersOutsideTheList) {
 
     for (const std::string& name:
          {std::string("Precio €"), std::string("Granja 🙂"), std::string("ç"), std::string("a_b"),
-          std::string("@dipa"), std::string("Tab\there"), std::string("Línea\n"),
+          std::string("@Juanceto01"), std::string("Tab\there"), std::string("Línea\n"),
           std::string("\x7F"), non_breaking_space, null_character}) {
         EXPECT_EQ(count_name_characters(name), std::nullopt) << name;
     }
@@ -89,9 +89,9 @@ TEST(NameValidationTest, RejectsCharactersOutsideTheList) {
 TEST(NameValidationTest, TrimsOnlySpaces) {
     EXPECT_EQ(trim_spaces("  Granja Girasol  "), "Granja Girasol");
     EXPECT_EQ(trim_spaces("   "), "");
-    EXPECT_TRUE(is_valid_character_name("  Juana  "));
-    EXPECT_FALSE(is_valid_character_name("\tJuana"));
-    EXPECT_FALSE(is_valid_character_name(std::string("\xC2\xA0") + "Juana"));
+    EXPECT_TRUE(is_valid_character_name("  Juanceto01  "));
+    EXPECT_FALSE(is_valid_character_name("\tJuanceto01"));
+    EXPECT_FALSE(is_valid_character_name(std::string("\xC2\xA0") + "Juanceto01"));
     EXPECT_FALSE(is_valid_character_name(""));
     EXPECT_FALSE(is_valid_character_name("    "));
 }

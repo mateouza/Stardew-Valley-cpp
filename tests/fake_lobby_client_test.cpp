@@ -13,7 +13,7 @@ class FakeLobbyClientTest: public ::testing::Test {
 protected:
     FakeLobbyClient client;
 
-    static CharacterDraft make_character(const std::string& name = "Juana") {
+    static CharacterDraft make_character(const std::string& name = "Juanceto01") {
         return CharacterDraft{name, CharacterAppearance{1, 1, 1, 1, 1}};
     }
 
@@ -47,25 +47,25 @@ TEST_F(FakeLobbyClientTest, RejectsRequestsBeforeConnecting) {
 }
 
 TEST_F(FakeLobbyClientTest, RejectsMissingServerAddress) {
-    EXPECT_EQ(client.connect("", "8080", "juana"), LobbyError::ServerUnavailable);
-    EXPECT_EQ(client.connect("localhost", "", "juana"), LobbyError::ServerUnavailable);
-    EXPECT_EQ(client.connect("localhost", "puerto", "juana"), LobbyError::ServerUnavailable);
+    EXPECT_EQ(client.connect("", "8080", "Juanceto02"), LobbyError::ServerUnavailable);
+    EXPECT_EQ(client.connect("localhost", "", "Juanceto02"), LobbyError::ServerUnavailable);
+    EXPECT_EQ(client.connect("localhost", "puerto", "Juanceto02"), LobbyError::ServerUnavailable);
 }
 
 TEST_F(FakeLobbyClientTest, RejectsPortsOutOfRangeOrNotNumeric) {
     for (const char* port: {"0", "65536", "99999", "abc", "80a", " 8080"}) {
-        EXPECT_EQ(client.connect("localhost", port, "juana"), LobbyError::ServerUnavailable)
+        EXPECT_EQ(client.connect("localhost", port, "Juanceto02"), LobbyError::ServerUnavailable)
                 << port;
     }
 }
 
 TEST_F(FakeLobbyClientTest, AcceptsPortsAtRangeLimits) {
-    EXPECT_EQ(client.connect("localhost", "1", "juana"), std::nullopt);
-    EXPECT_EQ(client.connect("localhost", "65535", "juana"), std::nullopt);
+    EXPECT_EQ(client.connect("localhost", "1", "Juanceto02"), std::nullopt);
+    EXPECT_EQ(client.connect("localhost", "65535", "Juanceto02"), std::nullopt);
 }
 
 TEST_F(FakeLobbyClientTest, RejectsInvalidUsernames) {
-    const std::string usernames[] = {"", "con espacio", "ñandu", "@dipa",
+    const std::string usernames[] = {"", "con espacio", "ñandu", "@Juanceto01",
                                      std::string(MAX_USERNAME_LENGTH + 1, 'a')};
     for (const std::string& username: usernames) {
         EXPECT_EQ(client.connect("localhost", "8080", username), LobbyError::InvalidUsername)
@@ -74,13 +74,13 @@ TEST_F(FakeLobbyClientTest, RejectsInvalidUsernames) {
 }
 
 TEST_F(FakeLobbyClientTest, AcceptsUsernamesWithLettersDigitsAndUnderscore) {
-    EXPECT_EQ(client.connect("localhost", "8080", "Mate_Capo1"), std::nullopt);
+    EXPECT_EQ(client.connect("localhost", "8080", "Juanceto_01"), std::nullopt);
     EXPECT_EQ(client.connect("localhost", "8080", std::string(MAX_USERNAME_LENGTH, 'a')),
               std::nullopt);
 }
 
 TEST_F(FakeLobbyClientTest, ListsAvailableWorlds) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     const auto worlds = std::get<std::vector<WorldInfo>>(client.list_worlds());
 
@@ -92,30 +92,30 @@ TEST_F(FakeLobbyClientTest, ListsAvailableWorlds) {
 }
 
 TEST_F(FakeLobbyClientTest, NewUserHasNoSavedGames) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     EXPECT_TRUE(saved_games().empty());
 }
 
 TEST_F(FakeLobbyClientTest, DemoUserHasSharedAndSoloGames) {
-    connect_as("dipa");
+    connect_as("Juanceto01");
 
     const auto games = saved_games();
 
     ASSERT_EQ(games.size(), 2u);
     EXPECT_TRUE(games[0].multiplayer);
     EXPECT_FALSE(games[1].multiplayer);
-    EXPECT_EQ(games[0].character.name, "Dipa");
+    EXPECT_EQ(games[0].character.name, "Juanceto01");
 }
 
 TEST_F(FakeLobbyClientTest, CreatesSinglePlayerGameAndListsItAsSaved) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
-    const auto ticket = std::get<GameTicket>(
-            client.create_game("  Granja Girasol  ", "orilla_del_rio", make_character(" Juana ")));
+    const auto ticket = std::get<GameTicket>(client.create_game(
+            "  Granja Girasol  ", "orilla_del_rio", make_character(" Juanceto01 ")));
 
     EXPECT_EQ(ticket.game_name, "Granja Girasol");
-    EXPECT_EQ(ticket.character.name, "Juana");
+    EXPECT_EQ(ticket.character.name, "Juanceto01");
     EXPECT_FALSE(ticket.multiplayer);
 
     const auto games = saved_games();
@@ -128,7 +128,7 @@ TEST_F(FakeLobbyClientTest, CreatesSinglePlayerGameAndListsItAsSaved) {
 }
 
 TEST_F(FakeLobbyClientTest, RejectsInvalidGameNames) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     const std::string names[] = {"", "   ", std::string(MAX_GAME_NAME_LENGTH + 1, 'g')};
     for (const std::string& name: names) {
@@ -142,7 +142,7 @@ TEST_F(FakeLobbyClientTest, RejectsInvalidGameNames) {
 }
 
 TEST_F(FakeLobbyClientTest, CountsNameLengthInCharactersNotBytes) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     std::string longest_name;
     for (std::size_t i = 0; i < MAX_CHARACTER_NAME_LENGTH; ++i) {
@@ -157,7 +157,7 @@ TEST_F(FakeLobbyClientTest, CountsNameLengthInCharactersNotBytes) {
 }
 
 TEST_F(FakeLobbyClientTest, RejectsMalformedOrUnlistedNames) {
-    connect_as("juana");
+    connect_as("Juanceto02");
     const std::string stray_continuations(1000, '\x80');
 
     EXPECT_EQ(error_of(client.create_game(stray_continuations, "valle_clasico", make_character())),
@@ -167,19 +167,20 @@ TEST_F(FakeLobbyClientTest, RejectsMalformedOrUnlistedNames) {
     EXPECT_EQ(error_of(client.create_game("Granja", "valle_clasico",
                                           make_character(stray_continuations))),
               LobbyError::InvalidCharacterName);
-    EXPECT_EQ(error_of(client.create_game("Granja", "valle_clasico", make_character("\tJuana"))),
-              LobbyError::InvalidCharacterName);
+    EXPECT_EQ(
+            error_of(client.create_game("Granja", "valle_clasico", make_character("\tJuanceto01"))),
+            LobbyError::InvalidCharacterName);
 }
 
 TEST_F(FakeLobbyClientTest, RejectsUnknownWorld) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     EXPECT_EQ(error_of(client.create_game("Granja", "desierto", make_character())),
               LobbyError::UnknownWorld);
 }
 
 TEST_F(FakeLobbyClientTest, RejectsInvalidCharacters) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     EXPECT_EQ(error_of(client.create_game("Granja", "valle_clasico", make_character("  "))),
               LobbyError::InvalidCharacterName);
@@ -191,18 +192,18 @@ TEST_F(FakeLobbyClientTest, RejectsInvalidCharacters) {
 }
 
 TEST_F(FakeLobbyClientTest, FindsGameByInviteCodeIgnoringCaseAndSpaces) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     const auto game = std::get<JoinableGameInfo>(client.find_game("  valle1 "));
 
-    EXPECT_EQ(game.game_name, "Granja de Pandamos");
-    EXPECT_EQ(game.owner, "Pandamos");
+    EXPECT_EQ(game.game_name, "Granja de Juanceto03");
+    EXPECT_EQ(game.owner, "Juanceto03");
     EXPECT_EQ(game.player_count, 2u);
     EXPECT_EQ(game.max_players, FakeLobbyClient::MAX_PLAYERS_PER_GAME);
 }
 
 TEST_F(FakeLobbyClientTest, RejectsUnknownInviteCode) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     EXPECT_EQ(error_of(client.find_game("NOEXISTE")), LobbyError::InvalidInviteCode);
     EXPECT_EQ(error_of(client.find_game("")), LobbyError::InvalidInviteCode);
@@ -211,12 +212,12 @@ TEST_F(FakeLobbyClientTest, RejectsUnknownInviteCode) {
 }
 
 TEST_F(FakeLobbyClientTest, JoinsSharedGameAsMultiplayer) {
-    connect_as("juana");
+    connect_as("Juanceto02");
 
     const auto ticket = std::get<GameTicket>(
             client.join_game(FakeLobbyClient::DEMO_INVITE_CODE, make_character()));
 
-    EXPECT_EQ(ticket.game_name, "Granja de Pandamos");
+    EXPECT_EQ(ticket.game_name, "Granja de Juanceto03");
     EXPECT_TRUE(ticket.multiplayer);
 
     const auto games = saved_games();
@@ -230,7 +231,7 @@ TEST_F(FakeLobbyClientTest, JoinsSharedGameAsMultiplayer) {
 }
 
 TEST_F(FakeLobbyClientTest, RejectsJoiningTwice) {
-    connect_as("dipa");
+    connect_as("Juanceto01");
 
     EXPECT_EQ(error_of(client.find_game(FakeLobbyClient::DEMO_INVITE_CODE)),
               LobbyError::AlreadyJoined);
@@ -252,11 +253,11 @@ TEST_F(FakeLobbyClientTest, RejectsJoiningFullGame) {
 }
 
 TEST_F(FakeLobbyClientTest, RejectsResumingForeignOrUnknownGames) {
-    connect_as("dipa");
-    const auto dipa_games = saved_games();
+    connect_as("Juanceto01");
+    const auto demo_user_games = saved_games();
 
-    connect_as("juana");
-    for (const SavedGameInfo& game: dipa_games) {
+    connect_as("Juanceto02");
+    for (const SavedGameInfo& game: demo_user_games) {
         EXPECT_EQ(error_of(client.resume_game(game.game_id)), LobbyError::UnknownGame);
     }
     EXPECT_EQ(error_of(client.resume_game("no-existe")), LobbyError::UnknownGame);
@@ -264,7 +265,7 @@ TEST_F(FakeLobbyClientTest, RejectsResumingForeignOrUnknownGames) {
 
 TEST(FakeLobbyClientWithoutDemoGamesTest, StartsWithoutGames) {
     FakeLobbyClient client(false);
-    ASSERT_EQ(client.connect("localhost", "8080", "dipa"), std::nullopt);
+    ASSERT_EQ(client.connect("localhost", "8080", "Juanceto01"), std::nullopt);
 
     EXPECT_TRUE(std::get<std::vector<SavedGameInfo>>(client.list_saved_games()).empty());
     EXPECT_EQ(std::get<LobbyError>(client.find_game(FakeLobbyClient::DEMO_INVITE_CODE)),

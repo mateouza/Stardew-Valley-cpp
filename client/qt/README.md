@@ -40,8 +40,8 @@ ctest --test-dir build --output-on-failure
 Mientras el protocolo no tenga mensajes de lobby, `stardew_launcher` usa `FakeLobbyClient`:
 
 - Cualquier nombre de usuario válido se conecta (letras, números y `_`, hasta 16).
-- Código de invitación: **`VALLE1`** ("Granja de Pandamos", 2 de 4 jugadores).
-- `dipa` tiene dos partidas guardadas: una multijugador y una individual. `Pandamos` tiene una.
+- Código de invitación: **`VALLE1`** ("Granja de Juanceto03", 2 de 4 jugadores).
+- `Juanceto01` tiene dos partidas guardadas: una multijugador y una individual. `Juanceto03` tiene una.
 - Hay tres mundos: Valle Clásico, Orilla del Río y Colinas Altas.
 
 Lo creado en una ejecución no se guarda: se pierde al cerrar.
