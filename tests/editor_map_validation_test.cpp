@@ -25,6 +25,12 @@ WorldMap complete_map() {
         map.town.set(column++, 0, tile);
     }
     map.town.set(0, 5, Tile::ExitToFarm);
+
+    for (Zone& level: map.dungeon) {
+        level.set(1, 1, Tile::DungeonExit);
+        level.set(2, 2, Tile::StairsDown);
+    }
+    map.dungeon.back().set(2, 2, Tile::Wall);
     return map;
 }
 
@@ -45,10 +51,10 @@ TEST(MapValidationTest, CompleteMapHasNoProblems) {
 TEST(MapValidationTest, EmptyMapListsEverythingMissing) {
     const Problems problems = describe(WorldMap::create_empty("Valle Juanceto"));
 
-    // 2 de la granja y 7 del pueblo.
-    EXPECT_EQ(problems.size(), 9u);
+    // 2 de la granja, 7 del pueblo, y 10 salidas y 9 escaleras de la mazmorra.
+    EXPECT_EQ(problems.size(), 28u);
     EXPECT_EQ(problems.front(), "Granja: falta «Cabaña»");
-    EXPECT_EQ(problems.back(), "Pueblo: falta «Salida a la granja»");
+    EXPECT_EQ(problems.back(), "Mazmorra, nivel 10: falta «Salida de la mazmorra»");
 }
 
 TEST(MapValidationTest, NameFollowsTheGameNameRule) {
@@ -98,6 +104,22 @@ TEST(MapValidationTest, TownNeedsEachMerchantAndPlaceOnce) {
     WorldMap map = complete_map();
     map.town.set(0, 5, Tile::Grass);
     EXPECT_EQ(describe(map), Problems{"Pueblo: falta «Salida a la granja»"});
+}
+
+TEST(MapValidationTest, EachLevelNeedsAnExitAndStairsExceptTheLast) {
+    WorldMap map = complete_map();
+    map.dungeon[0].set(2, 2, Tile::Floor);
+    map.dungeon[2].set(1, 1, Tile::Floor);
+    map.dungeon[4].set(3, 3, Tile::StairsDown);
+    map.dungeon[9].set(2, 2, Tile::StairsDown);
+
+    EXPECT_EQ(describe(map),
+              (Problems{"Mazmorra, nivel 1: falta «Escalera al siguiente nivel»",
+                        "Mazmorra, nivel 3: falta «Salida de la mazmorra»",
+                        "Mazmorra, nivel 5: sobra «Escalera al siguiente nivel»: hay 2 y tiene que "
+                        "haber 1",
+                        "Mazmorra, nivel 10: sobra «Escalera al siguiente nivel»: es el último "
+                        "nivel"}));
 }
 
 }

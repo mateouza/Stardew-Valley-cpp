@@ -47,6 +47,19 @@ std::vector<MapProblem> validate(const WorldMap& map) {
         require_exactly_one("Pueblo", map.town, tile, problems);
     }
     require_at_least_one("Pueblo", map.town, Tile::ExitToFarm, problems);
+
+    for (int number = 1; number <= WorldMap::DUNGEON_LEVELS; ++number) {
+        const std::string place = "Mazmorra, nivel " + std::to_string(number);
+        const Zone& level = map.dungeon[number - 1];
+
+        require_at_least_one(place, level, Tile::DungeonExit, problems);
+        if (number < WorldMap::DUNGEON_LEVELS) {
+            require_exactly_one(place, level, Tile::StairsDown, problems);
+        } else if (level.count(Tile::StairsDown) > 0) {
+            problems.push_back(
+                    {place, "sobra " + quoted(Tile::StairsDown) + ": es el último nivel"});
+        }
+    }
     return problems;
 }
 
