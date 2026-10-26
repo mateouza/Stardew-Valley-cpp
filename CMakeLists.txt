@@ -114,11 +114,12 @@ if(BUILD_EDITOR)
 
     add_library(qt_editor STATIC
         editor/qt/editor_window.cpp
+        editor/qt/tile_colors.cpp
     )
 
     set_target_properties(qt_editor PROPERTIES AUTOMOC ON)
     target_include_directories(qt_editor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(qt_editor PUBLIC qt_ui Qt6::Widgets)
+    target_link_libraries(qt_editor PUBLIC editor_model qt_ui Qt6::Widgets)
     target_compile_options(qt_editor PRIVATE -Wall -Wextra -Wpedantic)
 
     add_executable(stardew_editor editor/main.cpp)
@@ -246,6 +247,21 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
         target_compile_options(editor_model_tests PRIVATE -Wall -Wextra -Wpedantic)
 
         gtest_discover_tests(editor_model_tests)
+
+        find_package(Qt6 REQUIRED COMPONENTS Test)
+
+        add_executable(editor_qt_tests
+            tests/editor_qt_main.cpp
+            tests/editor_tile_colors_test.cpp
+        )
+        target_link_libraries(editor_qt_tests PRIVATE qt_editor Qt6::Test GTest::gtest)
+        target_compile_options(editor_qt_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+        gtest_discover_tests(editor_qt_tests
+            PROPERTIES
+                ENVIRONMENT QT_QPA_PLATFORM=offscreen
+                TIMEOUT 10
+        )
     endif()
 
     gtest_discover_tests(match_tests PROPERTIES TIMEOUT 5)
