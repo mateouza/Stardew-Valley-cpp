@@ -97,6 +97,14 @@ if(BUILD_LAUNCHER)
 endif()
 
 if(BUILD_EDITOR)
+    # Modelo del mapa, sin Qt.
+    add_library(editor_model STATIC
+        editor/model/tile.cpp
+    )
+
+    target_include_directories(editor_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(editor_model PRIVATE -Wall -Wextra -Wpedantic)
+
     add_library(qt_editor STATIC
         editor/qt/editor_window.cpp
     )
@@ -216,6 +224,14 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
                 ENVIRONMENT QT_QPA_PLATFORM=offscreen
                 TIMEOUT 10
         )
+    endif()
+
+    if(BUILD_EDITOR)
+        add_executable(editor_model_tests tests/editor_tile_test.cpp)
+        target_link_libraries(editor_model_tests PRIVATE editor_model GTest::gtest_main)
+        target_compile_options(editor_model_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+        gtest_discover_tests(editor_model_tests)
     endif()
 
     gtest_discover_tests(match_tests PROPERTIES TIMEOUT 5)
