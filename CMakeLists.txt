@@ -54,6 +54,7 @@ add_library(server_core STATIC
     server/match.cpp
     server/tick_scheduler.cpp
     server/match_manager.cpp
+    server/client_handler.cpp
 )
 
 target_include_directories(server_core PUBLIC server)
@@ -62,7 +63,10 @@ target_link_libraries(server_core PUBLIC course_support game_contracts server_mo
 
 target_compile_options(server_core PRIVATE -Wall -Wextra -Wpedantic)
 
-add_executable(server server/main.cpp)
+add_executable(server
+    server/main.cpp
+    server/server_application.cpp
+)
 
 target_link_libraries(server PRIVATE server_core)
 
