@@ -105,6 +105,8 @@ GameTicket FakeLobbyClient::make_ticket(const StoredGame& game) const {
     return GameTicket{game.id, game.name, game.characters.at(*username), !game.invite_code.empty()};
 }
 
+void FakeLobbyClient::interrupt() {}
+
 std::optional<LobbyError> FakeLobbyClient::connect(const std::string& host, const std::string& port,
                                                    const std::string& requested_username) {
     if (trim_spaces(host).empty() || !is_valid_port(port)) {

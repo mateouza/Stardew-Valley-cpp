@@ -47,9 +47,11 @@ target_compile_options(server_model PRIVATE -Wall -Wextra -Wpedantic)
 add_library(client_lobby STATIC
     client/lobby/fake_lobby_client.cpp
     client/lobby/lobby_validation.cpp
+    client/lobby/lobby_worker.cpp
 )
 
 target_include_directories(client_lobby PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/client)
+target_link_libraries(client_lobby PUBLIC game_contracts Threads::Threads)
 target_compile_options(client_lobby PRIVATE -Wall -Wextra -Wpedantic)
 
 if(BUILD_LAUNCHER)
@@ -160,6 +162,12 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     target_compile_options(lobby_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(lobby_validation_tests)
+
+    add_executable(lobby_worker_tests tests/lobby_worker_test.cpp)
+    target_link_libraries(lobby_worker_tests PRIVATE client_lobby GTest::gtest_main)
+    target_compile_options(lobby_worker_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(lobby_worker_tests PROPERTIES TIMEOUT 5)
 
     if(BUILD_LAUNCHER)
         find_package(Qt6 REQUIRED COMPONENTS Test)

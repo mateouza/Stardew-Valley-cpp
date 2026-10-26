@@ -9,9 +9,17 @@
 
 namespace lobby {
 
+// Pedidos al lobby del servidor. Las operaciones son bloqueantes y las llama un único hilo, el de
+// LobbyWorker, nunca el de la interfaz. No lanzan excepciones: si se pierde la conexión devuelven
+// LobbyError::ServerUnavailable. Cada implementación valida sus parámetros.
 class LobbyClient {
 public:
     virtual ~LobbyClient() = default;
+
+    // Se llama desde otro hilo para cerrar mientras una operación puede estar bloqueada. Es
+    // definitivo: la operación en curso y las siguientes tienen que terminar enseguida (por
+    // ejemplo, haciendo shutdown del socket).
+    virtual void interrupt() = 0;
 
     virtual std::optional<LobbyError> connect(const std::string& host, const std::string& port,
                                               const std::string& username) = 0;
@@ -29,6 +37,7 @@ public:
     virtual LobbyResult<GameTicket> join_game(const std::string& invite_code,
                                               const CharacterDraft& character) = 0;
 
+    // Provisorio: falta acordar cómo se acredita que la conexión puede recuperar ese personaje.
     virtual LobbyResult<GameTicket> resume_game(const std::string& game_id) = 0;
 };
 
