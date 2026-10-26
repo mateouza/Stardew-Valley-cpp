@@ -23,6 +23,11 @@ public:
 // MapFileError y deja como estaba el archivo que hubiera en path.
 void save_map(const WorldMap& map, const std::string& path);
 
+// Lanza MapFileError si no puede leer el archivo o si no respeta el formato, por ejemplo con una
+// zona de más de Zone::MAX_SIDE de lado. No revisa las reglas de validate(): de eso se ocupa el
+// editor después de abrirlo.
+WorldMap load_map(const std::string& path);
+
 }
 
 #endif
