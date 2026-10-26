@@ -6,7 +6,9 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <stdexcept>
+#include <thread>
 #include <utility>
 #include <variant>
 
@@ -21,6 +23,7 @@
 #include "client_session.h"
 #include "liberror.h"
 #include "match_manager.h"
+#include "network_client.h"
 #include "socket.h"
 
 TEST(ServerProtocolTest, ReceivesMoveRight) {
@@ -825,4 +828,182 @@ TEST_F(ClientServerProtocolTest, TwoHandlersShareMatchAndPublishMovement) {
 
     EXPECT_NO_THROW(first_handler.rethrow_if_failed());
     EXPECT_NO_THROW(second_handler.rethrow_if_failed());
+}
+
+class NetworkClientTest: public ClientServerProtocolTest {
+protected:
+    std::optional<ServerMessage> wait_message(NetworkClient& network) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{2};
+
+        while (std::chrono::steady_clock::now() < deadline) {
+            auto message = network.try_receive();
+
+            if (message) {
+                return message;
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds{1});
+        }
+
+        return std::nullopt;
+    }
+
+    bool wait_finished(NetworkClient& network) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{2};
+
+        while (std::chrono::steady_clock::now() < deadline) {
+            if (network.has_finished()) {
+                return true;
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds{1});
+        }
+
+        return network.has_finished();
+    }
+};
+
+TEST_F(NetworkClientTest, SendsQueuedRequestsInOrder) {
+    NetworkClient network(std::move(client), 16, 16);
+    network.start();
+
+    ASSERT_TRUE(network.try_send(CreateMatchRequest{"Granja", "Mateo"}));
+    ASSERT_TRUE(network.try_send(game::MoveRequest{game::MovementDirection{-1, 1}}));
+
+    const auto request = server_protocol.receive_lobby_request();
+    ASSERT_TRUE(request.has_value());
+
+    const auto* create = std::get_if<CreateMatchRequest>(&*request);
+    ASSERT_NE(create, nullptr);
+    EXPECT_EQ(create->match_name, "Granja");
+    EXPECT_EQ(create->player_name, "Mateo");
+
+    const auto movement = server_protocol.receive_move();
+    ASSERT_TRUE(movement.has_value());
+    EXPECT_EQ(movement->direction.horizontal, -1);
+    EXPECT_EQ(movement->direction.vertical, 1);
+
+    network.stop();
+    network.join();
+
+    EXPECT_NO_THROW(network.rethrow_if_failed());
+}
+
+TEST_F(NetworkClientTest, ReceivesResponsesAndStatesInOrder) {
+    NetworkClient network(std::move(client), 16, 16);
+    network.start();
+
+    server_protocol.send_match_response(MatchResponse{std::string{"ABC123"}});
+    server_protocol.send_join_response(JoinResponse{game::PlayerId{7}});
+
+    game::GameState state;
+    state.players.push_back(game::PlayerState{7, "Mateo", {2.5, 3.25}, {1, 0}, true});
+
+    server_protocol.send_game_state(state);
+
+    const auto first = wait_message(network);
+    ASSERT_TRUE(first.has_value());
+
+    const auto* selection = std::get_if<MatchResponse>(&*first);
+    ASSERT_NE(selection, nullptr);
+    ASSERT_TRUE(selection->invitation_code.has_value());
+    EXPECT_EQ(*selection->invitation_code, "ABC123");
+
+    const auto second = wait_message(network);
+    ASSERT_TRUE(second.has_value());
+
+    const auto* join = std::get_if<JoinResponse>(&*second);
+    ASSERT_NE(join, nullptr);
+
+    const auto* id = std::get_if<game::PlayerId>(&join->result);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(*id, 7u);
+
+    const auto third = wait_message(network);
+    ASSERT_TRUE(third.has_value());
+
+    const auto* received = std::get_if<game::GameState>(&*third);
+    ASSERT_NE(received, nullptr);
+    ASSERT_EQ(received->players.size(), 1u);
+
+    const auto& player = received->players.front();
+    EXPECT_EQ(player.name, "Mateo");
+    EXPECT_DOUBLE_EQ(player.position.x, 2.5);
+    EXPECT_DOUBLE_EQ(player.position.y, 3.25);
+    EXPECT_EQ(player.facing.horizontal, 1);
+    EXPECT_EQ(player.facing.vertical, 0);
+    EXPECT_TRUE(player.moving);
+
+    network.stop();
+    network.join();
+
+    EXPECT_NO_THROW(network.rethrow_if_failed());
+}
+
+TEST_F(NetworkClientTest, SupportsIdleShutdownAndRejectsRestart) {
+    NetworkClient network(std::move(client), 16, 16);
+    network.start();
+
+    EXPECT_FALSE(network.try_receive().has_value());
+
+    network.stop();
+    network.join();
+
+    EXPECT_TRUE(network.has_finished());
+    EXPECT_NO_THROW(network.stop());
+    EXPECT_NO_THROW(network.join());
+    EXPECT_NO_THROW(network.rethrow_if_failed());
+
+    EXPECT_THROW(network.start(), std::logic_error);
+    EXPECT_THROW(network.try_send(game::MoveRequest{game::MovementDirection{1, 0}}),
+                 std::logic_error);
+}
+
+TEST_F(NetworkClientTest, DetectsServerEndOfStream) {
+    NetworkClient network(std::move(client), 16, 16);
+    network.start();
+
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_TRUE(wait_finished(network));
+
+    network.stop();
+    network.join();
+
+    EXPECT_NO_THROW(network.rethrow_if_failed());
+}
+
+TEST_F(NetworkClientTest, PreservesInvalidMessageFailureAfterJoin) {
+    NetworkClient network(std::move(client), 16, 16);
+    network.start();
+
+    const std::array<std::uint8_t, 1> message{0x7F};
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 1);
+
+    EXPECT_TRUE(wait_finished(network));
+
+    network.stop();
+    network.join();
+
+    EXPECT_THROW(network.rethrow_if_failed(), std::runtime_error);
+}
+
+TEST_F(NetworkClientTest, ReportsIncomingQueueSaturation) {
+    NetworkClient network(std::move(client), 16, 1);
+    network.start();
+
+    server_protocol.send_game_state(game::GameState{});
+    server_protocol.send_game_state(game::GameState{});
+
+    EXPECT_TRUE(wait_finished(network));
+
+    network.stop();
+    network.join();
+
+    EXPECT_THROW(network.rethrow_if_failed(), std::runtime_error);
+
+    const auto message = network.try_receive();
+    ASSERT_TRUE(message.has_value());
+    EXPECT_TRUE(std::holds_alternative<game::GameState>(*message));
+    EXPECT_FALSE(network.try_receive().has_value());
 }
