@@ -1,9 +1,10 @@
 #include "launcher_window.h"
 
-#include <QApplication>
 #include <QPainter>
 #include <QStackedWidget>
+#include <QTimer>
 #include <QVBoxLayout>
+#include <chrono>
 #include <initializer_list>
 #include <utility>
 #include <variant>
@@ -23,29 +24,34 @@ namespace launcher {
 
 namespace {
 
-// Las llamadas al lobby son bloqueantes: mientras duran, el cursor indica que hay que esperar.
-class BusyCursor {
-public:
-    BusyCursor() { QApplication::setOverrideCursor(Qt::WaitCursor); }
-    ~BusyCursor() { QApplication::restoreOverrideCursor(); }
+// Cada cuánto se consulta, mientras se espera, si llegó la respuesta del lobby.
+constexpr std::chrono::milliseconds RESPONSE_POLL_INTERVAL{20};
 
-    BusyCursor(const BusyCursor&) = delete;
-    BusyCursor& operator=(const BusyCursor&) = delete;
-};
+// Si el lobby devolvió un error, lo muestra en la pantalla que hizo el pedido.
+template <typename Screen>
+std::optional<lobby::GameTicket> ticket_or_show_error(
+        const lobby::LobbyResult<lobby::GameTicket>& result, Screen* screen) {
+    if (const auto* error = std::get_if<lobby::LobbyError>(&result)) {
+        screen->show_error(lobby_error_message(*error));
+        return std::nullopt;
+    }
+    return std::get<lobby::GameTicket>(result);
+}
 
 }
 
 LauncherWindow::LauncherWindow(lobby::LobbyClient& lobby_client, const LauncherOptions& options,
                                QWidget* parent):
         QWidget(parent),
-        lobby_client(lobby_client),
+        lobby_worker(lobby_client),
         screens(new QStackedWidget(this)),
         connect_screen(new ConnectScreen(options, screens)),
         main_menu_screen(new MainMenuScreen(screens)),
         new_game_screen(new NewGameScreen(screens)),
         join_screen(new JoinScreen(screens)),
         character_screen(new CharacterScreen(screens)),
-        resume_screen(new ResumeScreen(screens)) {
+        resume_screen(new ResumeScreen(screens)),
+        response_timer(new QTimer(this)) {
     setWindowTitle("Stardew Valley");
     resize(1024, 720);
     setMinimumSize(900, 660);
@@ -59,6 +65,9 @@ LauncherWindow::LauncherWindow(lobby::LobbyClient& lobby_client, const LauncherO
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(screens);
+
+    response_timer->setInterval(RESPONSE_POLL_INTERVAL);
+    connect(response_timer, &QTimer::timeout, this, &LauncherWindow::poll_lobby);
 
     auto back_to_menu = [this] { show_screen(main_menu_screen); };
 
@@ -94,29 +103,32 @@ void LauncherWindow::show_screen(QWidget* screen) {
 
 void LauncherWindow::connect_to_server(const QString& requested_username, const QString& host,
                                        const QString& port) {
-    const BusyCursor busy;
-    const auto error = lobby_client.connect(host.toStdString(), port.toStdString(),
-                                            requested_username.toStdString());
-    if (error) {
-        connect_screen->show_error(lobby_error_message(*error));
+    username = requested_username;
+    server_address = host + ":" + port;
+    send_to_lobby(lobby::ConnectRequest{host.toStdString(), port.toStdString(),
+                                        requested_username.toStdString()});
+}
+
+void LauncherWindow::handle(const lobby::ConnectResponse& response) {
+    if (response.error) {
+        connect_screen->show_error(lobby_error_message(*response.error));
         return;
     }
 
-    username = requested_username;
-    main_menu_screen->set_session(username, host + ":" + port);
+    main_menu_screen->set_session(username, server_address);
     show_screen(main_menu_screen);
 }
 
-void LauncherWindow::open_new_game() {
-    const BusyCursor busy;
-    const auto worlds = lobby_client.list_worlds();
-    if (const auto* error = std::get_if<lobby::LobbyError>(&worlds)) {
+void LauncherWindow::open_new_game() { send_to_lobby(lobby::ListWorldsRequest{}); }
+
+void LauncherWindow::handle(const lobby::ListWorldsResponse& response) {
+    if (const auto* error = std::get_if<lobby::LobbyError>(&response.result)) {
         main_menu_screen->show_error(lobby_error_message(*error));
         return;
     }
 
     main_menu_screen->show_error("");
-    new_game_screen->reset(std::get<std::vector<lobby::WorldInfo>>(worlds));
+    new_game_screen->reset(std::get<std::vector<lobby::WorldInfo>>(response.result));
     character_screen->reset_character(username);
     show_screen(new_game_screen);
 }
@@ -139,16 +151,18 @@ void LauncherWindow::open_join() {
 }
 
 void LauncherWindow::look_up_invite_code(const QString& invite_code) {
-    const BusyCursor busy;
-    const auto result = lobby_client.find_game(invite_code.toStdString());
-    if (const auto* error = std::get_if<lobby::LobbyError>(&result)) {
+    pending_invite_code = invite_code;
+    send_to_lobby(lobby::FindGameRequest{invite_code.toStdString()});
+}
+
+void LauncherWindow::handle(const lobby::FindGameResponse& response) {
+    if (const auto* error = std::get_if<lobby::LobbyError>(&response.result)) {
         join_screen->show_error(lobby_error_message(*error));
         return;
     }
 
-    const auto& game = std::get<lobby::JoinableGameInfo>(result);
+    const auto& game = std::get<lobby::JoinableGameInfo>(response.result);
     character_purpose = CharacterPurpose::JoinGame;
-    pending_invite_code = invite_code;
     character_screen->prepare(
             QString("Te unís a «%1», de %2 · %3/%4 jugadores")
                     .arg(QString::fromStdString(game.game_name), QString::fromStdString(game.owner),
@@ -157,28 +171,27 @@ void LauncherWindow::look_up_invite_code(const QString& invite_code) {
     show_screen(character_screen);
 }
 
-void LauncherWindow::open_resume() {
-    const BusyCursor busy;
-    const auto games = lobby_client.list_saved_games();
-    if (const auto* error = std::get_if<lobby::LobbyError>(&games)) {
+void LauncherWindow::open_resume() { send_to_lobby(lobby::ListSavedGamesRequest{}); }
+
+void LauncherWindow::handle(const lobby::ListSavedGamesResponse& response) {
+    if (const auto* error = std::get_if<lobby::LobbyError>(&response.result)) {
         main_menu_screen->show_error(lobby_error_message(*error));
         return;
     }
 
     main_menu_screen->show_error("");
-    resume_screen->set_games(std::get<std::vector<lobby::SavedGameInfo>>(games));
+    resume_screen->set_games(std::get<std::vector<lobby::SavedGameInfo>>(response.result));
     show_screen(resume_screen);
 }
 
 void LauncherWindow::resume_game(const QString& game_id) {
-    const BusyCursor busy;
-    auto result = lobby_client.resume_game(game_id.toStdString());
-    if (const auto* error = std::get_if<lobby::LobbyError>(&result)) {
-        resume_screen->show_error(lobby_error_message(*error));
-        return;
-    }
+    send_to_lobby(lobby::ResumeGameRequest{game_id.toStdString()});
+}
 
-    finish(std::get<lobby::GameTicket>(std::move(result)));
+void LauncherWindow::handle(const lobby::ResumeGameResponse& response) {
+    if (auto game_ticket = ticket_or_show_error(response.result, resume_screen)) {
+        finish(std::move(*game_ticket));
+    }
 }
 
 void LauncherWindow::leave_character_screen() {
@@ -190,22 +203,49 @@ void LauncherWindow::leave_character_screen() {
 }
 
 void LauncherWindow::confirm_character(const lobby::CharacterDraft& character) {
-    const BusyCursor busy;
-    auto result = character_purpose == CharacterPurpose::NewGame ?
-                          lobby_client.create_game(pending_game_name.toStdString(),
-                                                   pending_world_id.toStdString(), character) :
-                          lobby_client.join_game(pending_invite_code.toStdString(), character);
-    if (const auto* error = std::get_if<lobby::LobbyError>(&result)) {
-        character_screen->show_error(lobby_error_message(*error));
-        return;
+    if (character_purpose == CharacterPurpose::NewGame) {
+        send_to_lobby(lobby::CreateGameRequest{pending_game_name.toStdString(),
+                                               pending_world_id.toStdString(), character});
+    } else {
+        send_to_lobby(lobby::JoinGameRequest{pending_invite_code.toStdString(), character});
     }
+}
 
-    finish(std::get<lobby::GameTicket>(std::move(result)));
+void LauncherWindow::handle(const lobby::CreateGameResponse& response) {
+    if (auto game_ticket = ticket_or_show_error(response.result, character_screen)) {
+        finish(std::move(*game_ticket));
+    }
+}
+
+void LauncherWindow::handle(const lobby::JoinGameResponse& response) {
+    if (auto game_ticket = ticket_or_show_error(response.result, character_screen)) {
+        finish(std::move(*game_ticket));
+    }
 }
 
 void LauncherWindow::finish(lobby::GameTicket game_ticket) {
     ticket = std::move(game_ticket);
     close();
+}
+
+void LauncherWindow::send_to_lobby(const lobby::LobbyRequest& request) {
+    screens->setEnabled(false);
+    setCursor(Qt::BusyCursor);
+    lobby_worker.submit(request);
+    response_timer->start();
+}
+
+void LauncherWindow::poll_lobby() {
+    lobby::LobbyResponse response;
+    if (!lobby_worker.try_pop_response(response)) {
+        return;
+    }
+
+    response_timer->stop();
+    unsetCursor();
+    screens->setEnabled(true);
+    screens->currentWidget()->setFocus();
+    std::visit([this](const auto& lobby_response) { handle(lobby_response); }, response);
 }
 
 void LauncherWindow::paintEvent(QPaintEvent* /*event*/) {
@@ -214,5 +254,7 @@ void LauncherWindow::paintEvent(QPaintEvent* /*event*/) {
 }
 
 const std::optional<lobby::GameTicket>& LauncherWindow::get_ticket() const { return ticket; }
+
+bool LauncherWindow::is_waiting_for_lobby() const { return response_timer->isActive(); }
 
 }

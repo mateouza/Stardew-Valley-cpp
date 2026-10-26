@@ -21,6 +21,12 @@ void PrintTo(const QString& text, std::ostream* os) { *os << '"' << text.toStdSt
 
 namespace launcher {
 
+// Procesa eventos, como el loop de Qt, hasta que la ventana recibe la respuesta del lobby o vence
+// el plazo. Si no había ningún pedido, vuelve enseguida.
+bool lobby_answered(const LauncherWindow& window) {
+    return QTest::qWaitFor([&window] { return !window.is_waiting_for_lobby(); }, 2000);
+}
+
 class LauncherWindowTest: public ::testing::Test {
 protected:
     lobby::FakeLobbyClient lobby_client;
@@ -47,6 +53,7 @@ protected:
 
     void click(const char* screen_name, const char* button_name) {
         widget<QPushButton>(screen_name, button_name)->click();
+        ASSERT_TRUE(lobby_answered(window));
     }
 
     void type(const char* screen_name, const char* input_name, const QString& text) {
@@ -126,6 +133,7 @@ TEST_F(LauncherWindowTest, EnterWithValidPortConnects) {
     type("connect_screen", "port_input", "65535");
 
     QTest::keyClick(widget<QLineEdit>("connect_screen", "port_input"), Qt::Key_Return);
+    ASSERT_TRUE(lobby_answered(window));
 
     EXPECT_EQ(current_screen(), "main_menu_screen");
 }
@@ -378,6 +386,7 @@ TEST(LauncherWindowErrorsTest, ServerUnavailableKeepsConnectScreenOpen) {
     ConnectRejectingLobbyClient lobby_client(lobby::LobbyError::ServerUnavailable);
     LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "Juanceto02"});
     window.findChild<QPushButton*>("connect_button")->click();
+    ASSERT_TRUE(lobby_answered(window));
 
     EXPECT_EQ(window.findChild<QStackedWidget*>()->currentWidget()->objectName(), "connect_screen");
     EXPECT_TRUE(connect_error_label(window)->isVisibleTo(&window));
@@ -389,6 +398,7 @@ TEST(LauncherWindowErrorsTest, UsernameRejectedByServerShowsItsMessage) {
     ConnectRejectingLobbyClient lobby_client(lobby::LobbyError::InvalidUsername);
     LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "Juanceto02"});
     window.findChild<QPushButton*>("connect_button")->click();
+    ASSERT_TRUE(lobby_answered(window));
 
     EXPECT_EQ(window.findChild<QStackedWidget*>()->currentWidget()->objectName(), "connect_screen");
     EXPECT_TRUE(connect_error_label(window)->text().startsWith("El nombre de usuario"));
@@ -406,10 +416,13 @@ TEST(LauncherWindowErrorsTest, ServerRejectionKeepsCharacterScreenOpen) {
     RejectingLobbyClient lobby_client;
     LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "Juanceto02"});
     window.findChild<QPushButton*>("connect_button")->click();
+    ASSERT_TRUE(lobby_answered(window));
     window.findChild<QPushButton*>("new_game_button")->click();
+    ASSERT_TRUE(lobby_answered(window));
     window.findChild<QLineEdit*>("game_name_input")->setText("Granja");
     window.findChild<QPushButton*>("continue_button")->click();
     window.findChild<QPushButton*>("confirm_button")->click();
+    ASSERT_TRUE(lobby_answered(window));
 
     auto* character_screen = window.findChild<QWidget*>("character_screen");
     auto* error_label = character_screen->findChild<QLabel*>("error_label");

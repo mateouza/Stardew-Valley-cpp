@@ -6,12 +6,15 @@
 #include <optional>
 
 #include "lobby/lobby_client.h"
+#include "lobby/lobby_requests.h"
 #include "lobby/lobby_types.h"
+#include "lobby/lobby_worker.h"
 
 #include "launcher.h"
 
 class QPaintEvent;
 class QStackedWidget;
+class QTimer;
 
 namespace launcher {
 
@@ -23,7 +26,8 @@ class NewGameScreen;
 class ResumeScreen;
 
 // Controlador del launcher: cambia de pantalla, le pide cada operación al lobby y se cierra
-// cuando consigue un ticket de partida.
+// cuando consigue un ticket de partida. Los pedidos los ejecuta LobbyWorker en otro hilo; un
+// QTimer consulta si llegó la respuesta, así que el hilo de Qt nunca espera al servidor.
 class LauncherWindow: public QWidget {
     Q_OBJECT
 
@@ -31,7 +35,7 @@ private:
     // La pantalla de personaje se comparte: esto indica si al confirmar se crea o se une.
     enum class CharacterPurpose { NewGame, JoinGame };
 
-    lobby::LobbyClient& lobby_client;
+    lobby::LobbyWorker lobby_worker;
     QStackedWidget* screens;
     ConnectScreen* connect_screen;
     MainMenuScreen* main_menu_screen;
@@ -39,8 +43,10 @@ private:
     JoinScreen* join_screen;
     CharacterScreen* character_screen;
     ResumeScreen* resume_screen;
+    QTimer* response_timer;
 
     QString username;
+    QString server_address;
     CharacterPurpose character_purpose = CharacterPurpose::NewGame;
     QString pending_game_name;
     QString pending_world_id;
@@ -60,6 +66,17 @@ private:
     void confirm_character(const lobby::CharacterDraft& character);
     void finish(lobby::GameTicket game_ticket);
 
+    // Deshabilita las pantallas hasta que llegue la respuesta, para no mandar otro pedido.
+    void send_to_lobby(const lobby::LobbyRequest& request);
+    void poll_lobby();
+    void handle(const lobby::ConnectResponse& response);
+    void handle(const lobby::ListWorldsResponse& response);
+    void handle(const lobby::ListSavedGamesResponse& response);
+    void handle(const lobby::CreateGameResponse& response);
+    void handle(const lobby::FindGameResponse& response);
+    void handle(const lobby::JoinGameResponse& response);
+    void handle(const lobby::ResumeGameResponse& response);
+
 protected:
     void paintEvent(QPaintEvent* event) override;
 
@@ -68,6 +85,8 @@ public:
                    QWidget* parent = nullptr);
 
     const std::optional<lobby::GameTicket>& get_ticket() const;
+
+    bool is_waiting_for_lobby() const;
 };
 
 }
