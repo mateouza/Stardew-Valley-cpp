@@ -100,6 +100,7 @@ if(BUILD_EDITOR)
     # Modelo del mapa, sin Qt.
     add_library(editor_model STATIC
         editor/model/tile.cpp
+        editor/model/world_map.cpp
         editor/model/zone.cpp
     )
 
@@ -230,6 +231,7 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     if(BUILD_EDITOR)
         add_executable(editor_model_tests
             tests/editor_tile_test.cpp
+            tests/editor_world_map_test.cpp
             tests/editor_zone_test.cpp
         )
         target_link_libraries(editor_model_tests PRIVATE editor_model GTest::gtest_main)
