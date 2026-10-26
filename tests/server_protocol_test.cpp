@@ -1,6 +1,8 @@
 #include "server_protocol.h"
 
 #include <array>
+#include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <memory>
@@ -12,11 +14,13 @@
 
 #include "gtest/gtest.h"
 
+#include "client_handler.h"
 #include "client_protocol.h"
 #include "client_receiver.h"
 #include "client_sender.h"
 #include "client_session.h"
 #include "liberror.h"
+#include "match_manager.h"
 #include "socket.h"
 
 TEST(ServerProtocolTest, ReceivesMoveRight) {
@@ -710,4 +714,115 @@ TEST_F(ClientServerProtocolTest, RejectsInvalidCreateBeforeSendingAnyBytes) {
     client.shutdown(SHUT_WR);
 
     EXPECT_FALSE(server_protocol.receive_lobby_request().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, HandlerStopsWithoutReceivingALobbyRequest) {
+    MatchManager manager(game::Map{{{game::TileType::Walkable}}}, {0.5, 0.5}, {2, 1.0, 0.5, 0.5},
+                         16, std::chrono::milliseconds{20});
+
+    ClientHandler handler(std::move(connection), manager, 7, 256);
+
+    handler.start();
+    handler.stop();
+    handler.join();
+
+    EXPECT_FALSE(handler.is_alive());
+    EXPECT_NO_THROW(handler.rethrow_if_failed());
+}
+
+TEST_F(ClientServerProtocolTest, TwoHandlersShareMatchAndPublishMovement) {
+    MatchManager manager(game::Map{{{game::TileType::Walkable, game::TileType::Walkable}}},
+                         {0.5, 0.5}, {2, 1.0, 0.5, 0.5}, 256, std::chrono::milliseconds{20});
+
+    ClientHandler first_handler(std::move(connection), manager, 7, 256);
+    first_handler.start();
+
+    client_protocol.send_create_match(CreateMatchRequest{"Granja", "Mateo"});
+
+    const auto selection_message = client_protocol.receive_message();
+    ASSERT_TRUE(selection_message.has_value());
+
+    const auto* selection = std::get_if<MatchResponse>(&*selection_message);
+    ASSERT_NE(selection, nullptr);
+    ASSERT_TRUE(selection->invitation_code.has_value());
+
+    const auto first_join_message = client_protocol.receive_message();
+    ASSERT_TRUE(first_join_message.has_value());
+
+    const auto* first_join = std::get_if<JoinResponse>(&*first_join_message);
+    ASSERT_NE(first_join, nullptr);
+    ASSERT_TRUE(std::holds_alternative<game::PlayerId>(first_join->result));
+
+    const auto first_id = std::get<game::PlayerId>(first_join->result);
+
+    Socket second_client("127.0.0.1", "18080");
+    Socket second_connection = listener.accept();
+    ClientProtocol second_protocol(second_client);
+    ClientHandler second_handler(std::move(second_connection), manager, 8, 256);
+
+    second_handler.start();
+
+    second_protocol.send_join_match(JoinMatchRequest{*selection->invitation_code, "Jose"});
+
+    const auto second_selection_message = second_protocol.receive_message();
+    ASSERT_TRUE(second_selection_message.has_value());
+
+    const auto* second_selection = std::get_if<MatchResponse>(&*second_selection_message);
+
+    ASSERT_NE(second_selection, nullptr);
+    EXPECT_EQ(second_selection->invitation_code, selection->invitation_code);
+
+    const auto second_join_message = second_protocol.receive_message();
+    ASSERT_TRUE(second_join_message.has_value());
+
+    const auto* second_join = std::get_if<JoinResponse>(&*second_join_message);
+    ASSERT_NE(second_join, nullptr);
+    ASSERT_TRUE(std::holds_alternative<game::PlayerId>(second_join->result));
+
+    const auto second_id = std::get<game::PlayerId>(second_join->result);
+    ASSERT_NE(first_id, second_id);
+
+    second_protocol.send_move(game::MoveRequest{game::MovementDirection{1, 0}});
+
+    bool observed_movement = false;
+
+    for (std::size_t attempt = 0; attempt < 128 && !observed_movement; ++attempt) {
+        const auto message = client_protocol.receive_message();
+        ASSERT_TRUE(message.has_value());
+
+        const auto* state = std::get_if<game::GameState>(&*message);
+        ASSERT_NE(state, nullptr);
+
+        if (state->players.size() != 2) {
+            continue;
+        }
+
+        for (const auto& player: state->players) {
+            if (player.id == first_id) {
+                EXPECT_EQ(player.name, "Mateo");
+                EXPECT_DOUBLE_EQ(player.position.x, 0.5);
+                EXPECT_DOUBLE_EQ(player.position.y, 0.5);
+            }
+
+            if (player.id == second_id && player.position.x > 0.5) {
+                EXPECT_EQ(player.name, "Jose");
+                EXPECT_DOUBLE_EQ(player.position.y, 0.5);
+                EXPECT_EQ(player.facing.horizontal, 1);
+                EXPECT_EQ(player.facing.vertical, 0);
+                EXPECT_TRUE(player.moving);
+                observed_movement = true;
+            }
+        }
+    }
+
+    EXPECT_TRUE(observed_movement);
+
+    first_handler.stop();
+    second_handler.stop();
+
+    first_handler.join();
+    second_handler.join();
+
+    EXPECT_NO_THROW(first_handler.rethrow_if_failed());
+    EXPECT_NO_THROW(second_handler.rethrow_if_failed());
 }
