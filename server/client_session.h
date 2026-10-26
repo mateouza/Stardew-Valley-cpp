@@ -3,6 +3,7 @@
 
 #include <exception>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 
@@ -24,6 +25,7 @@ private:
     std::unique_ptr<ClientReceiver> receiver;
     std::unique_ptr<ClientSender> sender;
     std::exception_ptr failure;
+    std::mutex workers_mutex;
 
     bool started = false;
     bool stopped = false;

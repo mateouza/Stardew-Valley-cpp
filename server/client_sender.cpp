@@ -48,6 +48,10 @@ void ClientSender::run() {
         if (should_keep_running() && !channel->is_closing()) {
             failure = std::current_exception();
         }
+    } catch (const std::runtime_error&) {
+        if (should_keep_running() && !channel->is_closing()) {
+            failure = std::current_exception();
+        }
     } catch (...) {
         failure = std::current_exception();
     }

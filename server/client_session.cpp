@@ -14,6 +14,9 @@ ClientSession::~ClientSession() {
 
 void ClientSession::start(Queue<MatchCommand>& commands, const std::string& name,
                           std::shared_ptr<SessionChannel> channel) {
+
+    std::lock_guard<std::mutex> lock(workers_mutex);
+
     if (started) {
         throw std::logic_error("La sesion ya fue iniciada");
     }
@@ -130,4 +133,20 @@ void ClientSession::send_match_response(const MatchResponse& response) {
     protocol.send_match_response(response);
 }
 
-void ClientSession::shutdown_connection() { socket.shutdown(SHUT_RDWR); }
+void ClientSession::shutdown_connection() {
+    std::lock_guard<std::mutex> lock(workers_mutex);
+
+    if (channel) {
+        channel->request_close();
+    }
+
+    if (receiver) {
+        receiver->stop();
+    }
+
+    if (sender) {
+        sender->stop();
+    }
+
+    socket.shutdown(SHUT_RDWR);
+}
