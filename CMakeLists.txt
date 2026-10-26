@@ -97,8 +97,11 @@ if(BUILD_LAUNCHER)
 endif()
 
 if(BUILD_EDITOR)
+    find_package(tomlplusplus 3.4 CONFIG REQUIRED)
+
     # Modelo del mapa, sin Qt.
     add_library(editor_model STATIC
+        editor/model/map_file.cpp
         editor/model/map_validation.cpp
         editor/model/tile.cpp
         editor/model/world_map.cpp
@@ -106,7 +109,7 @@ if(BUILD_EDITOR)
     )
 
     target_include_directories(editor_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(editor_model PUBLIC client_lobby)
+    target_link_libraries(editor_model PUBLIC client_lobby PRIVATE tomlplusplus::tomlplusplus)
     target_compile_options(editor_model PRIVATE -Wall -Wextra -Wpedantic)
 
     add_library(qt_editor STATIC
@@ -232,12 +235,14 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
 
     if(BUILD_EDITOR)
         add_executable(editor_model_tests
+            tests/editor_map_file_test.cpp
             tests/editor_map_validation_test.cpp
             tests/editor_tile_test.cpp
             tests/editor_world_map_test.cpp
             tests/editor_zone_test.cpp
         )
-        target_link_libraries(editor_model_tests PRIVATE editor_model GTest::gtest_main)
+        target_link_libraries(editor_model_tests
+            PRIVATE editor_model tomlplusplus::tomlplusplus GTest::gtest_main)
         target_compile_options(editor_model_tests PRIVATE -Wall -Wextra -Wpedantic)
 
         gtest_discover_tests(editor_model_tests)
