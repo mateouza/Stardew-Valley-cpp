@@ -100,6 +100,7 @@ if(BUILD_EDITOR)
     # Modelo del mapa, sin Qt.
     add_library(editor_model STATIC
         editor/model/tile.cpp
+        editor/model/zone.cpp
     )
 
     target_include_directories(editor_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -227,7 +228,10 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     endif()
 
     if(BUILD_EDITOR)
-        add_executable(editor_model_tests tests/editor_tile_test.cpp)
+        add_executable(editor_model_tests
+            tests/editor_tile_test.cpp
+            tests/editor_zone_test.cpp
+        )
         target_link_libraries(editor_model_tests PRIVATE editor_model GTest::gtest_main)
         target_compile_options(editor_model_tests PRIVATE -Wall -Wextra -Wpedantic)
 
