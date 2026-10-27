@@ -33,18 +33,23 @@ void GameLoop::process_add_player(const AddPlayerCommand& command) {
         return;
     }
 
-    const auto result = model.add_player(command.name);
-
-    if (const auto* player_id = std::get_if<game::PlayerId>(&result)) {
-        sessions.emplace(session_id, PlayerSession{*player_id, channel});
-    }
-
     try {
-        if (!channel->get_outgoing_queue().try_push(JoinResponse{result})) {
+        const auto result = model.add_player(command.name);
+
+        if (const auto* player_id = std::get_if<game::PlayerId>(&result)) {
+            sessions.emplace(session_id, PlayerSession{*player_id, channel});
+        }
+
+        try {
+            if (!channel->get_outgoing_queue().try_push(JoinResponse{result})) {
+                channel->request_close();
+            }
+        } catch (const ClosedQueue&) {
             channel->request_close();
         }
-    } catch (const ClosedQueue&) {
+    } catch (...) {
         channel->request_close();
+        throw;
     }
 }
 
