@@ -5,13 +5,10 @@
 #include <vector>
 
 #include "game_types.h"
+#include "map_data.h"
+
 
 namespace game {
-
-enum class TileType {
-    Walkable,
-    Blocked,
-};
 
 class Map {
 private:
@@ -35,6 +32,8 @@ private:
 
 public:
     explicit Map(std::vector<std::vector<TileType>> tiles);
+
+    MapData get_data() const;
 
     bool can_occupy(Position position, double width, double height) const;
 
