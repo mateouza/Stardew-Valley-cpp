@@ -11,6 +11,7 @@ option(BUILD_LAUNCHER "Compilar el launcher Qt (requiere Qt6 Widgets)" ON)
 option(BUILD_EDITOR "Compilar el editor de mapas Qt (requiere Qt6 Widgets)" ON)
 
 find_package(Threads REQUIRED)
+find_package(tomlplusplus 3.4 CONFIG REQUIRED)
 
 add_library(game_contracts INTERFACE)
 
@@ -37,12 +38,13 @@ add_library(server_model STATIC
     server/player.cpp
     server/map.cpp
     server/world.cpp
+    server/world_config.cpp
 )
 
 target_include_directories(server_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/server)
 
 target_link_libraries(server_model PUBLIC game_contracts)
-
+target_link_libraries(server_model PRIVATE tomlplusplus::tomlplusplus)
 target_compile_options(server_model PRIVATE -Wall -Wextra -Wpedantic)
 
 add_library(client_lobby STATIC
@@ -199,6 +201,16 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     )
     target_compile_options(server_protocol_tests PRIVATE -Wall -Wextra -Wpedantic)
 
+    add_executable(world_config_tests tests/world_config_test.cpp)
+    target_link_libraries(world_config_tests PRIVATE server_model GTest::gtest_main)
+    target_compile_options(world_config_tests PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_definitions(world_config_tests PRIVATE
+        TEST_WORLD_CONFIG_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/world.toml"
+    )
+
+    gtest_discover_tests(world_config_tests)
+
+
     gtest_discover_tests(server_protocol_tests
         PROPERTIES
             TIMEOUT 5
@@ -210,6 +222,12 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     target_compile_options(game_loop_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(game_loop_tests PROPERTIES TIMEOUT 5)
+
+    add_executable(world_game_loop_tests tests/world_game_loop_test.cpp)
+    target_link_libraries(world_game_loop_tests PRIVATE server_core GTest::gtest_main)
+    target_compile_options(world_game_loop_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(world_game_loop_tests PROPERTIES TIMEOUT 5)
 
     add_executable(match_tests tests/match_test.cpp)
     target_link_libraries(match_tests PRIVATE server_core GTest::gtest_main)

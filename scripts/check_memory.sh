@@ -7,8 +7,10 @@ test_binaries=(
     build/player_tests
     build/map_tests
     build/world_tests
+    build/world_config_tests
     build/server_protocol_tests
     build/game_loop_tests
+    build/world_game_loop_tests
     build/match_tests
     build/fake_lobby_client_tests
     build/lobby_validation_tests
