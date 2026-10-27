@@ -3,32 +3,12 @@
 
 #include <chrono>
 #include <string>
-#include <variant>
 
+#include "game_results.h"
 #include "game_state.h"
 #include "game_types.h"
 
 namespace game {
-
-enum class AddPlayerError {
-    GameFull,
-};
-
-using AddPlayerResult = std::variant<PlayerId, AddPlayerError>;
-
-enum class ReconnectPlayerResult {
-    Accepted,
-    UnknownPlayer,
-    AlreadyConnected,
-    GameFull,
-};
-
-enum class SetDirectionResult {
-    Accepted,
-    UnknownPlayer,
-    DisconnectedPlayer,
-    InvalidDirection,
-};
 
 class GameModel {
 public:

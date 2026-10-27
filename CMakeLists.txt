@@ -130,11 +130,14 @@ add_library(server_core STATIC
     server/acceptor.cpp
     server/client_session.cpp
     server/client_receiver.cpp
+    server/client_sender.cpp
     server/game_loop.cpp
     server/server.cpp
     server/server_protocol.cpp
     server/match.cpp
     server/tick_scheduler.cpp
+    server/match_manager.cpp
+    server/client_handler.cpp
 )
 
 target_include_directories(server_core PUBLIC server)
@@ -143,11 +146,27 @@ target_link_libraries(server_core PUBLIC course_support game_contracts server_mo
 
 target_compile_options(server_core PRIVATE -Wall -Wextra -Wpedantic)
 
-add_executable(server server/main.cpp)
+add_executable(server
+    server/main.cpp
+    server/server_application.cpp
+)
 
 target_link_libraries(server PRIVATE server_core)
 
 target_compile_options(server PRIVATE -Wall -Wextra -Wpedantic)
+
+add_library(client_network STATIC
+    client/network/client_protocol.cpp
+    client/network/network_sender.cpp
+    client/network/network_receiver.cpp
+    client/network/network_client.cpp
+)
+
+target_include_directories(client_network PUBLIC client/network)
+
+target_link_libraries(client_network PUBLIC course_support game_contracts)
+
+target_compile_options(client_network PRIVATE -Wall -Wextra -Wpedantic)
 
 include(CTest)
 
@@ -173,7 +192,11 @@ if(BUILD_TESTING)
 
     gtest_discover_tests(world_tests)
 add_executable(server_protocol_tests tests/server_protocol_test.cpp)
-    target_link_libraries(server_protocol_tests PRIVATE server_core GTest::gtest_main)
+    target_link_libraries(server_protocol_tests PRIVATE
+        server_core
+        client_network
+        GTest::gtest_main
+    )
     target_compile_options(server_protocol_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(server_protocol_tests
@@ -280,6 +303,7 @@ if(BUILD_CLIENT)
     )
 
     target_link_libraries(stardew_client PRIVATE
+        client_network
         course_support
         game_contracts
         SDL2pp::SDL2pp

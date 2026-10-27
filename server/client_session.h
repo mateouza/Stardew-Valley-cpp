@@ -1,19 +1,53 @@
 #ifndef CLIENT_SESSION_H
 #define CLIENT_SESSION_H
 
+#include <exception>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <string>
+
+#include "client_receiver.h"
+#include "client_sender.h"
+#include "lobby_request.h"
+#include "match_command.h"
+#include "queue.h"
+#include "server_message.h"
 #include "server_protocol.h"
+#include "session_channel.h"
 #include "socket.h"
 
 class ClientSession {
 private:
     Socket socket;
     ServerProtocol protocol;
+    std::shared_ptr<SessionChannel> channel;
+    std::unique_ptr<ClientReceiver> receiver;
+    std::unique_ptr<ClientSender> sender;
+    std::exception_ptr failure;
+    std::mutex workers_mutex;
+
+    bool started = false;
+    bool stopped = false;
+    bool receiver_joinable = false;
+    bool sender_joinable = false;
 
 public:
     explicit ClientSession(Socket&& socket);
+    ~ClientSession();
 
     ClientSession(const ClientSession&) = delete;
     ClientSession& operator=(const ClientSession&) = delete;
+
+    void start(Queue<MatchCommand>& commands, const std::string& name,
+               std::shared_ptr<SessionChannel> channel);
+    void stop();
+    void join();
+    bool has_finished() const;
+    void rethrow_if_failed() const;
+    std::optional<LobbyRequest> receive_lobby_request();
+    void send_match_response(const MatchResponse& response);
+    void shutdown_connection();
 };
 
 #endif

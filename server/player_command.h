@@ -2,10 +2,10 @@
 #define PLAYER_COMMAND_H
 
 #include "game_command.h"
-#include "game_types.h"
+#include "session_id.h"
 
 struct PlayerCommand {
-    game::PlayerId player_id;
+    SessionId session_id;
     game::MoveRequest request;
 };
 

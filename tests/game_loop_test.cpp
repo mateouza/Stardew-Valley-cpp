@@ -2,8 +2,11 @@
 
 #include <chrono>
 #include <cstddef>
+#include <memory>
 #include <stdexcept>
+#include <string>
 #include <utility>
+#include <variant>
 
 #include "gtest/gtest.h"
 
@@ -14,7 +17,7 @@ TEST(GameLoopTest, RejectsNonPositiveTickInterval) {
     game::Map map({{game::TileType::Walkable}});
     game::WorldConfig config{1, 1.0, 0.5, 0.5};
     game::World world(std::move(map), {0.5, 0.5}, config);
-    Queue<PlayerCommand> commands;
+    Queue<MatchCommand> commands;
 
     EXPECT_THROW((GameLoop{world, commands, std::chrono::milliseconds{0}}), std::invalid_argument);
 
@@ -34,7 +37,7 @@ public:
 
 TEST(GameLoopTest, ClosesCommandsAndPreservesFailureWhenUpdateThrows) {
     FailingWorld world;
-    Queue<PlayerCommand> commands;
+    Queue<MatchCommand> commands;
     GameLoop game_loop(world, commands, std::chrono::milliseconds{1});
 
     game_loop.start();
@@ -73,7 +76,7 @@ public:
 
 TEST(GameLoopTest, UpdatesWithoutCommandsUsingConfiguredInterval) {
     RecordingWorld world;
-    Queue<PlayerCommand> commands;
+    Queue<MatchCommand> commands;
     GameLoop game_loop(world, commands, std::chrono::milliseconds{10});
 
     game_loop.start();
@@ -87,10 +90,14 @@ TEST(GameLoopTest, UpdatesWithoutCommandsUsingConfiguredInterval) {
 
 TEST(GameLoopTest, ProcessesAtMost128CommandsBeforeUpdating) {
     RecordingWorld world;
-    Queue<PlayerCommand> commands(256);
-    const PlayerCommand command{0, game::MoveRequest{game::MovementDirection{1, 0}}};
+    Queue<MatchCommand> commands(256);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
 
-    for (std::size_t index = 0; index < 129; ++index) {
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", channel}));
+
+    const PlayerCommand command{7, game::MoveRequest{game::MovementDirection{1, 0}}};
+
+    for (std::size_t index = 0; index < 128; ++index) {
         ASSERT_TRUE(commands.try_push(command));
     }
 
@@ -99,14 +106,10 @@ TEST(GameLoopTest, ProcessesAtMost128CommandsBeforeUpdating) {
     game_loop.start();
     game_loop.join();
 
-    EXPECT_EQ(world.processed_commands, 128u);
+    EXPECT_EQ(world.processed_commands, 127u);
     EXPECT_EQ(world.updates, 1u);
 
-    PlayerCommand remaining{};
-    ASSERT_TRUE(commands.try_pop(remaining));
-    EXPECT_EQ(remaining.player_id, command.player_id);
-    EXPECT_EQ(remaining.request.direction.horizontal, 1);
-    EXPECT_EQ(remaining.request.direction.vertical, 0);
+    MatchCommand remaining;
     EXPECT_THROW(commands.try_pop(remaining), ClosedQueue);
     EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
 }
@@ -197,4 +200,203 @@ TEST(TickSchedulerTest, RejectsAccumulationOverflowWithoutChangingPendingTime) {
 
     EXPECT_EQ(scheduler.get_wait_time(), std::chrono::milliseconds{5});
     EXPECT_EQ(scheduler.advance(std::chrono::milliseconds{5}), 1u);
+}
+
+TEST(GameLoopTest, RepliesWithPlayerIdWhenAdmissionSucceeds) {
+    RecordingWorld world;
+    Queue<MatchCommand> commands(16);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", channel}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{1});
+
+    game_loop.start();
+    game_loop.join();
+
+    ServerMessage message;
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+
+    const auto* response = std::get_if<JoinResponse>(&message);
+    ASSERT_NE(response, nullptr);
+
+    const auto* player_id = std::get_if<game::PlayerId>(&response->result);
+    ASSERT_NE(player_id, nullptr);
+    EXPECT_EQ(*player_id, 0u);
+
+    EXPECT_TRUE(channel->is_closing());
+    EXPECT_TRUE(world.get_state().players.empty());
+    EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
+}
+
+TEST(GameLoopTest, RepliesWithGameFullWhenThereIsNoCapacity) {
+    RecordingWorld world;
+    Queue<MatchCommand> commands(16);
+    auto first_channel = std::make_shared<SessionChannel>(7, 16);
+    auto second_channel = std::make_shared<SessionChannel>(8, 16);
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", first_channel}));
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Jose", second_channel}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{1});
+
+    game_loop.start();
+    game_loop.join();
+
+    ServerMessage message;
+    ASSERT_TRUE(second_channel->get_outgoing_queue().try_pop(message));
+
+    const auto* response = std::get_if<JoinResponse>(&message);
+    ASSERT_NE(response, nullptr);
+
+    const auto* error = std::get_if<game::AddPlayerError>(&response->result);
+    ASSERT_NE(error, nullptr);
+    EXPECT_EQ(*error, game::AddPlayerError::GameFull);
+
+    EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
+}
+
+class PublishingWorld: public game::World {
+private:
+    std::size_t updates = 0;
+
+public:
+    PublishingWorld():
+            game::World(game::Map{{{game::TileType::Walkable, game::TileType::Walkable}}},
+                        {0.5, 0.5}, game::WorldConfig{1, 1.0, 0.5, 0.5}) {}
+
+    void update_world(std::chrono::duration<double> elapsed) override {
+        ++updates;
+
+        if (updates == 2) {
+            throw std::runtime_error("Fin de la prueba de publicacion");
+        }
+
+        game::World::update_world(elapsed);
+    }
+};
+
+TEST(GameLoopTest, PublishesStateAfterApplyingMovement) {
+    PublishingWorld world;
+    Queue<MatchCommand> commands(16);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", channel}));
+    ASSERT_TRUE(
+            commands.try_push(PlayerCommand{7, game::MoveRequest{game::MovementDirection{1, 0}}}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{20});
+
+    game_loop.start();
+    game_loop.join();
+
+    ServerMessage message;
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+    ASSERT_TRUE(std::holds_alternative<JoinResponse>(message));
+
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+
+    const auto* state = std::get_if<game::GameState>(&message);
+    ASSERT_NE(state, nullptr);
+    ASSERT_EQ(state->players.size(), 1u);
+
+    const auto& player = state->players.front();
+
+    EXPECT_EQ(player.id, 0u);
+    EXPECT_EQ(player.name, "Mateo");
+    EXPECT_DOUBLE_EQ(player.position.x, 0.52);
+    EXPECT_DOUBLE_EQ(player.position.y, 0.5);
+    EXPECT_EQ(player.facing.horizontal, 1);
+    EXPECT_EQ(player.facing.vertical, 0);
+    EXPECT_TRUE(player.moving);
+
+    EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
+    EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
+}
+
+class PendingJoinFailureWorld: public game::World {
+public:
+    PendingJoinFailureWorld():
+            game::World(game::Map{{{game::TileType::Walkable}}}, {0.5, 0.5},
+                        game::WorldConfig{1, 1.0, 0.5, 0.5}) {}
+
+    void update_world(std::chrono::duration<double>) override {
+        throw std::runtime_error("Fallo de prueba con ingreso pendiente");
+    }
+};
+
+TEST(GameLoopTest, ClosesPendingJoinChannelWhenUpdateFails) {
+    PendingJoinFailureWorld world;
+    Queue<MatchCommand> commands(256);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+
+    for (std::size_t index = 0; index < 128; ++index) {
+        ASSERT_TRUE(commands.try_push(
+                PlayerCommand{7, game::MoveRequest{game::MovementDirection{1, 0}}}));
+    }
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", channel}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{1});
+
+    game_loop.start();
+    game_loop.join();
+
+    EXPECT_TRUE(channel->is_closing());
+
+    ServerMessage message;
+    EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
+
+    MatchCommand pending;
+    EXPECT_THROW(commands.try_pop(pending), ClosedQueue);
+
+    try {
+        game_loop.rethrow_if_failed();
+        ADD_FAILURE() << "No se propago el fallo del modelo";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(), "Fallo de prueba con ingreso pendiente");
+    }
+}
+
+class FailingAdmissionWorld: public game::World {
+public:
+    FailingAdmissionWorld():
+            game::World(game::Map{{{game::TileType::Walkable}}}, {0.5, 0.5},
+                        game::WorldConfig{2, 1.0, 0.5, 0.5}) {}
+
+    game::AddPlayerResult add_player(const std::string&) override {
+        throw std::runtime_error("Fallo de ingreso de prueba");
+    }
+};
+
+TEST(GameLoopTest, ClosesFailedAndPendingJoinChannelsWhenAdmissionThrows) {
+    FailingAdmissionWorld world;
+    Queue<MatchCommand> commands(16);
+    auto failed_channel = std::make_shared<SessionChannel>(7, 16);
+    auto pending_channel = std::make_shared<SessionChannel>(8, 16);
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", failed_channel}));
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Jose", pending_channel}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{1});
+
+    game_loop.start();
+    game_loop.join();
+
+    EXPECT_TRUE(failed_channel->is_closing());
+    EXPECT_TRUE(pending_channel->is_closing());
+
+    ServerMessage message;
+    EXPECT_THROW(failed_channel->get_outgoing_queue().try_pop(message), ClosedQueue);
+    EXPECT_THROW(pending_channel->get_outgoing_queue().try_pop(message), ClosedQueue);
+
+    MatchCommand remaining;
+    EXPECT_THROW(commands.try_pop(remaining), ClosedQueue);
+
+    try {
+        game_loop.rethrow_if_failed();
+        FAIL() << "No se propago el fallo de ingreso";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(), "Fallo de ingreso de prueba");
+    }
 }
