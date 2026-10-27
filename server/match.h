@@ -4,14 +4,14 @@
 #include <chrono>
 
 #include "game_loop.h"
-#include "player_command.h"
+#include "match_command.h"
 #include "queue.h"
 #include "world.h"
 
 class Match {
 private:
     game::World model;
-    Queue<PlayerCommand> commands;
+    Queue<MatchCommand> commands;
     GameLoop game_loop;
     bool started = false;
     bool joined = false;
@@ -27,7 +27,7 @@ public:
     void join();
     void rethrow_if_failed() const;
 
-    Queue<PlayerCommand>& get_commands();
+    Queue<MatchCommand>& get_commands();
 };
 
 #endif

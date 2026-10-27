@@ -56,4 +56,4 @@ void Match::rethrow_if_failed() const {
     game_loop.rethrow_if_failed();
 }
 
-Queue<PlayerCommand>& Match::get_commands() { return commands; }
+Queue<MatchCommand>& Match::get_commands() { return commands; }
