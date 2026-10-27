@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <stdexcept>
 #include <utility>
 
@@ -24,6 +25,27 @@ Map::Map(std::vector<std::vector<TileType>> tiles): tiles(std::move(tiles)) {
             }
         }
     }
+}
+
+MapData Map::get_data() const {
+    const auto width = tiles.front().size();
+    const auto height = tiles.size();
+    if (!std::in_range<std::uint32_t>(width) || !std::in_range<std::uint32_t>(height)) {
+        throw std::overflow_error("Las dimensiones del mapa no entran en MapData");
+    }
+
+    MapData data;
+    data.width = static_cast<std::uint32_t>(width);
+    data.height = static_cast<std::uint32_t>(height);
+    if (height > data.tiles.max_size() / width) {
+        throw std::length_error("El mapa supera la capacidad del vector de celdas");
+    }
+
+    data.tiles.reserve(width * height);
+    for (const auto& row: tiles) {
+        data.tiles.insert(data.tiles.end(), row.begin(), row.end());
+    }
+    return data;
 }
 
 Map::TileRange Map::get_tile_range(Position position, Position destination, double width,

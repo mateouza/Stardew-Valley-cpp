@@ -50,6 +50,50 @@ TEST(MapConstructionTest, SupportsRectangularMaps) {
     EXPECT_FALSE(map.can_occupy({0.5, 1.5}, 1.0, 1.0));
 }
 
+TEST(MapDataTest, ExportsRectangularMapInRowOrder) {
+    const Map map{{{TileType::Walkable, TileType::Blocked, TileType::Blocked},
+                   {TileType::Blocked, TileType::Walkable, TileType::Walkable}}};
+
+    const auto data = map.get_data();
+    const std::vector<TileType> expected = {TileType::Walkable, TileType::Blocked,
+                                            TileType::Blocked,  TileType::Blocked,
+                                            TileType::Walkable, TileType::Walkable};
+
+    EXPECT_EQ(data.width, 3u);
+    EXPECT_EQ(data.height, 2u);
+    EXPECT_EQ(data.tiles, expected);
+}
+
+TEST(MapDataTest, ExportsSingleTileMap) {
+    const Map map{{{TileType::Blocked}}};
+
+    const auto data = map.get_data();
+
+    EXPECT_EQ(data.width, 1u);
+    EXPECT_EQ(data.height, 1u);
+    ASSERT_EQ(data.tiles.size(), 1u);
+    EXPECT_EQ(data.tiles.at(0), TileType::Blocked);
+}
+
+TEST_F(MapTest, ExportedDataIsIndependentOfTheMap) {
+    auto data = map.get_data();
+    data.width = 1;
+    data.height = 1;
+    data.tiles.at(0) = TileType::Blocked;
+    data.tiles.at(4) = TileType::Walkable;
+    data.tiles.clear();
+
+    EXPECT_TRUE(map.can_occupy({0.5, 0.5}, 0.5, 0.5));
+    EXPECT_FALSE(map.can_occupy({1.5, 1.5}, 0.5, 0.5));
+
+    const auto original = map.get_data();
+    EXPECT_EQ(original.width, 3u);
+    EXPECT_EQ(original.height, 3u);
+    ASSERT_EQ(original.tiles.size(), 9u);
+    EXPECT_EQ(original.tiles.at(0), TileType::Walkable);
+    EXPECT_EQ(original.tiles.at(4), TileType::Blocked);
+}
+
 TEST_F(MapTest, AcceptsBodyInsideWalkableTile) {
     EXPECT_TRUE(map.can_occupy({0.5, 0.5}, 0.5, 0.5));
 }
