@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <utility>
 #include <variant>
 
@@ -354,5 +355,48 @@ TEST(GameLoopTest, ClosesPendingJoinChannelWhenUpdateFails) {
         ADD_FAILURE() << "No se propago el fallo del modelo";
     } catch (const std::runtime_error& error) {
         EXPECT_STREQ(error.what(), "Fallo de prueba con ingreso pendiente");
+    }
+}
+
+class FailingAdmissionWorld: public game::World {
+public:
+    FailingAdmissionWorld():
+            game::World(game::Map{{{game::TileType::Walkable}}}, {0.5, 0.5},
+                        game::WorldConfig{2, 1.0, 0.5, 0.5}) {}
+
+    game::AddPlayerResult add_player(const std::string&) override {
+        throw std::runtime_error("Fallo de ingreso de prueba");
+    }
+};
+
+TEST(GameLoopTest, ClosesFailedAndPendingJoinChannelsWhenAdmissionThrows) {
+    FailingAdmissionWorld world;
+    Queue<MatchCommand> commands(16);
+    auto failed_channel = std::make_shared<SessionChannel>(7, 16);
+    auto pending_channel = std::make_shared<SessionChannel>(8, 16);
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", failed_channel}));
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Jose", pending_channel}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{1});
+
+    game_loop.start();
+    game_loop.join();
+
+    EXPECT_TRUE(failed_channel->is_closing());
+    EXPECT_TRUE(pending_channel->is_closing());
+
+    ServerMessage message;
+    EXPECT_THROW(failed_channel->get_outgoing_queue().try_pop(message), ClosedQueue);
+    EXPECT_THROW(pending_channel->get_outgoing_queue().try_pop(message), ClosedQueue);
+
+    MatchCommand remaining;
+    EXPECT_THROW(commands.try_pop(remaining), ClosedQueue);
+
+    try {
+        game_loop.rethrow_if_failed();
+        FAIL() << "No se propago el fallo de ingreso";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(), "Fallo de ingreso de prueba");
     }
 }
