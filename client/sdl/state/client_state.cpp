@@ -1,12 +1,18 @@
 #include "client_state.h"
 
-ClientState::ClientState(double x_inicial, double y_inicial): x(x_inicial), y(y_inicial) {}
+ClientState::ClientState(game::PlayerId id_propio): id_propio(id_propio) {}
 
-double ClientState::obtener_x() const { return x; }
+game::PlayerId ClientState::obtener_id_propio() const {
+    return id_propio;
+}
 
-double ClientState::obtener_y() const { return y; }
+void ClientState::actualizar(const game::GameState& estado) {
+    jugadores.clear();
+    for (const auto& jugador: estado.players) {
+        jugadores[jugador.id] = jugador;
+    }
+}
 
-void ClientState::mover_a(double nuevo_x, double nuevo_y) {
-    x = nuevo_x;
-    y = nuevo_y;
+const std::map<game::PlayerId, game::PlayerState>& ClientState::obtener_jugadores() const {
+    return jugadores;
 }

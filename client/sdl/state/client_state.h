@@ -1,18 +1,24 @@
 #ifndef CLIENT_STATE_H
 #define CLIENT_STATE_H
 
+#include <map>
+
+#include "game_state.h"
+#include "game_types.h"
+
 class ClientState {
 private:
-    double x;
-    double y;
+    game::PlayerId id_propio;
+    std::map<game::PlayerId, game::PlayerState> jugadores;
 
 public:
-    ClientState(double x_inicial, double y_inicial);
+    explicit ClientState(game::PlayerId id_propio);
 
-    double obtener_x() const;
-    double obtener_y() const;
+    game::PlayerId obtener_id_propio() const;
 
-    void mover_a(double nuevo_x, double nuevo_y);
+    void actualizar(const game::GameState& estado);
+
+    const std::map<game::PlayerId, game::PlayerState>& obtener_jugadores() const;
 };
 
 #endif
