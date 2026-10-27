@@ -5,13 +5,10 @@
 #include <vector>
 
 #include "game_types.h"
+#include "map_data.h"
+
 
 namespace game {
-
-enum class TileType {
-    Walkable,
-    Blocked,
-};
 
 class Map {
 private:
