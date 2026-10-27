@@ -25,11 +25,13 @@ sudo apt install build-essential cmake git libgtest-dev clang-format-18 cppcheck
 
 Controles verificados con clang-format 18, cppcheck 2.13.0 y pre-commit 3.6.2.
 
-Para trabajar solo con el servidor y los tests sin compilar el cliente grafico SDL2PP (momentaneamente):
+Para trabajar solo con el servidor y los tests, sin compilar el cliente grafico SDL2pp, el launcher Qt ni el editor de mapas (momentaneamente):
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBUILD_CLIENT=OFF
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBUILD_CLIENT=OFF -DBUILD_LAUNCHER=OFF -DBUILD_EDITOR=OFF
 ```
+
+Asi no se buscan Qt ni SDL. Las dependencias del launcher y del editor estan en `client/qt/README.md`.
 
 Luego usar los comandos de Make.
 
@@ -76,6 +78,6 @@ make valgrind
 
 Los tests de protocolo necesitan el puerto TCP 18080 libre. No ejecutar simultaneamente distintas ejecuciones de tests o Valgrind que utilicen ese puerto.
 
-Valgrind ejecuta los binarios de tests secuencialmente. La lista se mantiene en `scripts/check_memory.sh`.
+Valgrind ejecuta los binarios de tests secuencialmente. La lista se mantiene en `scripts/check_memory.sh`. Los tests del launcher Qt se revisan solo si se compilaron (`BUILD_LAUNCHER=ON`), con `QT_QPA_PLATFORM=offscreen`.
 
 Cada binario tiene un limite de 60 segundos y 5 segundos adicionales antes del cierre forzado.
