@@ -39,6 +39,7 @@ add_library(server_model STATIC
     server/map.cpp
     server/world.cpp
     server/world_config.cpp
+    server/demo_map.cpp
 )
 
 target_include_directories(server_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/server)
@@ -182,7 +183,10 @@ if(BUILD_TESTING)
 
     gtest_discover_tests(player_tests)
 
-    add_executable(map_tests tests/map_test.cpp)
+    add_executable(map_tests
+        tests/map_test.cpp
+        tests/demo_map_test.cpp
+    )
     target_link_libraries(map_tests PRIVATE server_model GTest::gtest_main)
     target_compile_options(map_tests PRIVATE -Wall -Wextra -Wpedantic)
 
