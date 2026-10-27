@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "server.h"
+#include "world_config.h"
 
 game::Map ServerApplication::make_initial_map() {
     constexpr std::size_t MAP_WIDTH = 10;
@@ -26,7 +27,7 @@ int ServerApplication::run(int argc, char* argv[]) {
     try {
         auto map = make_initial_map();
         const game::Position spawn_position{0.5, 0.5};
-        const game::WorldConfig config{4, 2.0, 0.6, 0.6};
+        const game::WorldConfig config = game::load_world_config("config/world.toml");
 
         Server server(argv[1], std::move(map), spawn_position, config);
         server.run();
