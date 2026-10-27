@@ -1,0 +1,92 @@
+name = 'Mapa de ejemplo'
+version = 1
+
+[farm]
+height = 14
+rows = [
+    'oooooooooooooooooooo',
+    'oggggggggggggggggggo',
+    'oggHgggggggggg~~gggo',
+    'ogg.ggggggggg~~~~ggo',
+    'ogg.gggggggggg~~gggo',
+    'ogg.....gggggggggggo',
+    'ogggggg.ggggoooggggo',
+    'ogggggg.ggggoooggggo',
+    'ogggggg............>',
+    'oggggggggggggggggggo',
+    'oggooggggggggggggggo',
+    'oggooggggggggggggggo',
+    'oggggggggggggggggggo',
+    'oooooooooooooooooooo'
+]
+width = 20
+
+[town]
+height = 14
+rows = [
+    'oooooooooooooooooooo',
+    'oggggggggggggggggggo',
+    'oggMggggggUgggggPggo',
+    'ogg.gggggg.ggggg.ggo',
+    'ogg.gggggg.ggggg.ggo',
+    'ogg..............ggo',
+    'ogggggggg.gggggggggo',
+    '<.........gg~~~~gggo',
+    'ogggggggg.gggggggggo',
+    'ogg..............ggo',
+    'ogg.gggggg.ggggg.ggo',
+    'ogg.gggggg.ggggg.ggo',
+    'oggCggggggEgggggRggo',
+    'oooooooooooooooooooo'
+]
+width = 20
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#_______S#', '##########' ]
+width = 10
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#_______S#', '##########' ]
+width = 10
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#_______S#', '##########' ]
+width = 10
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#_______S#', '##########' ]
+width = 10
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#_______S#', '##########' ]
+width = 10
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#_______S#', '##########' ]
+width = 10
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#_______S#', '##########' ]
+width = 10
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#_______S#', '##########' ]
+width = 10
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#_______S#', '##########' ]
+width = 10
+
+[[dungeon]]
+height = 6
+rows = [ '##########', '#X______##', '#__##___##', '#__##____#', '#________#', '##########' ]
+width = 10

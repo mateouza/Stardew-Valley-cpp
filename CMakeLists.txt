@@ -281,6 +281,7 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
 
     if(BUILD_EDITOR)
         add_executable(editor_model_tests
+            tests/editor_example_map_test.cpp
             tests/editor_map_file_test.cpp
             tests/editor_map_validation_test.cpp
             tests/editor_tile_test.cpp
@@ -290,6 +291,9 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
         target_link_libraries(editor_model_tests
             PRIVATE editor_model tomlplusplus::tomlplusplus GTest::gtest_main)
         target_compile_options(editor_model_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_definitions(editor_model_tests PRIVATE
+            EXAMPLE_MAP_PATH="${CMAKE_CURRENT_SOURCE_DIR}/maps/example.toml"
+        )
 
         gtest_discover_tests(editor_model_tests)
 
