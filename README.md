@@ -16,11 +16,11 @@ Trabajo final grupal de Taller de Programacion I, Catedra Veiga, FIUBA.
 
 ## Dependencias
 
-Ubuntu 24.04, incluyendo WSL. Se requiere C++20 y CMake 3.28 o superior.
+Ubuntu 24.04, incluyendo WSL. Se requiere C++20, CMake 3.28 o superior y toml++ 3.4 o superior para cargar la configuracion TOML.
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake git libgtest-dev clang-format-18 cppcheck pre-commit valgrind
+sudo apt install build-essential cmake git libgtest-dev libtomlplusplus-dev clang-format-18 cppcheck pre-commit valgrind
 ```
 
 Controles verificados con clang-format 18, cppcheck 2.13.0 y pre-commit 3.6.2.
