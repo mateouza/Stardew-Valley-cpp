@@ -33,6 +33,8 @@ private:
 public:
     explicit Map(std::vector<std::vector<TileType>> tiles);
 
+    MapData get_data() const;
+
     bool can_occupy(Position position, double width, double height) const;
 
     Position resolve_movement(Position position, Position destination, double width,
