@@ -1,22 +1,13 @@
 #include "server_application.h"
 
-#include <cstddef>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <utility>
-#include <vector>
 
+#include "demo_map.h"
 #include "server.h"
 #include "world_config.h"
-
-game::Map ServerApplication::make_initial_map() {
-    constexpr std::size_t MAP_WIDTH = 10;
-    constexpr std::size_t MAP_HEIGHT = 10;
-
-    return game::Map{std::vector<std::vector<game::TileType>>(
-            MAP_HEIGHT, std::vector<game::TileType>(MAP_WIDTH, game::TileType::Walkable))};
-}
 
 int ServerApplication::run(int argc, char* argv[]) {
     if (argc != 2) {
@@ -25,11 +16,10 @@ int ServerApplication::run(int argc, char* argv[]) {
     }
 
     try {
-        auto map = make_initial_map();
-        const game::Position spawn_position{0.5, 0.5};
+        auto demo = game::make_demo_map();
         const game::WorldConfig config = game::load_world_config("config/world.toml");
 
-        Server server(argv[1], std::move(map), spawn_position, config);
+        Server server(argv[1], std::move(demo.map), demo.spawn_position, config);
         server.run();
 
         return EXIT_SUCCESS;
