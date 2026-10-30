@@ -84,9 +84,12 @@ int main(int argc, char* argv[]) {
             std::cerr << "El servidor no respondio a tiempo a la solicitud de partida\n";
             return EXIT_FAILURE;
         }
-        if (respuesta_partida->invitation_code) {
-            std::cout << "Codigo de invitacion: " << *respuesta_partida->invitation_code << '\n';
+        if (!respuesta_partida->invitation_code) {
+            std::cerr << "No se encontro la partida\n";
+            return EXIT_FAILURE;
         }
+        std::cout << "Codigo de invitacion: " << *respuesta_partida->invitation_code << '\n';
+
 
         std::optional<JoinResponse> respuesta_union = esperar_mensaje<JoinResponse>(client, ESPERA_RESPUESTA);
         if (!respuesta_union) {
@@ -100,6 +103,9 @@ int main(int argc, char* argv[]) {
         }
 
         ClientState estado_cliente(*id_propio);
+
+        SDL2pp::SDL sdl(SDL_INIT_VIDEO);
+        SDL2pp::SDLImage sdl_image(IMG_INIT_PNG);
 
         SDLWindow ventana("Stardew Valley", 800, 600, false);
         Renderer renderer(ventana.obtener_handle());
@@ -134,6 +140,8 @@ int main(int argc, char* argv[]) {
             if (entrada.direccion.horizontal != ultima_direccion_enviada.horizontal ||
                 entrada.direccion.vertical != ultima_direccion_enviada.vertical) {
                 pendiente  = entrada.direccion;
+            } else {
+                pendiente.reset();
             }
             
             if (pendiente) {
