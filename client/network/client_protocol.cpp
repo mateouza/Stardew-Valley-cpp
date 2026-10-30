@@ -1,7 +1,9 @@
 #include "client_protocol.h"
 
 #include <array>
+#include <cstddef>
 #include <stdexcept>
+#include <vector>
 
 ClientProtocol::ClientProtocol(Socket& socket): ProtocolBase(socket) {}
 
@@ -101,6 +103,8 @@ std::optional<ServerMessage> ClientProtocol::receive_message() {
             return ServerMessage{receive_game_state()};
         case MATCH_RESPONSE_MESSAGE:
             return ServerMessage{receive_match_response()};
+        case GAME_INFO_MESSAGE:
+            return ServerMessage{receive_game_info()};
         default:
             throw std::runtime_error("Tipo de mensaje recibido inesperado");
     }
@@ -159,4 +163,45 @@ MatchResponse ClientProtocol::receive_match_response() {
         default:
             throw std::runtime_error("Resultado de seleccion de partida invalido");
     }
+}
+
+game::GameInfo ClientProtocol::receive_game_info() {
+    game::GameInfo info;
+
+    info.map.width = receive_uint32();
+    info.map.height = receive_uint32();
+
+    if (info.map.width == 0 || info.map.height == 0) {
+        throw std::runtime_error("Las dimensiones recibidas del mapa son invalidas");
+    }
+
+    const auto count = static_cast<std::uint64_t>(info.map.width) * info.map.height;
+
+    if (count > MAX_MAP_CELLS) {
+        throw std::length_error("El mapa recibido supera el limite de celdas");
+    }
+
+    info.player_width = receive_double();
+    info.player_height = receive_double();
+
+    if (info.player_width <= 0.0 || info.player_height <= 0.0 ||
+        info.player_width > info.map.width || info.player_height > info.map.height) {
+        throw std::runtime_error("Las dimensiones recibidas del jugador son invalidas");
+    }
+
+    std::vector<std::uint8_t> tiles(static_cast<std::size_t>(count));
+    receive_bytes(tiles.data(), static_cast<unsigned int>(tiles.size()));
+
+    info.map.tiles.reserve(tiles.size());
+
+    for (const auto tile: tiles) {
+        if (tile != static_cast<std::uint8_t>(game::TileType::Walkable) &&
+            tile != static_cast<std::uint8_t>(game::TileType::Blocked)) {
+            throw std::runtime_error("El mapa recibido contiene un tipo de celda invalido");
+        }
+
+        info.map.tiles.push_back(static_cast<game::TileType>(tile));
+    }
+
+    return info;
 }

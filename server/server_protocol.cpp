@@ -5,6 +5,7 @@
 #include <limits>
 #include <stdexcept>
 #include <variant>
+#include <vector>
 
 ServerProtocol::ServerProtocol(Socket& socket): ProtocolBase(socket) {}
 
@@ -154,4 +155,53 @@ void ServerProtocol::send_match_response(const MatchResponse& response) {
     if (response.invitation_code) {
         send_string(*response.invitation_code);
     }
+}
+
+void ServerProtocol::validate_game_info(const game::GameInfo& info) {
+    const auto& map = info.map;
+
+    if (map.width == 0 || map.height == 0) {
+        throw std::invalid_argument("Las dimensiones del mapa deben ser positivas");
+    }
+
+    const auto count = static_cast<std::uint64_t>(map.width) * map.height;
+
+    if (count > MAX_MAP_CELLS) {
+        throw std::length_error("El mapa supera el limite de celdas del protocolo");
+    }
+
+    if (map.tiles.size() != count) {
+        throw std::invalid_argument("La cantidad de celdas no coincide con las dimensiones");
+    }
+
+    if (!std::isfinite(info.player_width) || !std::isfinite(info.player_height) ||
+        info.player_width <= 0.0 || info.player_height <= 0.0 || info.player_width > map.width ||
+        info.player_height > map.height) {
+        throw std::invalid_argument("Las dimensiones del jugador son invalidas");
+    }
+
+    for (const auto tile: map.tiles) {
+        if (tile != game::TileType::Walkable && tile != game::TileType::Blocked) {
+            throw std::invalid_argument("El mapa contiene un tipo de celda invalido");
+        }
+    }
+}
+
+void ServerProtocol::send_game_info(const game::GameInfo& info) {
+    validate_game_info(info);
+
+    std::vector<std::uint8_t> tiles;
+    tiles.reserve(info.map.tiles.size());
+
+    for (const auto tile: info.map.tiles) {
+        tiles.push_back(static_cast<std::uint8_t>(tile));
+    }
+
+    const std::uint8_t message_type = GAME_INFO_MESSAGE;
+    send_bytes(&message_type, sizeof(message_type));
+    send_uint32(info.map.width);
+    send_uint32(info.map.height);
+    send_double(info.player_width);
+    send_double(info.player_height);
+    send_bytes(tiles.data(), static_cast<unsigned int>(tiles.size()));
 }
