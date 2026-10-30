@@ -16,7 +16,9 @@ void Renderer::limpiar() {
     renderer.Clear();
 }
 
-void Renderer::dibujar(SDL2pp::Texture& textura, int x, int y, int ancho, int alto) {
+
+void Renderer::dibujar(SDL2pp::Texture& textura, int x, int y, int ancho, int alto, Uint8 r, Uint8 g, Uint8 b) {
+    textura.SetColorMod(r, g, b);
     renderer.Copy(textura, SDL2pp::NullOpt, SDL2pp::Rect(x, y, ancho, alto));
 }
 
