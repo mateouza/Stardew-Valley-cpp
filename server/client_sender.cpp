@@ -29,6 +29,11 @@ void ClientSender::send_message(const ServerMessage& message) {
         return;
     }
 
+    if (const auto* info = std::get_if<game::GameInfo>(&message)) {
+        protocol.send_game_info(*info);
+        return;
+    }
+
     protocol.send_game_state(std::get<game::GameState>(message));
 }
 

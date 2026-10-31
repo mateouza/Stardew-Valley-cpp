@@ -7,6 +7,7 @@
 #include <memory>
 #include <mutex>
 
+#include "game_info.h"
 #include "game_model.h"
 #include "match_command.h"
 #include "queue.h"
@@ -23,6 +24,7 @@ private:
 
     game::GameModel& model;
     Queue<MatchCommand>& commands;
+    const game::GameInfo& game_info;
     std::map<SessionId, PlayerSession> sessions;
     std::chrono::milliseconds tick_interval;
     std::exception_ptr failure;
@@ -41,7 +43,7 @@ private:
 
 public:
     GameLoop(game::GameModel& model, Queue<MatchCommand>& commands,
-             std::chrono::milliseconds tick_interval);
+             std::chrono::milliseconds tick_interval, const game::GameInfo& game_info);
 
     void stop() override;
     void rethrow_if_failed() const;

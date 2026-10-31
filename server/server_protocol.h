@@ -15,6 +15,7 @@ private:
     std::int8_t decode_direction(std::uint8_t value);
     void validate_game_state(const game::GameState& state);
     void send_player_state(const game::PlayerState& player);
+    void validate_game_info(const game::GameInfo& info);
 
 public:
     explicit ServerProtocol(Socket& socket);
@@ -24,6 +25,7 @@ public:
     void send_game_state(const game::GameState& state);
     std::optional<LobbyRequest> receive_lobby_request();
     void send_match_response(const MatchResponse& response);
+    void send_game_info(const game::GameInfo& info);
 };
 
 #endif

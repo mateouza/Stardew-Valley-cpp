@@ -26,6 +26,8 @@ protected:
     static constexpr std::uint8_t MATCH_RESPONSE_MESSAGE = 0x06;
     static constexpr std::uint8_t MATCH_FOUND = 0x00;
     static constexpr std::uint8_t MATCH_NOT_FOUND = 0x01;
+    static constexpr std::uint8_t GAME_INFO_MESSAGE = 0x07;
+    static constexpr std::uint32_t MAX_MAP_CELLS = 1'000'000;
 
     explicit ProtocolBase(Socket& socket);
     ~ProtocolBase() = default;

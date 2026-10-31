@@ -9,8 +9,8 @@
 #include "tick_scheduler.h"
 
 GameLoop::GameLoop(game::GameModel& model, Queue<MatchCommand>& commands,
-                   std::chrono::milliseconds tick_interval):
-        model(model), commands(commands), tick_interval(tick_interval) {
+                   std::chrono::milliseconds tick_interval, const game::GameInfo& game_info):
+        model(model), commands(commands), game_info(game_info), tick_interval(tick_interval) {
     if (tick_interval.count() <= 0) {
         throw std::invalid_argument("El intervalo de actualizacion debe ser positivo");
     }
@@ -35,13 +35,19 @@ void GameLoop::process_add_player(const AddPlayerCommand& command) {
 
     try {
         const auto result = model.add_player(command.name);
+        const auto* player_id = std::get_if<game::PlayerId>(&result);
 
-        if (const auto* player_id = std::get_if<game::PlayerId>(&result)) {
+        if (player_id) {
             sessions.emplace(session_id, PlayerSession{*player_id, channel});
         }
 
         try {
             if (!channel->get_outgoing_queue().try_push(JoinResponse{result})) {
+                channel->request_close();
+                return;
+            }
+
+            if (player_id && !channel->get_outgoing_queue().try_push(game_info)) {
                 channel->request_close();
             }
         } catch (const ClosedQueue&) {

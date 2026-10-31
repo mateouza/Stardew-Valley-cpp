@@ -3,6 +3,7 @@
 
 #include <chrono>
 
+#include "game_info.h"
 #include "game_loop.h"
 #include "match_command.h"
 #include "queue.h"
@@ -10,6 +11,7 @@
 
 class Match {
 private:
+    const game::GameInfo game_info;
     game::World model;
     Queue<MatchCommand> commands;
     GameLoop game_loop;

@@ -758,6 +758,20 @@ TEST_F(ClientServerProtocolTest, TwoHandlersShareMatchAndPublishMovement) {
 
     const auto first_id = std::get<game::PlayerId>(first_join->result);
 
+    const auto first_info_message = client_protocol.receive_message();
+    ASSERT_TRUE(first_info_message.has_value());
+
+    const auto* first_info = std::get_if<game::GameInfo>(&*first_info_message);
+    ASSERT_NE(first_info, nullptr);
+
+    EXPECT_EQ(first_info->map.width, 2u);
+    EXPECT_EQ(first_info->map.height, 1u);
+    ASSERT_EQ(first_info->map.tiles.size(), 2u);
+    EXPECT_EQ(first_info->map.tiles[0], game::TileType::Walkable);
+    EXPECT_EQ(first_info->map.tiles[1], game::TileType::Walkable);
+    EXPECT_DOUBLE_EQ(first_info->player_width, 0.5);
+    EXPECT_DOUBLE_EQ(first_info->player_height, 0.5);
+
     Socket second_client("127.0.0.1", "18080");
     Socket second_connection = listener.accept();
     ClientProtocol second_protocol(second_client);
@@ -771,7 +785,6 @@ TEST_F(ClientServerProtocolTest, TwoHandlersShareMatchAndPublishMovement) {
     ASSERT_TRUE(second_selection_message.has_value());
 
     const auto* second_selection = std::get_if<MatchResponse>(&*second_selection_message);
-
     ASSERT_NE(second_selection, nullptr);
     EXPECT_EQ(second_selection->invitation_code, selection->invitation_code);
 
@@ -784,6 +797,18 @@ TEST_F(ClientServerProtocolTest, TwoHandlersShareMatchAndPublishMovement) {
 
     const auto second_id = std::get<game::PlayerId>(second_join->result);
     ASSERT_NE(first_id, second_id);
+
+    const auto second_info_message = second_protocol.receive_message();
+    ASSERT_TRUE(second_info_message.has_value());
+
+    const auto* second_info = std::get_if<game::GameInfo>(&*second_info_message);
+    ASSERT_NE(second_info, nullptr);
+
+    EXPECT_EQ(second_info->map.width, first_info->map.width);
+    EXPECT_EQ(second_info->map.height, first_info->map.height);
+    EXPECT_EQ(second_info->map.tiles, first_info->map.tiles);
+    EXPECT_DOUBLE_EQ(second_info->player_width, first_info->player_width);
+    EXPECT_DOUBLE_EQ(second_info->player_height, first_info->player_height);
 
     second_protocol.send_move(game::MoveRequest{game::MovementDirection{1, 0}});
 
@@ -1006,4 +1031,64 @@ TEST_F(NetworkClientTest, ReportsIncomingQueueSaturation) {
     ASSERT_TRUE(message.has_value());
     EXPECT_TRUE(std::holds_alternative<game::GameState>(*message));
     EXPECT_FALSE(network.try_receive().has_value());
+}
+
+TEST(ServerProtocolTest, SendsGameInfoToClientProtocol) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol server_protocol(connection);
+    ClientProtocol client_protocol(client);
+
+    const game::GameInfo info{
+            {2, 1, {game::TileType::Walkable, game::TileType::Blocked}}, 0.5, 0.5};
+
+    server_protocol.send_game_info(info);
+    connection.shutdown(SHUT_WR);
+
+    const auto message = client_protocol.receive_message();
+    ASSERT_TRUE(message.has_value());
+
+    const auto* received = std::get_if<game::GameInfo>(&*message);
+    ASSERT_NE(received, nullptr);
+
+    EXPECT_EQ(received->map.width, 2u);
+    EXPECT_EQ(received->map.height, 1u);
+    EXPECT_EQ(received->map.tiles, info.map.tiles);
+    EXPECT_DOUBLE_EQ(received->player_width, 0.5);
+    EXPECT_DOUBLE_EQ(received->player_height, 0.5);
+
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}
+
+TEST(ServerProtocolTest, RejectsInconsistentGameInfoBeforeSendingBytes) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    ServerProtocol server_protocol(connection);
+    ClientProtocol client_protocol(client);
+
+    const game::GameInfo info{{2, 1, {game::TileType::Walkable}}, 0.5, 0.5};
+
+    EXPECT_THROW(server_protocol.send_game_info(info), std::invalid_argument);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}
+
+TEST(ServerProtocolTest, RejectsReceivedMapAboveCellLimit) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    const std::array<std::uint8_t, 9> message{0x07, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 9);
+    connection.shutdown(SHUT_WR);
+
+    ClientProtocol protocol(client);
+
+    EXPECT_THROW(protocol.receive_message(), std::length_error);
 }
