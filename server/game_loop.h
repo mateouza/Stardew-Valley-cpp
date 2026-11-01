@@ -24,7 +24,7 @@ private:
 
     game::GameModel& model;
     Queue<MatchCommand>& commands;
-    const game::GameInfo& game_info;
+    const game::GameInfo game_info;
     std::map<SessionId, PlayerSession> sessions;
     std::chrono::milliseconds tick_interval;
     std::exception_ptr failure;
