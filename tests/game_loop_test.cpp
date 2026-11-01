@@ -459,3 +459,48 @@ TEST(GameLoopTest, ClosesSessionWhenGameInfoDoesNotFitInOutgoingQueue) {
     EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
     EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
 }
+
+TEST(GameLoopTest, OwnsGameInfoPassedAsTemporary) {
+    RecordingWorld world;
+    Queue<MatchCommand> commands(16);
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", channel}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{1},
+                       game::GameInfo{{1, 1, {game::TileType::Walkable}}, 0.5, 0.5});
+
+    game_loop.start();
+    game_loop.join();
+
+    ServerMessage message;
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+
+    const auto* response = std::get_if<JoinResponse>(&message);
+    ASSERT_NE(response, nullptr);
+
+    const auto* player_id = std::get_if<game::PlayerId>(&response->result);
+    ASSERT_NE(player_id, nullptr);
+    EXPECT_EQ(*player_id, 0u);
+
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+
+    const auto* info = std::get_if<game::GameInfo>(&message);
+    ASSERT_NE(info, nullptr);
+    EXPECT_EQ(info->map.width, 1u);
+    EXPECT_EQ(info->map.height, 1u);
+    ASSERT_EQ(info->map.tiles.size(), 1u);
+    EXPECT_EQ(info->map.tiles.front(), game::TileType::Walkable);
+    EXPECT_DOUBLE_EQ(info->player_width, 0.5);
+    EXPECT_DOUBLE_EQ(info->player_height, 0.5);
+
+    EXPECT_TRUE(channel->is_closing());
+    EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
+
+    try {
+        game_loop.rethrow_if_failed();
+        FAIL() << "No se propago el fallo de actualizacion";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(), "Fin de la primera actualizacion de prueba");
+    }
+}
