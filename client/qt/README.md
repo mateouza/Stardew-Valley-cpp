@@ -9,7 +9,7 @@ para que arranque el cliente SDL.
 
 | Carpeta | Contenido |
 | --- | --- |
-| `client/lobby/` | Contrato con el servidor, **sin Qt**: tipos (`lobby_types.h`), interfaz `LobbyClient`, `FakeLobbyClient` (simula al servidor en memoria), validación compartida (`lobby_validation`) y `LobbyWorker`, el hilo que ejecuta los pedidos. Biblioteca `client_lobby`. |
+| `client/lobby/` | Contrato con el servidor, **sin Qt**: tipos (`lobby_types.h`), interfaz `LobbyClient`, `FakeLobbyClient` (simula al servidor en memoria), validación compartida (`lobby_validation`) y `LobbyWorker`, el hilo que ejecuta los pedidos. Biblioteca `client_lobby`. `NetworkLobbyClient`, el lobby real sobre `NetworkClient`, va aparte en `client_lobby_network`. |
 | `client/qt/` | `run_launcher()` (`launcher.h`), la ventana controladora (`launcher_window`), la hoja de estilo y los mensajes de error. Biblioteca `qt_launcher`. |
 | `client/qt/screens/` | Una clase por pantalla. Solo emiten señales; la ventana decide a qué pantalla ir y qué pedirle al lobby. |
 | `client/qt/widgets/` | Fondo, sprite del personaje, selectores, tarjetas y helpers de UI. |
@@ -27,29 +27,31 @@ sudo apt install qt6-base-dev libgl1-mesa-dev
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBUILD_CLIENT=OFF
 cmake --build build -j4
+./build/server 8080                      # en otra terminal; 'q' + Enter lo cierra
 ./build/stardew_launcher                 # o: ./build/stardew_launcher <host> <puerto>
+./build/stardew_launcher --demo          # sin servidor, con el lobby falso
 ctest --test-dir build --output-on-failure
 ```
 
 - `-DBUILD_CLIENT=OFF` evita necesitar SDL2pp. El launcher se compila con `BUILD_LAUNCHER` y el editor de mapas (`stardew_editor`) con `BUILD_EDITOR`; las dos están en `ON` por defecto. Con las dos en `OFF` no se busca Qt.
 - Los tests del launcher (`launcher_window_tests` y `character_widgets_tests`) usan Qt en modo `offscreen`, así que no necesitan pantalla.
-- Los del lobby (`fake_lobby_client_tests`, `lobby_validation_tests` y `lobby_worker_tests`) no dependen de Qt y se compilan siempre.
+- Los del lobby (`fake_lobby_client_tests`, `lobby_validation_tests`, `lobby_worker_tests` y `network_lobby_client_tests`) no dependen de Qt y se compilan siempre.
 - `make valgrind` revisa todos; los de Qt, solo si existen.
 
-## Qué es demostración y qué falta
+## Lobby real y modo demostración
 
-`stardew_launcher` usa `FakeLobbyClient`, que simula al servidor en memoria mientras el
-protocolo no tenga mensajes de lobby. Sirve para desarrollar y probar las pantallas, pero no es
-la funcionalidad real:
+`stardew_launcher` usa `NetworkLobbyClient`. Crear y unirse son reales: el servidor crea la
+partida y devuelve su código, y otro launcher se une con ese código. El resto lo responde el
+cliente, porque el protocolo todavía no lo tiene:
 
-- Lo creado en una ejecución se pierde al cerrar.
-- `create_game()` no crea una partida (`Match`) en el servidor.
-- Las partidas creadas no tienen código de invitación, y la interfaz no tiene una operación para
-  generarlo. Unirse solo funciona con la partida precargada `VALLE1`.
-- No hay creación ni unión real entre dos clientes.
-- Al elegir una partida, `stardew_launcher` imprime el ticket y termina: todavía no arranca el juego.
+- El usuario y la apariencia no viajan al servidor; el nombre que ven los demás es el del personaje.
+- El único mundo es el mapa que cargó el servidor, y no hay partidas guardadas para retomar.
+- Buscar un código solo revisa que no esté vacío: si existe o está llena se sabe al unirse.
+- Quien se une no recibe el nombre de la partida.
+- Al entrar, `stardew_launcher` imprime el código y termina: todavía no arranca el juego.
 
-Datos precargados:
+`stardew_launcher --demo` usa `FakeLobbyClient`, que simula al servidor en memoria para probar
+las pantallas sin servidor. Lo creado ahí se pierde al cerrar. Datos precargados:
 
 - Cualquier nombre de usuario válido se conecta.
 - Código de invitación: **`VALLE1`** ("Granja de Juanceto03", 2 de 4 jugadores).
@@ -125,25 +127,22 @@ personaje, así que `resume_game()` es provisorio. Pregunta para el corrector: �
 debe acreditar que una conexión puede recuperar un personaje existente? ¿Alcanza con el nombre
 de usuario para el alcance del TP?»
 
-**Paso de Qt a SDL2pp.** `run_launcher()` devuelve el ticket y destruye la `QApplication`
-antes de volver, así que SDL puede inicializarse después en el mismo proceso. Falta acordar con
-Kika y con quien implemente la red del cliente:
-
-- quién es dueño de la conexión y cómo sigue abierta después de cerrar el launcher;
-- qué datos necesita el cliente SDL además de los del ticket (partida, personaje y si es multijugador).
-
-No se agrega un socket al ticket ni se abre una segunda conexión sin acordarlo.
+**Paso de Qt a SDL2pp.** Acordado con Kika: Qt y SDL corren en el mismo proceso, uno después
+del otro. `run_launcher()` destruye la `QApplication` antes de volver. Después,
+`NetworkLobbyClient::take_game_connection()` entrega la misma conexión, ya adentro de la
+partida, con lo que el lobby leyó: código, `PlayerId` y `GameInfo`. Falta que el launcher se la
+pase a `ejecutar_cliente_sdl()`, cuando exista la biblioteca `client_sdl`.
 
 ## Qué prueban los tests
 
 - Ventana: navegación entre pantallas y errores, con el fake; teclado, pegado y Enter en los
-  campos con reglas; respuesta demorada y cierre con un pedido pendiente.
+  campos con reglas; respuesta demorada y cierre con un pedido pendiente. Además, un launcher
+  crea una partida en el servidor real y otro se une con su código.
 - Fake y validación: las reglas del contrato, incluido el UTF-8 inválido.
+- Lobby real (`network_lobby_client_tests`), contra el servidor en el mismo proceso: crear, unirse,
+  código inexistente, partida llena, `interrupt()` mientras espera y la conexión que recibe el juego.
 - Worker: orden de los pedidos, que no bloquea y que se interrumpe al destruirse.
 - Widgets: sprite y selectores.
-
-No prueban sockets, persistencia ni comunicación real con el servidor. Cada capa va a necesitar
-sus propias pruebas y, después, una de integración.
 
 ## Convenciones de la UI
 

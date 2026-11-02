@@ -9,6 +9,7 @@
 #include <QString>
 #include <QTest>
 #include <QtGlobal>
+#include <chrono>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -17,8 +18,13 @@
 
 #include "gtest/gtest.h"
 #include "lobby/fake_lobby_client.h"
+#include "lobby/network_lobby_client.h"
 
+#include "acceptor.h"
 #include "blocking_lobby_client.h"
+#include "map.h"
+#include "match_manager.h"
+#include "world_config.h"
 
 void PrintTo(const QString& text, std::ostream* os) { *os << '"' << text.toStdString() << '"'; }
 
@@ -479,6 +485,60 @@ TEST(LauncherWindowOptionsTest, PrefillsConnectionFields) {
     EXPECT_EQ(window.findChild<QLineEdit*>("host_input")->text(), "10.0.0.5");
     EXPECT_EQ(window.findChild<QLineEdit*>("port_input")->text(), "9000");
     EXPECT_EQ(window.findChild<QLineEdit*>("username_input")->text(), "Juanceto01");
+}
+
+// El launcher con el lobby real, contra el servidor de verdad en el mismo proceso.
+class LauncherWithServerTest: public ::testing::Test {
+protected:
+    MatchManager matches{game::Map{{{game::TileType::Walkable}}}, game::Position{0.5, 0.5},
+                         game::WorldConfig{2, 1.0, 0.5, 0.5}, 64, std::chrono::milliseconds{20}};
+    Acceptor acceptor{"18083", matches, 64};
+
+    void SetUp() override { acceptor.start(); }
+
+    void TearDown() override {
+        acceptor.stop();
+        acceptor.join();
+        matches.stop();
+    }
+
+    static void click(LauncherWindow& window, const char* button_name) {
+        window.findChild<QPushButton*>(button_name)->click();
+        ASSERT_TRUE(lobby_answered(window));
+    }
+};
+
+TEST_F(LauncherWithServerTest, CreatesAGameThatAnotherLauncherJoinsWithItsCode) {
+    lobby::NetworkLobbyClient creator;
+    {
+        LauncherWindow window(creator, LauncherOptions{"127.0.0.1", "18083", "Juana"});
+        click(window, "connect_button");
+        click(window, "new_game_button");
+        window.findChild<QLineEdit*>("game_name_input")->setText("Granja");
+        window.findChild<QPushButton*>("continue_button")->click();
+        click(window, "confirm_button");
+        ASSERT_TRUE(window.get_ticket().has_value());
+    }
+
+    // Como en run_launcher(): la ventana ya se destruyó y la conexión de la partida sigue abierta.
+    const auto created = creator.take_game_connection();
+    ASSERT_TRUE(created.has_value());
+    const QString code = QString::fromStdString(created->invite_code);
+
+    lobby::NetworkLobbyClient guest;
+    LauncherWindow window(guest, LauncherOptions{"127.0.0.1", "18083", "Kika"});
+    click(window, "connect_button");
+    click(window, "join_button");
+    window.findChild<QLineEdit*>("invite_code_input")->setText(code);
+    click(window, "find_game_button");
+    auto* character_screen = window.findChild<QWidget*>("character_screen");
+    EXPECT_EQ(character_screen->findChild<QLabel*>("context_label")->text(),
+              "Te unís a la partida con código " + code);
+    click(window, "confirm_button");
+
+    ASSERT_TRUE(window.get_ticket().has_value());
+    EXPECT_EQ(window.get_ticket()->game_id, created->invite_code);
+    EXPECT_TRUE(guest.take_game_connection().has_value());
 }
 
 }

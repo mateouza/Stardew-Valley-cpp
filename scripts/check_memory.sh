@@ -9,12 +9,14 @@ test_binaries=(
     build/world_tests
     build/world_config_tests
     build/server_protocol_tests
+    build/network_client_tests
     build/game_loop_tests
     build/world_game_loop_tests
     build/match_tests
     build/fake_lobby_client_tests
     build/lobby_validation_tests
     build/lobby_worker_tests
+    build/network_lobby_client_tests
 )
 
 # Solo existen si se compilo con BUILD_LAUNCHER=ON.

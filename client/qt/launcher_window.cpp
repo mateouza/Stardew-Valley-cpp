@@ -163,11 +163,16 @@ void LauncherWindow::handle(const lobby::FindGameResponse& response) {
 
     const auto& game = std::get<lobby::JoinableGameInfo>(response.result);
     character_purpose = CharacterPurpose::JoinGame;
-    character_screen->prepare(
-            QString("Te unís a «%1», de %2 · %3/%4 jugadores")
-                    .arg(QString::fromStdString(game.game_name), QString::fromStdString(game.owner),
-                         QString::number(game.player_count), QString::number(game.max_players)),
-            "Unirme a la partida");
+    // El lobby real no conoce la partida hasta unirse, así que la devuelve sin nombre.
+    const QString context = game.game_name.empty() ?
+                                    QString("Te unís a la partida con código %1")
+                                            .arg(QString::fromStdString(game.game_id)) :
+                                    QString("Te unís a «%1», de %2 · %3/%4 jugadores")
+                                            .arg(QString::fromStdString(game.game_name),
+                                                 QString::fromStdString(game.owner),
+                                                 QString::number(game.player_count),
+                                                 QString::number(game.max_players));
+    character_screen->prepare(context, "Unirme a la partida");
     show_screen(character_screen);
 }
 

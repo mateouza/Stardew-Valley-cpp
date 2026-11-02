@@ -95,7 +95,7 @@ if(BUILD_LAUNCHER)
     target_compile_options(qt_launcher PRIVATE -Wall -Wextra -Wpedantic)
 
     add_executable(stardew_launcher client/qt/main.cpp)
-    target_link_libraries(stardew_launcher PRIVATE qt_launcher)
+    target_link_libraries(stardew_launcher PRIVATE qt_launcher client_lobby_network)
     target_compile_options(stardew_launcher PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
@@ -285,13 +285,15 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
         find_package(Qt6 REQUIRED COMPONENTS Test)
 
         add_executable(launcher_window_tests tests/launcher_window_test.cpp)
-        target_link_libraries(launcher_window_tests PRIVATE qt_launcher Qt6::Test GTest::gtest)
+        target_link_libraries(launcher_window_tests PRIVATE
+            qt_launcher client_lobby_network server_core Qt6::Test GTest::gtest)
         target_compile_options(launcher_window_tests PRIVATE -Wall -Wextra -Wpedantic)
 
         gtest_discover_tests(launcher_window_tests
             PROPERTIES
                 ENVIRONMENT QT_QPA_PLATFORM=offscreen
                 TIMEOUT 10
+                RESOURCE_LOCK protocol_port_18083
         )
 
         add_executable(character_widgets_tests tests/character_widgets_test.cpp)
