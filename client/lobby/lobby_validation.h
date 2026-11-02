@@ -6,6 +6,8 @@
 #include <string>
 #include <string_view>
 
+#include "lobby_types.h"
+
 namespace lobby {
 
 // Reglas que comparten el lobby y las pantallas, para que los dos acepten exactamente lo mismo.
@@ -29,6 +31,13 @@ bool is_valid_game_name(std::string_view name);
 
 // Sin los espacios de los extremos, entre 1 y MAX_CHARACTER_NAME_LENGTH caracteres de la lista.
 bool is_valid_character_name(std::string_view name);
+
+// Cada opción de la apariencia es menor que su cantidad (SKIN_TONE_COUNT y las demás).
+bool is_valid_appearance(const CharacterAppearance& appearance);
+
+// InvalidCharacterName o InvalidAppearance, en ese orden, o nada si el personaje es válido. No saca
+// los espacios del nombre.
+std::optional<LobbyError> validate_character(const CharacterDraft& character);
 
 }
 

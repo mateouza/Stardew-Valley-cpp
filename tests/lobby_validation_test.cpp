@@ -110,4 +110,27 @@ TEST(NameValidationTest, GameNameLimitIsCountedInCharacters) {
     EXPECT_FALSE(is_valid_game_name(repeat("é", MAX_GAME_NAME_LENGTH + 1)));
 }
 
+TEST(CharacterValidationTest, AcceptsTheLastOptionOfEachChoice) {
+    const CharacterAppearance last{SKIN_TONE_COUNT - 1, HAIR_STYLE_COUNT - 1, HAIR_COLOR_COUNT - 1,
+                                   SHIRT_COLOR_COUNT - 1, PANTS_COLOR_COUNT - 1};
+
+    EXPECT_EQ(validate_character(CharacterDraft{"Juanceto01", last}), std::nullopt);
+}
+
+TEST(CharacterValidationTest, RejectsAnOptionOutOfRange) {
+    CharacterAppearance appearance;
+    appearance.pants_color = PANTS_COLOR_COUNT;
+
+    EXPECT_FALSE(is_valid_appearance(appearance));
+    EXPECT_EQ(validate_character(CharacterDraft{"Juanceto01", appearance}),
+              LobbyError::InvalidAppearance);
+}
+
+TEST(CharacterValidationTest, ReportsTheNameBeforeTheAppearance) {
+    CharacterAppearance appearance;
+    appearance.skin_tone = SKIN_TONE_COUNT;
+
+    EXPECT_EQ(validate_character(CharacterDraft{"", appearance}), LobbyError::InvalidCharacterName);
+}
+
 }
