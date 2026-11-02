@@ -171,6 +171,12 @@ target_link_libraries(client_network PUBLIC course_support game_contracts)
 
 target_compile_options(client_network PRIVATE -Wall -Wextra -Wpedantic)
 
+# El lobby real va aparte de client_lobby, así el editor y los tests del lobby falso no necesitan
+# la red.
+add_library(client_lobby_network STATIC client/lobby/network_lobby_client.cpp)
+target_link_libraries(client_lobby_network PUBLIC client_lobby client_network)
+target_compile_options(client_lobby_network PRIVATE -Wall -Wextra -Wpedantic)
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -264,6 +270,16 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     target_compile_options(lobby_worker_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(lobby_worker_tests PROPERTIES TIMEOUT 5)
+
+    add_executable(network_lobby_client_tests tests/network_lobby_client_test.cpp)
+    target_link_libraries(network_lobby_client_tests PRIVATE client_lobby_network GTest::gtest_main)
+    target_compile_options(network_lobby_client_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(network_lobby_client_tests
+        PROPERTIES
+            TIMEOUT 5
+            RESOURCE_LOCK protocol_port_18082
+    )
 
     if(BUILD_LAUNCHER)
         find_package(Qt6 REQUIRED COMPONENTS Test)
