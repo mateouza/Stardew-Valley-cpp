@@ -319,6 +319,7 @@ if(BUILD_CLIENT)
     add_executable(stardew_client
         client/sdl/main.cpp
         client/sdl/render/renderer.cpp
+        client/sdl/render/texture_manager.cpp
         client/sdl/render/sdl_window.cpp
         client/sdl/state/client_state.cpp
         client/sdl/core/input_handler.cpp

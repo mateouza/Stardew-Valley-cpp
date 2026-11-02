@@ -17,7 +17,9 @@
 #include "core/input_handler.h"
 #include "render/renderer.h"
 #include "render/sdl_window.h"
+#include "render/texture_manager.h"
 #include "state/client_state.h"
+
 
 namespace {
 
@@ -239,7 +241,8 @@ int main(int argc, char* argv[]) {
 
         SDLWindow ventana("Stardew Valley", 800, 600, false);
         Renderer renderer(ventana.obtener_handle());
-        SDL2pp::Texture textura = renderer.cargar_textura("assets/rock.png");
+        TextureManager texturas(renderer);
+        SDL2pp::Texture& textura = texturas.obtener_textura("assets/rock.png");
 
         const int ancho_sprite_px = static_cast<int>(resultado->info_partida.player_width * PIXELS_POR_CELDA);
         const int alto_sprite_px = static_cast<int>(resultado->info_partida.player_height * PIXELS_POR_CELDA);
