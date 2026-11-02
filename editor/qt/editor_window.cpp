@@ -2,12 +2,14 @@
 
 #include <QAction>
 #include <QComboBox>
+#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QKeySequence>
 #include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QPixmap>
 #include <QScrollArea>
 #include <QSignalBlocker>
@@ -15,6 +17,8 @@
 #include <QWidget>
 #include <algorithm>
 
+#include "editor/model/map_file.h"
+#include "editor/model/map_validation.h"
 #include "qt/widgets/ui_helpers.h"
 
 #include "tile_colors.h"
@@ -25,6 +29,8 @@ namespace editor {
 namespace {
 
 constexpr int SIDE_PANEL_WIDTH = 240;
+constexpr const char* MAP_FILE_FILTER = "Mapas (*.toml)";
+constexpr const char* NEW_MAP_NAME = "Mundo nuevo";
 
 QIcon swatch(Tile tile) {
     QPixmap pixmap(18, 18);
@@ -36,7 +42,7 @@ QIcon swatch(Tile tile) {
 
 EditorWindow::EditorWindow(QWidget* parent):
         QMainWindow(parent),
-        map(WorldMap::create_empty("Mundo nuevo")),
+        map(WorldMap::create_empty(NEW_MAP_NAME)),
         zone_selector(new QComboBox(this)),
         palette(new QListWidget(this)),
         grid(new TileGridView(this)) {
@@ -47,9 +53,18 @@ EditorWindow::EditorWindow(QWidget* parent):
     setMinimumSize(900, 600);
 
     QMenu* file_menu = menuBar()->addMenu("&Archivo");
-    QAction* quit_action = file_menu->addAction("&Salir");
-    quit_action->setShortcut(QKeySequence::Quit);
-    connect(quit_action, &QAction::triggered, this, &QWidget::close);
+    const auto add_action = [this, file_menu](const char* text, QKeySequence::StandardKey key,
+                                              auto slot) {
+        QAction* action = file_menu->addAction(text);
+        action->setShortcut(key);
+        connect(action, &QAction::triggered, this, slot);
+    };
+    add_action("&Nuevo", QKeySequence::New, &EditorWindow::new_map);
+    add_action("&Abrir…", QKeySequence::Open, &EditorWindow::ask_open);
+    add_action("&Guardar", QKeySequence::Save, &EditorWindow::ask_save);
+    add_action("Guardar &como…", QKeySequence::SaveAs, &EditorWindow::ask_save_as);
+    file_menu->addSeparator();
+    add_action("&Salir", QKeySequence::Quit, &QWidget::close);
 
     zone_selector->setObjectName("zone_selector");
     zone_selector->addItems({"Granja", "Pueblo"});
@@ -115,6 +130,91 @@ void EditorWindow::choose_brush(int palette_row) {
     if (palette_row >= 0) {
         grid->set_brush(static_cast<Tile>(palette->item(palette_row)->data(Qt::UserRole).toInt()));
     }
+}
+
+void EditorWindow::show_map() {
+    modified = false;
+    const QSignalBlocker blocker(zone_selector);
+    zone_selector->setCurrentIndex(0);
+    show_zone(map.farm);
+}
+
+void EditorWindow::new_map() {
+    map = WorldMap::create_empty(NEW_MAP_NAME);
+    current_path.clear();
+    show_map();
+}
+
+std::optional<QString> EditorWindow::open_map(const QString& path) {
+    try {
+        map = load_map(path.toStdString());
+    } catch (const MapFileError& error) {
+        return QString::fromStdString(error.what());
+    }
+
+    current_path = path;
+    show_map();
+    return std::nullopt;
+}
+
+std::optional<QString> EditorWindow::save_map_to(const QString& path) {
+    const auto problems = validate(map);
+    if (!problems.empty()) {
+        QString message = "No se puede guardar mientras el mapa tenga problemas:";
+        for (const MapProblem& problem: problems) {
+            message += QString("\n• %1: %2")
+                               .arg(QString::fromStdString(problem.place),
+                                    QString::fromStdString(problem.description));
+        }
+        return message;
+    }
+
+    try {
+        save_map(map, path.toStdString());
+    } catch (const MapFileError& error) {
+        return QString::fromStdString(error.what());
+    }
+
+    current_path = path;
+    modified = false;
+    return std::nullopt;
+}
+
+void EditorWindow::ask_open() {
+    const QString path =
+            QFileDialog::getOpenFileName(this, "Abrir mapa", current_path, MAP_FILE_FILTER);
+    if (path.isEmpty()) {
+        return;
+    }
+    if (const auto error = open_map(path)) {
+        show_error(*error);
+    }
+}
+
+void EditorWindow::ask_save() {
+    if (current_path.isEmpty()) {
+        ask_save_as();
+    } else if (const auto error = save_map_to(current_path)) {
+        show_error(*error);
+    }
+}
+
+void EditorWindow::ask_save_as() {
+    QString path =
+            QFileDialog::getSaveFileName(this, "Guardar mapa", current_path, MAP_FILE_FILTER);
+    if (path.isEmpty()) {
+        return;
+    }
+    if (!path.endsWith(".toml")) {
+        path += ".toml";
+    }
+    if (const auto error = save_map_to(path)) {
+        show_error(*error);
+    }
+}
+
+void EditorWindow::show_error(const QString& message) {
+    QMessageBox::warning(this, "Editor de mapas", message);
 }
 
 const WorldMap& EditorWindow::get_map() const { return map; }

@@ -1,10 +1,14 @@
 #include "editor/qt/editor_window.h"
 
 #include <QComboBox>
+#include <QFile>
 #include <QListWidget>
 #include <QPoint>
 #include <QSize>
+#include <QTemporaryDir>
 #include <QTest>
+#include <optional>
+#include <string>
 
 #include "editor/qt/tile_grid_view.h"
 #include "gtest/gtest.h"
@@ -17,6 +21,11 @@ constexpr int TILE_SIZE = TileGridView::TILE_SIZE;
 
 QPoint center_of(int column, int row) {
     return QPoint(column * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2);
+}
+
+// Para que gtest muestre el mensaje si una operación falla cuando no debería.
+std::string error_of(const std::optional<QString>& error) {
+    return error ? error->toStdString() : "";
 }
 
 }
@@ -88,6 +97,59 @@ TEST_F(EditorWindowTest, KeepsTheBrushOnlyIfTheNewZoneAllowsIt) {
 
     zone_selector->setCurrentText("Mazmorra, nivel 1");
     EXPECT_EQ(grid->get_brush(), tiles_for(ZoneKind::Dungeon).front());
+}
+
+TEST_F(EditorWindowTest, SavedMapOpensAgainTheSame) {
+    ASSERT_EQ(error_of(window.open_map(EXAMPLE_MAP_PATH)), "");
+    choose_brush(Tile::Water);
+    QTest::mouseClick(grid, Qt::LeftButton, Qt::NoModifier, center_of(1, 1));
+    QTemporaryDir directory;
+    const QString path = directory.filePath("mapa.toml");
+
+    ASSERT_EQ(error_of(window.save_map_to(path)), "");
+    EXPECT_FALSE(window.is_modified());
+
+    EditorWindow reopened;
+    ASSERT_EQ(error_of(reopened.open_map(path)), "");
+    EXPECT_EQ(reopened.get_map().farm.at(1, 1), Tile::Water);
+    EXPECT_TRUE(reopened.get_map() == window.get_map());
+}
+
+TEST_F(EditorWindowTest, MapWithProblemsIsNotSaved) {
+    QTemporaryDir directory;
+    const QString path = directory.filePath("mapa.toml");
+
+    const auto error = window.save_map_to(path);
+
+    ASSERT_TRUE(error.has_value());
+    EXPECT_TRUE(error->contains("Granja: falta")) << error->toStdString();
+    EXPECT_FALSE(QFile::exists(path));
+}
+
+TEST_F(EditorWindowTest, FileThatCannotBeOpenedKeepsTheCurrentMap) {
+    choose_brush(Tile::Cabin);
+    QTest::mouseClick(grid, Qt::LeftButton, Qt::NoModifier, center_of(0, 0));
+    QTemporaryDir directory;
+    QFile broken(directory.filePath("roto.toml"));
+    ASSERT_TRUE(broken.open(QIODevice::WriteOnly));
+    broken.write("esto no es [un mapa");
+    broken.close();
+
+    EXPECT_TRUE(window.open_map(broken.fileName()).has_value());
+    EXPECT_EQ(window.get_map().farm.at(0, 0), Tile::Cabin);
+    EXPECT_TRUE(window.is_modified());
+}
+
+TEST_F(EditorWindowTest, OpeningOrStartingAMapShowsItsFarmWithoutChanges) {
+    zone_selector->setCurrentText("Pueblo");
+    ASSERT_EQ(error_of(window.open_map(EXAMPLE_MAP_PATH)), "");
+    EXPECT_EQ(zone_selector->currentText(), "Granja");
+    EXPECT_EQ(palette->count(), static_cast<int>(tiles_for(ZoneKind::Farm).size()));
+
+    QTest::mouseClick(grid, Qt::LeftButton, Qt::NoModifier, center_of(1, 1));
+    window.new_map();
+    EXPECT_TRUE(window.get_map() == WorldMap::create_empty("Mundo nuevo"));
+    EXPECT_FALSE(window.is_modified());
 }
 
 }

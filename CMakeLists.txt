@@ -336,6 +336,9 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
         )
         target_link_libraries(editor_qt_tests PRIVATE qt_editor Qt6::Test GTest::gtest)
         target_compile_options(editor_qt_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_definitions(editor_qt_tests PRIVATE
+            EXAMPLE_MAP_PATH="${CMAKE_CURRENT_SOURCE_DIR}/maps/example.toml"
+        )
 
         gtest_discover_tests(editor_qt_tests
             PROPERTIES
