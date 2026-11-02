@@ -6,7 +6,7 @@
 
 
 InputResultado InputHandler::procesar_eventos() {
-    InputResultado resultado{{0, 0}, false};
+    InputResultado resultado{{0, 0}, false, std::nullopt};
     SDL_Event evento;
     while (SDL_PollEvent(&evento)) {
         if (evento.type == SDL_QUIT) {

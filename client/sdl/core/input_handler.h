@@ -1,6 +1,7 @@
 #ifndef INPUT_HANDLER_H
 #define INPUT_HANDLER_H
 
+#include <cstddef>
 #include <optional>
 
 #include <SDL2/SDL.h>

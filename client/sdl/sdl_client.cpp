@@ -12,6 +12,7 @@
 #include <SDL_image.h>
 
 #include "core/input_handler.h"
+#include "core/inventory_bar.h"
 #include "game_command.h"
 #include "render/renderer.h"
 #include "render/sdl_window.h"
@@ -86,7 +87,7 @@ void dibujar_jugadores(Renderer& renderer, SDL2pp::Texture& textura, const Clien
 
 bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHandler& input_handler,
                           Renderer& renderer, SDL2pp::Texture& textura, const game::MapData& mapa,
-                          int ancho_sprite, int alto_sprite) {
+                          InventoryBar& inventario, int ancho_sprite, int alto_sprite) {
     game::MovementDirection ultima_direccion_enviada{0, 0};
     std::optional<game::MovementDirection> pendiente;
 
@@ -106,6 +107,10 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
             continue;
         }
 
+        if (entrada.slot_seleccionado) {
+            inventario.seleccionar(*entrada.slot_seleccionado);
+        }
+
         actualizar_direccion_pendiente(entrada.direccion, ultima_direccion_enviada, pendiente);
 
         if (pendiente) {
@@ -120,6 +125,7 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
         renderer.limpiar();
         dibujar_mapa(renderer, mapa);
         dibujar_jugadores(renderer, textura, estado, ancho_sprite, alto_sprite);
+        inventario.dibujar(renderer, ANCHO_VENTANA, ALTO_VENTANA);
         renderer.presentar();
     }
 
@@ -143,8 +149,9 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
 
         ClientState estado_cliente(id_propio);
         InputHandler input_handler;
+        InventoryBar inventario;
 
-        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, textura, info_partida.map, ancho_sprite_px, alto_sprite_px);
+        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, textura, info_partida.map, inventario, ancho_sprite_px, alto_sprite_px);
         
         if (conexion_perdida) {
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Conexion perdida",

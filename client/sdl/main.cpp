@@ -15,11 +15,6 @@
 #include "network_client.h"
 #include "server_message.h"
 #include "sdl_client.h"
-#include "core/input_handler.h"
-#include "render/renderer.h"
-#include "render/sdl_window.h"
-#include "render/texture_manager.h"
-#include "state/client_state.h"
 
 
 namespace {

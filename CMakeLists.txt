@@ -323,6 +323,7 @@ if(BUILD_CLIENT OR BUILD_LAUNCHER)
         client/sdl/render/sdl_window.cpp
         client/sdl/state/client_state.cpp
         client/sdl/core/input_handler.cpp
+        client/sdl/core/inventory_bar.cpp
     )
 
     target_link_libraries(client_sdl PUBLIC
