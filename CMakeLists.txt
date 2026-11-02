@@ -40,6 +40,7 @@ add_library(server_model STATIC
     server/world.cpp
     server/world_config.cpp
     server/demo_map.cpp
+    server/soil.cpp
 )
 
 target_include_directories(server_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/server)
@@ -191,6 +192,12 @@ if(BUILD_TESTING)
     target_compile_options(map_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(map_tests)
+
+    add_executable(soil_tests tests/soil_test.cpp)
+    target_link_libraries(soil_tests PRIVATE server_model GTest::gtest_main)
+    target_compile_options(soil_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(soil_tests)
 
     add_executable(world_tests tests/world_test.cpp)
     target_link_libraries(world_tests PRIVATE server_model GTest::gtest_main)

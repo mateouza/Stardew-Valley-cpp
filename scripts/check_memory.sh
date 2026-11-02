@@ -6,6 +6,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 test_binaries=(
     build/player_tests
     build/map_tests
+    build/soil_tests
     build/world_tests
     build/world_config_tests
     build/server_protocol_tests
