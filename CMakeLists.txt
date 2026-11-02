@@ -118,6 +118,7 @@ if(BUILD_EDITOR)
     add_library(qt_editor STATIC
         editor/qt/editor_window.cpp
         editor/qt/tile_colors.cpp
+        editor/qt/tile_grid_view.cpp
     )
 
     set_target_properties(qt_editor PROPERTIES AUTOMOC ON)
@@ -330,6 +331,7 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
         add_executable(editor_qt_tests
             tests/editor_qt_main.cpp
             tests/editor_tile_colors_test.cpp
+            tests/editor_tile_grid_view_test.cpp
         )
         target_link_libraries(editor_qt_tests PRIVATE qt_editor Qt6::Test GTest::gtest)
         target_compile_options(editor_qt_tests PRIVATE -Wall -Wextra -Wpedantic)
