@@ -22,4 +22,9 @@ void Renderer::dibujar(SDL2pp::Texture& textura, int x, int y, int ancho, int al
     renderer.Copy(textura, SDL2pp::NullOpt, SDL2pp::Rect(x, y, ancho, alto));
 }
 
+void Renderer::dibujar_rectangulo(int x, int y, int ancho, int alto, Uint8 r, Uint8 g, Uint8 b) {
+    renderer.SetDrawColor(r, g, b, 255);
+    renderer.FillRect(SDL2pp::Rect(x, y, ancho, alto));
+}
+
 void Renderer::presentar() { renderer.Present(); }
