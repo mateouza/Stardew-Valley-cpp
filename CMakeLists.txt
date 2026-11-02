@@ -272,7 +272,7 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     gtest_discover_tests(lobby_worker_tests PROPERTIES TIMEOUT 5)
 
     add_executable(network_lobby_client_tests tests/network_lobby_client_test.cpp)
-    target_link_libraries(network_lobby_client_tests PRIVATE client_lobby_network GTest::gtest_main)
+    target_link_libraries(network_lobby_client_tests PRIVATE client_lobby_network server_core GTest::gtest_main)
     target_compile_options(network_lobby_client_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(network_lobby_client_tests
