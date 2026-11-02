@@ -135,6 +135,13 @@ protected:
         acceptor.join();
         matches.stop();
     }
+
+    // Crea una partida con client, que queda adentro, y devuelve su código.
+    std::string create_game() {
+        const auto result =
+                client.create_game("Granja", NetworkLobbyClient::WORLD_ID, make_character("Juana"));
+        return std::get<GameTicket>(result).game_id;
+    }
 };
 
 TEST_F(ServerNetworkLobbyClientTest, CreatesAGameAndHandsOverTheConnection) {
@@ -160,6 +167,64 @@ TEST_F(ServerNetworkLobbyClientTest, CreatesAGameAndHandsOverTheConnection) {
     ASSERT_EQ(state->players.size(), 1u);
     EXPECT_EQ(state->players[0].id, connection->player_id);
     EXPECT_EQ(state->players[0].name, "Juana");
+}
+
+TEST_F(ServerNetworkLobbyClientTest, JoinsTheGameOfAnotherPlayer) {
+    const std::string code = create_game();
+    NetworkLobbyClient guest;
+    ASSERT_EQ(guest.connect(HOST, PORT, "Kika"), std::nullopt);
+
+    EXPECT_EQ(std::get<JoinableGameInfo>(guest.find_game(code)).game_id, code);
+    const auto ticket = std::get<GameTicket>(guest.join_game(code, make_character("Kika")));
+    EXPECT_EQ(ticket.game_id, code);
+
+    auto connection = guest.take_game_connection();
+    ASSERT_TRUE(connection.has_value());
+    const auto message = connection->network->receive();
+    ASSERT_TRUE(message.has_value());
+    const auto* state = std::get_if<game::GameState>(&*message);
+    ASSERT_NE(state, nullptr);
+    ASSERT_EQ(state->players.size(), 2u);
+    EXPECT_TRUE(state->players[0].id == connection->player_id ||
+                state->players[1].id == connection->player_id);
+}
+
+TEST_F(ServerNetworkLobbyClientTest, UnknownCodeLeavesTheConnectionReady) {
+    EXPECT_EQ(std::get<LobbyError>(client.join_game("999", make_character("Juana"))),
+              LobbyError::InvalidInviteCode);
+
+    EXPECT_FALSE(create_game().empty());
+}
+
+TEST_F(ServerNetworkLobbyClientTest, ReportsAFullGame) {
+    const std::string code = create_game();
+    NetworkLobbyClient second;
+    NetworkLobbyClient third;
+    ASSERT_EQ(second.connect(HOST, PORT, "Kika"), std::nullopt);
+    ASSERT_EQ(third.connect(HOST, PORT, "Mateo"), std::nullopt);
+
+    EXPECT_TRUE(std::holds_alternative<GameTicket>(second.join_game(code, make_character("Kika"))));
+    EXPECT_EQ(std::get<LobbyError>(third.join_game(code, make_character("Mateo"))),
+              LobbyError::GameFull);
+    EXPECT_FALSE(third.take_game_connection().has_value());
+}
+
+// Lo que no es válido se rechaza sin mandarlo, así que la conexión sigue lista.
+TEST_F(ServerNetworkLobbyClientTest, ChecksEachRequestBeforeSendingIt) {
+    const auto juana = make_character("Juana");
+    const auto* world = NetworkLobbyClient::WORLD_ID;
+
+    EXPECT_EQ(std::get<LobbyError>(client.create_game("  ", world, juana)),
+              LobbyError::InvalidGameName);
+    EXPECT_EQ(std::get<LobbyError>(client.create_game("Granja", "otro", juana)),
+              LobbyError::UnknownWorld);
+    EXPECT_EQ(std::get<LobbyError>(client.create_game("Granja", world, make_character(""))),
+              LobbyError::InvalidCharacterName);
+    EXPECT_EQ(std::get<LobbyError>(client.join_game("  ", juana)), LobbyError::InvalidInviteCode);
+    EXPECT_EQ(std::get<LobbyError>(client.join_game("1", make_character(""))),
+              LobbyError::InvalidCharacterName);
+
+    EXPECT_FALSE(create_game().empty());
 }
 
 }

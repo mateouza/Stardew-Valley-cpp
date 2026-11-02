@@ -180,9 +180,21 @@ LobbyResult<JoinableGameInfo> NetworkLobbyClient::find_game(const std::string& i
     return JoinableGameInfo{code, "", "", 0, 0};
 }
 
-LobbyResult<GameTicket> NetworkLobbyClient::join_game(const std::string& /*invite_code*/,
-                                                      const CharacterDraft& /*character*/) {
-    return LobbyError::ServerUnavailable;
+LobbyResult<GameTicket> NetworkLobbyClient::join_game(const std::string& invite_code,
+                                                      const CharacterDraft& character) {
+    // Un código vacío haría fallar al hilo que envía, y eso cerraría la conexión.
+    const std::string code = trim_spaces(invite_code);
+    if (code.empty()) {
+        return LobbyError::InvalidInviteCode;
+    }
+
+    const CharacterDraft draft{trim_spaces(character.name), character.appearance};
+    if (auto error = validate_character(draft)) {
+        return *error;
+    }
+
+    // El servidor no le dice el nombre de la partida a quien se une.
+    return enter_game(JoinMatchRequest{code, draft.name}, "", draft);
 }
 
 LobbyResult<GameTicket> NetworkLobbyClient::resume_game(const std::string& /*game_id*/) {
