@@ -221,6 +221,16 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
             RESOURCE_LOCK protocol_port_18080
     )
 
+    add_executable(network_client_tests tests/network_client_test.cpp)
+    target_link_libraries(network_client_tests PRIVATE server_core client_network GTest::gtest_main)
+    target_compile_options(network_client_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(network_client_tests
+        PROPERTIES
+            TIMEOUT 5
+            RESOURCE_LOCK protocol_port_18081
+    )
+
     add_executable(game_loop_tests tests/game_loop_test.cpp)
     target_link_libraries(game_loop_tests PRIVATE server_core server_model GTest::gtest_main)
     target_compile_options(game_loop_tests PRIVATE -Wall -Wextra -Wpedantic)

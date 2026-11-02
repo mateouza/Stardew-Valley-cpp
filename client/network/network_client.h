@@ -44,6 +44,7 @@ public:
     void start();
     bool try_send(const ClientRequest& request);
     std::optional<ServerMessage> try_receive();
+    std::optional<ServerMessage> receive();
 
     bool has_finished() const;
     void stop();

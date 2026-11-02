@@ -73,6 +73,18 @@ std::optional<ServerMessage> NetworkClient::try_receive() {
     return message;
 }
 
+std::optional<ServerMessage> NetworkClient::receive() {
+    if (!started) {
+        throw std::logic_error("La conexion no fue iniciada");
+    }
+
+    try {
+        return messages.pop();
+    } catch (const ClosedQueue&) {
+        return std::nullopt;
+    }
+}
+
 bool NetworkClient::has_finished() const {
     if (!started) {
         return stopped;
