@@ -11,6 +11,7 @@
 
 #include "gtest/gtest.h"
 
+#include "game_info.h"
 #include "game_loop.h"
 #include "match_command.h"
 #include "server_message.h"
@@ -43,6 +44,12 @@ protected:
                          {TileType::Walkable, TileType::Blocked}}},
                     {0.5, 0.5},
                     {2, 2.0, 0.5, 0.5}};
+
+    const GameInfo info{
+            {2, 2, {TileType::Walkable, TileType::Walkable, TileType::Walkable, TileType::Blocked}},
+            0.5,
+            0.5};
+
     static constexpr unsigned int MAX_STEPS = 70;
 
     Queue<MatchCommand> commands{16};
@@ -53,16 +60,19 @@ protected:
 
     SessionId add_player(const std::string& name) {
         const auto session_id = next_session_id++;
-        auto channel = std::make_shared<SessionChannel>(session_id, MAX_STEPS + 1);
+        auto channel = std::make_shared<SessionChannel>(session_id, MAX_STEPS + 2);
+
         if (!commands.try_push(AddPlayerCommand{name, channel})) {
             throw std::runtime_error("La cola de comandos de la prueba esta llena");
         }
+
         channels.emplace(session_id, std::move(channel));
         return session_id;
     }
 
     void send_direction(SessionId session_id, MovementDirection direction) {
         const PlayerCommand command{session_id, MoveRequest{direction}};
+
         if (!commands.try_push(command)) {
             throw std::runtime_error("La cola de comandos de la prueba esta llena");
         }
@@ -71,18 +81,41 @@ protected:
     void read_join_responses() {
         for (const auto& [session_id, channel]: channels) {
             ServerMessage message;
+
             if (!channel->get_outgoing_queue().try_pop(message)) {
                 throw std::runtime_error("No se recibio la respuesta de ingreso");
             }
+
             const auto* response = std::get_if<JoinResponse>(&message);
+
             if (!response) {
                 throw std::runtime_error("El primer mensaje debe ser la respuesta de ingreso");
             }
+
             const auto* player_id = std::get_if<PlayerId>(&response->result);
+
             if (!player_id) {
                 throw std::runtime_error("Se rechazo el ingreso del jugador de la prueba");
             }
+
             player_ids.emplace(session_id, *player_id);
+
+            if (!channel->get_outgoing_queue().try_pop(message)) {
+                throw std::runtime_error("No se recibio la informacion de la partida");
+            }
+
+            const auto* received_info = std::get_if<GameInfo>(&message);
+
+            if (!received_info) {
+                throw std::runtime_error(
+                        "El segundo mensaje debe ser la informacion de la partida");
+            }
+
+            EXPECT_EQ(received_info->map.width, info.map.width);
+            EXPECT_EQ(received_info->map.height, info.map.height);
+            EXPECT_EQ(received_info->map.tiles, info.map.tiles);
+            EXPECT_DOUBLE_EQ(received_info->player_width, info.player_width);
+            EXPECT_DOUBLE_EQ(received_info->player_height, info.player_height);
         }
     }
 
@@ -90,13 +123,17 @@ protected:
         if (steps == 0 || steps > MAX_STEPS) {
             throw std::invalid_argument("La prueba debe ejecutar entre 1 y 70 pasos");
         }
-        GameLoop loop(world, commands, std::chrono::milliseconds{10});
+
+        GameLoop loop(world, commands, std::chrono::milliseconds{10}, info);
         std::size_t updates = 0;
+
         world.set_after_update([&] {
             ++updates;
+
             if (after_step) {
                 after_step(updates);
             }
+
             if (updates == steps) {
                 final_state = world.get_state();
                 loop.stop();
@@ -114,11 +151,13 @@ protected:
 
     PlayerState get_player(SessionId session_id) const {
         const auto player_id = player_ids.at(session_id);
+
         for (const auto& player: final_state.players) {
             if (player.id == player_id) {
                 return player;
             }
         }
+
         throw std::runtime_error("No se encontro al jugador de la prueba");
     }
 };

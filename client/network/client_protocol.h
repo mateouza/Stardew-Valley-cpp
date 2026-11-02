@@ -17,6 +17,7 @@ private:
     game::PlayerState receive_player_state();
     game::GameState receive_game_state();
     MatchResponse receive_match_response();
+    game::GameInfo receive_game_info();
 
 public:
     explicit ClientProtocol(Socket& socket);
