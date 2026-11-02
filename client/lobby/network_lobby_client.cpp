@@ -7,6 +7,11 @@
 
 namespace lobby {
 
+bool NetworkLobbyClient::is_connected() {
+    std::lock_guard<std::mutex> lock(mutex);
+    return network && !interrupted && !network->has_finished();
+}
+
 void NetworkLobbyClient::interrupt() {
     std::lock_guard<std::mutex> lock(mutex);
     interrupted = true;
@@ -48,11 +53,20 @@ std::optional<LobbyError> NetworkLobbyClient::connect(const std::string& host,
 }
 
 LobbyResult<std::vector<WorldInfo>> NetworkLobbyClient::list_worlds() {
-    return LobbyError::ServerUnavailable;
+    if (!is_connected()) {
+        return LobbyError::ServerUnavailable;
+    }
+
+    return std::vector<WorldInfo>{
+            {WORLD_ID, "Mapa del servidor", "El mapa que cargó el servidor al arrancar."}};
 }
 
 LobbyResult<std::vector<SavedGameInfo>> NetworkLobbyClient::list_saved_games() {
-    return LobbyError::ServerUnavailable;
+    if (!is_connected()) {
+        return LobbyError::ServerUnavailable;
+    }
+
+    return std::vector<SavedGameInfo>{};
 }
 
 LobbyResult<GameTicket> NetworkLobbyClient::create_game(const std::string& /*game_name*/,
@@ -61,8 +75,19 @@ LobbyResult<GameTicket> NetworkLobbyClient::create_game(const std::string& /*gam
     return LobbyError::ServerUnavailable;
 }
 
-LobbyResult<JoinableGameInfo> NetworkLobbyClient::find_game(const std::string& /*invite_code*/) {
-    return LobbyError::ServerUnavailable;
+LobbyResult<JoinableGameInfo> NetworkLobbyClient::find_game(const std::string& invite_code) {
+    if (!is_connected()) {
+        return LobbyError::ServerUnavailable;
+    }
+
+    const std::string code = trim_spaces(invite_code);
+    if (code.empty()) {
+        return LobbyError::InvalidInviteCode;
+    }
+
+    // El protocolo no deja consultar una partida sin entrar: el código se confirma en join_game(),
+    // y hasta entonces no se sabe el nombre ni cuántos jugadores tiene.
+    return JoinableGameInfo{code, "", "", 0, 0};
 }
 
 LobbyResult<GameTicket> NetworkLobbyClient::join_game(const std::string& /*invite_code*/,
@@ -71,7 +96,11 @@ LobbyResult<GameTicket> NetworkLobbyClient::join_game(const std::string& /*invit
 }
 
 LobbyResult<GameTicket> NetworkLobbyClient::resume_game(const std::string& /*game_id*/) {
-    return LobbyError::ServerUnavailable;
+    if (!is_connected()) {
+        return LobbyError::ServerUnavailable;
+    }
+
+    return LobbyError::UnknownGame;
 }
 
 }

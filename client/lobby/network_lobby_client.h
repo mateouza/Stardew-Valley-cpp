@@ -26,7 +26,11 @@ private:
     std::unique_ptr<NetworkClient> network;
     bool interrupted = false;
 
+    bool is_connected();
+
 public:
+    static constexpr const char* WORLD_ID = "servidor";
+
     void interrupt() override;
 
     // interrupt() no corta un intento de conexión en curso: al cerrar el launcher, LobbyWorker
