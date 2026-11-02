@@ -12,6 +12,12 @@ InputResultado InputHandler::procesar_eventos() {
         if (evento.type == SDL_QUIT) {
             resultado.salir = true;
         }
+        if (evento.type == SDL_KEYDOWN) {
+            const SDL_Scancode tecla = evento.key.keysym.scancode;
+            if (tecla >= SDL_SCANCODE_1 && tecla <= SDL_SCANCODE_9) {
+                resultado.slot_seleccionado = static_cast<std::size_t>(tecla - SDL_SCANCODE_1);
+            }
+        }
     }
 
     const Uint8* teclas = SDL_GetKeyboardState(nullptr);
