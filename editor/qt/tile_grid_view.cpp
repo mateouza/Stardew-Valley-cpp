@@ -1,6 +1,7 @@
 #include "tile_grid_view.h"
 
 #include <QFont>
+#include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
 #include <QRect>
@@ -33,6 +34,10 @@ void TileGridView::set_zone(Zone* new_zone) {
     update();
 }
 
+void TileGridView::set_brush(Tile tile) { brush = tile; }
+
+Tile TileGridView::get_brush() const { return brush; }
+
 void TileGridView::paintEvent(QPaintEvent* event) {
     if (zone == nullptr) {
         return;
@@ -61,6 +66,34 @@ void TileGridView::paintEvent(QPaintEvent* event) {
             }
         }
     }
+}
+
+void TileGridView::mousePressEvent(QMouseEvent* event) {
+    if (event->button() == Qt::LeftButton) {
+        paint_at(event->position().toPoint());
+    }
+}
+
+void TileGridView::mouseMoveEvent(QMouseEvent* event) {
+    if (event->buttons() & Qt::LeftButton) {
+        paint_at(event->position().toPoint());
+    }
+}
+
+void TileGridView::paint_at(const QPoint& position) {
+    // Al arrastrar, el mouse puede salir del widget: las coordenadas negativas no son casillas.
+    if (zone == nullptr || position.x() < 0 || position.y() < 0) {
+        return;
+    }
+    const int column = position.x() / TILE_SIZE;
+    const int row = position.y() / TILE_SIZE;
+    if (!zone->contains(column, row) || !is_allowed(zone->kind(), brush) ||
+        zone->at(column, row) == brush) {
+        return;
+    }
+    zone->set(column, row, brush);
+    update(cell_rect(column, row));
+    emit tile_painted(column, row);
 }
 
 }

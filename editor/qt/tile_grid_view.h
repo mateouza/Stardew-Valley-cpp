@@ -1,23 +1,31 @@
 #ifndef EDITOR_QT_TILE_GRID_VIEW_H_
 #define EDITOR_QT_TILE_GRID_VIEW_H_
 
+#include <QPoint>
 #include <QWidget>
 
 #include "editor/model/zone.h"
 
+class QMouseEvent;
 class QPaintEvent;
 
 namespace editor {
 
-// Muestra una zona casilla por casilla, con los colores y las letras de tile_colors.h.
+// Muestra una zona casilla por casilla, con los colores y las letras de tile_colors.h, y la deja
+// pintar: un click o un arrastre con el botón izquierdo pone la casilla del pincel.
 class TileGridView: public QWidget {
     Q_OBJECT
 
 private:
     Zone* zone = nullptr;
+    Tile brush = Tile::Grass;
+
+    void paint_at(const QPoint& position);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
 
 public:
     // Lado de cada casilla en pantalla, en píxeles.
@@ -28,6 +36,14 @@ public:
     // No es dueña de la zona: quien se la pasa la mantiene viva mientras se muestre. Hay que volver
     // a llamarla si la zona cambia de tamaño. Con nullptr no muestra nada.
     void set_zone(Zone* new_zone);
+
+    // Si la zona no admite esa casilla, los clicks no pintan nada.
+    void set_brush(Tile tile);
+    Tile get_brush() const;
+
+signals:
+    // Una casilla cambió por un click o un arrastre.
+    void tile_painted(int column, int row);
 };
 
 }
