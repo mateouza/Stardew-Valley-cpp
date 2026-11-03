@@ -11,6 +11,9 @@ class ProtocolBase {
 private:
     Socket& socket;
 
+public:
+    static constexpr std::uint32_t MAX_INVITATION_CODE_BYTES = 256;
+
 protected:
     static constexpr std::uint8_t MOVE_MESSAGE = 0x01;
     static constexpr std::uint8_t JOIN_RESPONSE_MESSAGE = 0x02;
@@ -22,7 +25,6 @@ protected:
     static constexpr std::uint8_t CREATE_MATCH_MESSAGE = 0x04;
     static constexpr std::uint8_t JOIN_MATCH_MESSAGE = 0x05;
     static constexpr std::uint32_t MAX_MATCH_NAME_BYTES = 256;
-    static constexpr std::uint32_t MAX_INVITATION_CODE_BYTES = 256;
     static constexpr std::uint8_t MATCH_RESPONSE_MESSAGE = 0x06;
     static constexpr std::uint8_t MATCH_FOUND = 0x00;
     static constexpr std::uint8_t MATCH_NOT_FOUND = 0x01;

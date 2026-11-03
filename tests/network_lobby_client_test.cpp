@@ -15,6 +15,7 @@
 #include "game_state.h"
 #include "map.h"
 #include "match_manager.h"
+#include "protocol_base.h"
 #include "socket.h"
 #include "world_config.h"
 
@@ -239,8 +240,8 @@ TEST_F(ServerNetworkLobbyClientTest, ChecksEachRequestBeforeSendingIt) {
 TEST_F(ServerNetworkLobbyClientTest, RejectsALongCodeWithoutSendingIt) {
     const auto juana = make_character("Juana");
 
-    for (const std::string& code:
-         {std::string(MAX_INVITE_CODE_LENGTH + 1, '1'), std::string(257, '1')}) {
+    for (const std::string& code: {std::string(MAX_INVITE_CODE_LENGTH + 1, '1'),
+                                   std::string(ProtocolBase::MAX_INVITATION_CODE_BYTES + 1, '1')}) {
         EXPECT_EQ(std::get<LobbyError>(client.find_game(code)), LobbyError::InvalidInviteCode);
         EXPECT_EQ(std::get<LobbyError>(client.join_game(code, juana)),
                   LobbyError::InvalidInviteCode);

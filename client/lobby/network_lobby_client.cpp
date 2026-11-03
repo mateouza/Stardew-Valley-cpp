@@ -5,8 +5,12 @@
 #include <variant>
 
 #include "lobby_validation.h"
+#include "protocol_base.h"
 
 namespace lobby {
+
+static_assert(MAX_INVITE_CODE_LENGTH <= ProtocolBase::MAX_INVITATION_CODE_BYTES,
+              "El protocolo tiene que aceptar cualquier codigo valido del lobby");
 
 namespace {
 
