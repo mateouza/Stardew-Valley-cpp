@@ -319,24 +319,40 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     gtest_discover_tests(match_tests PROPERTIES TIMEOUT 5)
 endif()
 
-if(BUILD_CLIENT)
+if(BUILD_CLIENT OR BUILD_LAUNCHER)
     find_package(SDL2 REQUIRED)
     find_package(SDL2pp REQUIRED)
 
-    add_executable(stardew_client
-        client/sdl/main.cpp
+    add_library(client_sdl STATIC
+        client/sdl/sdl_client.cpp
         client/sdl/render/renderer.cpp
+        client/sdl/render/texture_manager.cpp
         client/sdl/render/sdl_window.cpp
         client/sdl/state/client_state.cpp
         client/sdl/core/input_handler.cpp
+        client/sdl/core/inventory_bar.cpp
     )
 
-    target_link_libraries(stardew_client PRIVATE
+    target_link_libraries(client_sdl PUBLIC
         client_network
-        course_support
         game_contracts
         SDL2pp::SDL2pp
     )
 
-    target_compile_options(stardew_client PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(client_sdl PRIVATE -Wall -Wextra -Wpedantic)
+
+    if (BUILD_CLIENT)
+        add_executable(stardew_client
+            client/sdl/main.cpp
+        )
+
+        target_link_libraries(stardew_client PRIVATE
+            client_sdl
+            client_network
+            course_support
+            game_contracts
+        )
+
+        target_compile_options(stardew_client PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
 endif()
