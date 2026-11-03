@@ -1,5 +1,7 @@
 #include "player.h"
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 
 #include "gtest/gtest.h"
@@ -215,6 +217,9 @@ TEST_F(PlayerTest, KeepsInventoriesIndependentBetweenPlayers) {
     ASSERT_EQ(player.add_item({ItemType::StrawberrySeed, ItemQuality::Base, 12}),
               InventoryResult::Accepted);
 
+    ASSERT_EQ(player.select_slot(4), InventoryResult::Accepted);
+    ASSERT_EQ(other.select_slot(4), InventoryResult::Accepted);
+
     const auto item = player.get_selected_item();
     ASSERT_TRUE(item.has_value());
     EXPECT_EQ(item->type, ItemType::StrawberrySeed);
@@ -222,25 +227,82 @@ TEST_F(PlayerTest, KeepsInventoriesIndependentBetweenPlayers) {
 
     EXPECT_FALSE(other.get_selected_item().has_value());
 
-    ASSERT_EQ(player.select_slot(3), InventoryResult::Accepted);
-    EXPECT_EQ(player.get_selected_slot(), 3u);
-    EXPECT_EQ(other.get_selected_slot(), 0u);
+    ASSERT_EQ(player.select_slot(2), InventoryResult::Accepted);
+    EXPECT_EQ(player.get_selected_slot(), 2u);
+    EXPECT_EQ(other.get_selected_slot(), 4u);
 }
 
 TEST_F(PlayerTest, DelegatesRemovalAndPreservesStateOnRejection) {
     ASSERT_EQ(player.add_item({ItemType::StrawberrySeed, ItemQuality::Base, 2}),
               InventoryResult::Accepted);
+    ASSERT_EQ(player.select_slot(4), InventoryResult::Accepted);
 
-    EXPECT_EQ(player.remove_item(0, 3), InventoryResult::NotEnoughItems);
+    EXPECT_EQ(player.remove_item(4, 3), InventoryResult::NotEnoughItems);
 
     const auto item = player.get_selected_item();
     ASSERT_TRUE(item.has_value());
     EXPECT_EQ(item->quantity, 2u);
 
     EXPECT_EQ(player.select_slot(9), InventoryResult::InvalidSlot);
-    EXPECT_EQ(player.get_selected_slot(), 0u);
+    EXPECT_EQ(player.get_selected_slot(), 4u);
 
-    ASSERT_EQ(player.remove_item(0, 2), InventoryResult::Accepted);
+    ASSERT_EQ(player.remove_item(4, 2), InventoryResult::Accepted);
     EXPECT_FALSE(player.get_selected_item().has_value());
 }
+
+TEST_F(PlayerTest, StartsWithFourToolsAndFiveEmptySlots) {
+    const std::array<ItemType, 4> expected{ItemType::Pickaxe, ItemType::WateringCan,
+                                           ItemType::Shovel, ItemType::Sword};
+
+    EXPECT_EQ(player.get_selected_slot(), 0u);
+
+    for (std::size_t slot = 0; slot < expected.size(); ++slot) {
+        ASSERT_EQ(player.select_slot(slot), InventoryResult::Accepted);
+
+        const auto item = player.get_selected_item();
+        ASSERT_TRUE(item.has_value());
+        EXPECT_EQ(item->type, expected[slot]);
+        EXPECT_EQ(item->quality, ItemQuality::Base);
+        EXPECT_EQ(item->quantity, 1u);
+    }
+
+    for (std::size_t slot = expected.size(); slot < 9; ++slot) {
+        ASSERT_EQ(player.select_slot(slot), InventoryResult::Accepted);
+        EXPECT_FALSE(player.get_selected_item().has_value());
+    }
+}
+
+TEST_F(PlayerTest, ReconnectPreservesInventoryWithoutAddingToolsAgain) {
+    ASSERT_EQ(player.add_item({ItemType::StrawberrySeed, ItemQuality::Base, 12}),
+              InventoryResult::Accepted);
+    ASSERT_EQ(player.select_slot(4), InventoryResult::Accepted);
+
+    player.disconnect();
+    ASSERT_EQ(player.reconnect(), ReconnectPlayerResult::Accepted);
+
+    EXPECT_EQ(player.get_selected_slot(), 4u);
+
+    const auto item = player.get_selected_item();
+    ASSERT_TRUE(item.has_value());
+    EXPECT_EQ(item->type, ItemType::StrawberrySeed);
+    EXPECT_EQ(item->quantity, 12u);
+
+    const std::array<ItemType, 4> expected{ItemType::Pickaxe, ItemType::WateringCan,
+                                           ItemType::Shovel, ItemType::Sword};
+
+    for (std::size_t slot = 0; slot < expected.size(); ++slot) {
+        ASSERT_EQ(player.select_slot(slot), InventoryResult::Accepted);
+
+        const auto tool = player.get_selected_item();
+        ASSERT_TRUE(tool.has_value());
+        EXPECT_EQ(tool->type, expected[slot]);
+        EXPECT_EQ(tool->quantity, 1u);
+    }
+
+    for (std::size_t slot = 5; slot < 9; ++slot) {
+        ASSERT_EQ(player.select_slot(slot), InventoryResult::Accepted);
+        EXPECT_FALSE(player.get_selected_item().has_value());
+    }
+}
+
 }
