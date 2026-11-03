@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <optional>
 
+#include "inventory_state.h"
 #include "item.h"
 
 namespace game {
@@ -22,8 +23,8 @@ enum class InventoryResult {
 
 class Inventory {
 private:
-    static constexpr std::size_t CAPACITY = 9;
-    static constexpr std::uint32_t MAX_STACK_SIZE = 50;
+    static constexpr std::size_t CAPACITY = InventoryState::CAPACITY;
+    static constexpr std::uint32_t MAX_STACK_SIZE = InventoryState::MAX_STACK_SIZE;
 
     std::array<std::optional<ItemStack>, CAPACITY> slots{};
     std::size_t selected_slot = 0;
@@ -39,6 +40,7 @@ public:
     std::optional<ItemStack> get_selected_item() const;
 
     const std::array<std::optional<ItemStack>, CAPACITY>& get_slots() const;
+    InventoryState get_state() const;
 };
 
 }

@@ -121,4 +121,5 @@ InventoryResult Inventory::add(ItemStack item) {
     return InventoryResult::Accepted;
 }
 
+InventoryState Inventory::get_state() const { return {slots, selected_slot}; }
 }

@@ -78,4 +78,7 @@ InventoryResult Player::select_slot(std::size_t slot) { return inventory.select(
 std::size_t Player::get_selected_slot() const { return inventory.get_selected_slot(); }
 
 std::optional<ItemStack> Player::get_selected_item() const { return inventory.get_selected_item(); }
+
+InventoryState Player::get_inventory_state() const { return inventory.get_state(); }
+
 }

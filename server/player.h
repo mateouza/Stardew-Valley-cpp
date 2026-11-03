@@ -10,6 +10,7 @@
 #include "game_state.h"
 #include "game_types.h"
 #include "inventory.h"
+#include "inventory_state.h"
 
 namespace game {
 
@@ -43,6 +44,7 @@ public:
 
     std::size_t get_selected_slot() const;
     std::optional<ItemStack> get_selected_item() const;
+    InventoryState get_inventory_state() const;
 };
 
 }
