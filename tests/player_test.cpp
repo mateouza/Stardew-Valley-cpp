@@ -208,4 +208,39 @@ TEST_F(PlayerTest, StateIsAnIndependentSnapshot) {
     player.set_position({4.0, 3.5});
     EXPECT_DOUBLE_EQ(state.position.x, 99.0);
 }
+
+TEST_F(PlayerTest, KeepsInventoriesIndependentBetweenPlayers) {
+    Player other(8, "Mateo", {0.5, 0.5});
+
+    ASSERT_EQ(player.add_item({ItemType::StrawberrySeed, ItemQuality::Base, 12}),
+              InventoryResult::Accepted);
+
+    const auto item = player.get_selected_item();
+    ASSERT_TRUE(item.has_value());
+    EXPECT_EQ(item->type, ItemType::StrawberrySeed);
+    EXPECT_EQ(item->quantity, 12u);
+
+    EXPECT_FALSE(other.get_selected_item().has_value());
+
+    ASSERT_EQ(player.select_slot(3), InventoryResult::Accepted);
+    EXPECT_EQ(player.get_selected_slot(), 3u);
+    EXPECT_EQ(other.get_selected_slot(), 0u);
+}
+
+TEST_F(PlayerTest, DelegatesRemovalAndPreservesStateOnRejection) {
+    ASSERT_EQ(player.add_item({ItemType::StrawberrySeed, ItemQuality::Base, 2}),
+              InventoryResult::Accepted);
+
+    EXPECT_EQ(player.remove_item(0, 3), InventoryResult::NotEnoughItems);
+
+    const auto item = player.get_selected_item();
+    ASSERT_TRUE(item.has_value());
+    EXPECT_EQ(item->quantity, 2u);
+
+    EXPECT_EQ(player.select_slot(9), InventoryResult::InvalidSlot);
+    EXPECT_EQ(player.get_selected_slot(), 0u);
+
+    ASSERT_EQ(player.remove_item(0, 2), InventoryResult::Accepted);
+    EXPECT_FALSE(player.get_selected_item().has_value());
+}
 }

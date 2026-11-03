@@ -54,4 +54,15 @@ bool Player::is_connected() const { return connected; }
 
 PlayerState Player::get_state() const { return {id, name, position, facing, moving}; }
 
+InventoryResult Player::add_item(ItemStack item) { return inventory.add(item); }
+
+InventoryResult Player::remove_item(std::size_t slot, std::uint32_t quantity) {
+    return inventory.remove(slot, quantity);
+}
+
+InventoryResult Player::select_slot(std::size_t slot) { return inventory.select(slot); }
+
+std::size_t Player::get_selected_slot() const { return inventory.get_selected_slot(); }
+
+std::optional<ItemStack> Player::get_selected_item() const { return inventory.get_selected_item(); }
 }
