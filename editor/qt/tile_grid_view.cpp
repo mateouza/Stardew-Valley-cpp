@@ -48,7 +48,6 @@ void TileGridView::paintEvent(QPaintEvent* event) {
     font.setPixelSize(TILE_SIZE * 3 / 5);
     painter.setFont(font);
 
-    // Solo redibuja las casillas que pide Qt: al pintar una, no recorre la zona entera.
     const QRect dirty = event->rect();
     const int last_column = std::min(zone->width() - 1, dirty.right() / TILE_SIZE);
     const int last_row = std::min(zone->height() - 1, dirty.bottom() / TILE_SIZE);
@@ -81,7 +80,7 @@ void TileGridView::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void TileGridView::paint_at(const QPoint& position) {
-    // Al arrastrar, el mouse puede salir del widget: las coordenadas negativas no son casillas.
+    // Al arrastrar, el mouse puede salir del widget.
     if (zone == nullptr || position.x() < 0 || position.y() < 0) {
         return;
     }

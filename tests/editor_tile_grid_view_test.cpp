@@ -18,7 +18,6 @@ using Cells = std::vector<std::pair<int, int>>;
 
 constexpr int TILE_SIZE = TileGridView::TILE_SIZE;
 
-// Un punto dentro de la casilla, lejos del borde y de la letra.
 QPoint inside_cell(int column, int row) { return QPoint(column, row) * TILE_SIZE + QPoint(3, 3); }
 
 QPoint center_of(int column, int row) {

@@ -4,8 +4,6 @@
 
 namespace editor {
 
-// maps/example.toml es el mapa que se le pasa al resto del grupo: tiene que abrirse en el editor
-// sin ningún problema.
 TEST(ExampleMapTest, RepositoryExampleLoadsWithoutProblems) {
     const WorldMap map = load_map(EXAMPLE_MAP_PATH);
 

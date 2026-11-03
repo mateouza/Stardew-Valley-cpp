@@ -30,8 +30,6 @@ void PrintTo(const QString& text, std::ostream* os) { *os << '"' << text.toStdSt
 
 namespace launcher {
 
-// Procesa eventos, como el loop de Qt, hasta que la ventana recibe la respuesta del lobby o vence
-// el plazo. Si no había ningún pedido, vuelve enseguida.
 bool lobby_answered(const LauncherWindow& window) {
     return QTest::qWaitFor([&window] { return !window.is_waiting_for_lobby(); }, 2000);
 }
@@ -243,8 +241,7 @@ TEST_F(LauncherWindowTest, CharacterNameAcceptsOnlyListedCharacters) {
     auto* name_input = widget<QLineEdit>("character_screen", "character_name_input");
     name_input->clear();
 
-    // keyClicks solo simula teclas ASCII; así se manda cada tecla con su texto, como un teclado
-    // en español.
+    // keyClicks solo simula ASCII; acá cada tecla lleva su texto.
     for (const QChar c: QString::fromUtf8("Montaña_")) {
         QTest::sendKeyEvent(QTest::Click, name_input, Qt::Key_unknown, QString(c), Qt::NoModifier);
     }
@@ -446,7 +443,6 @@ TEST(LauncherWindowAsyncTest, DelayedResponseDoesNotBlockTheWindow) {
     LauncherWindow window(lobby_client, LauncherOptions{"localhost", "8080", "Juanceto02"});
     auto* screens = window.findChild<QStackedWidget*>();
 
-    // click() vuelve aunque el servidor no conteste: el pedido quedó esperando en otro hilo.
     window.findChild<QPushButton*>("connect_button")->click();
     ASSERT_TRUE(lobby_client.wait_until_started());
     QTest::qWait(50);
@@ -472,8 +468,6 @@ TEST(LauncherWindowAsyncTest, ClosingWithAPendingRequestInterruptsItAndCleansUp)
     window->close();
     EXPECT_FALSE(window->get_ticket().has_value());
 
-    // Si el pedido no se interrumpiera, el destructor esperaría al hilo para siempre y vencería
-    // el timeout de ctest.
     window.reset();
     EXPECT_TRUE(lobby_client.was_interrupted());
 }
@@ -487,7 +481,6 @@ TEST(LauncherWindowOptionsTest, PrefillsConnectionFields) {
     EXPECT_EQ(window.findChild<QLineEdit*>("username_input")->text(), "Juanceto01");
 }
 
-// El launcher con el lobby real, contra el servidor de verdad en el mismo proceso.
 class LauncherWithServerTest: public ::testing::Test {
 protected:
     MatchManager matches{game::Map{{{game::TileType::Walkable}}}, game::Position{0.5, 0.5},
@@ -520,7 +513,6 @@ TEST_F(LauncherWithServerTest, CreatesAGameThatAnotherLauncherJoinsWithItsCode) 
         ASSERT_TRUE(window.get_ticket().has_value());
     }
 
-    // Como en run_launcher(): la ventana ya se destruyó y la conexión de la partida sigue abierta.
     const auto created = creator.take_game_connection();
     ASSERT_TRUE(created.has_value());
     const QString code = QString::fromStdString(created->invite_code);

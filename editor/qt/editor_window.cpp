@@ -111,7 +111,6 @@ Zone& EditorWindow::zone_at(int index) {
 void EditorWindow::show_zone(Zone& zone) {
     grid->set_zone(&zone);
 
-    // La paleta cambia con la zona. Si el pincel también sirve en la nueva, se mantiene.
     const QSignalBlocker blocker(palette);
     palette->clear();
     const auto& tiles = tiles_for(zone.kind());

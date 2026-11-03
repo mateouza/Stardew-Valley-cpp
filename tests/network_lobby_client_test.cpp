@@ -45,7 +45,6 @@ TEST(NetworkLobbyClientTest, RejectsInvalidUsernameBeforeConnecting) {
     EXPECT_EQ(client.connect(HOST, PORT, "Juan ceto"), LobbyError::InvalidUsername);
 }
 
-// Después de interrupt() ni lo intenta, así el launcher no espera una conexión que va a descartar.
 TEST(NetworkLobbyClientTest, DoesNotTryToConnectAfterInterrupt) {
     Socket listener{PORT};
     NetworkLobbyClient client;
@@ -53,7 +52,6 @@ TEST(NetworkLobbyClientTest, DoesNotTryToConnectAfterInterrupt) {
 
     EXPECT_EQ(client.connect(HOST, PORT, "Juanceto01"), LobbyError::ServerUnavailable);
 
-    // Si el cliente se hubiera conectado, la primera conexión pendiente sería la suya, ya cerrada.
     Socket probe(HOST, PORT);
     const char sent = 'x';
     probe.sendall(&sent, sizeof(sent));
@@ -62,7 +60,7 @@ TEST(NetworkLobbyClientTest, DoesNotTryToConnectAfterInterrupt) {
     EXPECT_EQ(first.recvall(&received, sizeof(received)), 1);
 }
 
-// Alcanza con un socket escuchando: el sistema acepta la conexión aunque nadie llame a accept().
+// El sistema acepta la conexión aunque nadie llame a accept().
 class ConnectedNetworkLobbyClientTest: public ::testing::Test {
 protected:
     Socket listener{PORT};
@@ -93,7 +91,6 @@ TEST_F(ConnectedNetworkLobbyClientTest, FindGameOnlyValidatesTheCode) {
     EXPECT_EQ(std::get<LobbyError>(client.find_game("1 2")), LobbyError::InvalidInviteCode);
 }
 
-// Nadie contesta: sin interrupt(), create_game() esperaría para siempre.
 TEST_F(ConnectedNetworkLobbyClientTest, InterruptWakesUpAGameCreationWaitingForTheServer) {
     std::thread closing([this] {
         std::this_thread::sleep_for(std::chrono::milliseconds{50});
@@ -115,7 +112,6 @@ TEST_F(ConnectedNetworkLobbyClientTest, InterruptIsFinal) {
     EXPECT_EQ(client.connect(HOST, PORT, "Juanceto01"), LobbyError::ServerUnavailable);
 }
 
-// Si el servidor corta, las respuestas locales también dejan de estar disponibles.
 TEST(NetworkLobbyClientTest, AnswersNothingAfterTheServerCloses) {
     Socket listener{PORT};
     NetworkLobbyClient client;
@@ -123,7 +119,6 @@ TEST(NetworkLobbyClientTest, AnswersNothingAfterTheServerCloses) {
 
     listener.accept().shutdown(SHUT_RDWR);
 
-    // El hilo receptor de NetworkClient se entera de forma asincrónica.
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{2};
     while (std::holds_alternative<std::vector<WorldInfo>>(client.list_worlds()) &&
            std::chrono::steady_clock::now() < deadline) {
@@ -133,7 +128,6 @@ TEST(NetworkLobbyClientTest, AnswersNothingAfterTheServerCloses) {
     EXPECT_EQ(std::get<LobbyError>(client.list_worlds()), LobbyError::ServerUnavailable);
 }
 
-// El servidor de verdad, en el mismo proceso, con un mapa de 2 x 2 casillas transitables.
 class ServerNetworkLobbyClientTest: public ::testing::Test {
 protected:
     MatchManager matches{game::Map{{{game::TileType::Walkable, game::TileType::Walkable},
@@ -154,7 +148,6 @@ protected:
         matches.stop();
     }
 
-    // Crea una partida con client, que queda adentro, y devuelve su código.
     std::string create_game() {
         const auto result =
                 client.create_game("Granja", NetworkLobbyClient::WORLD_ID, make_character("Juana"));
@@ -169,7 +162,6 @@ TEST_F(ServerNetworkLobbyClientTest, CreatesAGameAndHandsOverTheConnection) {
     EXPECT_FALSE(ticket.game_id.empty());
     EXPECT_EQ(ticket.game_name, "Granja");
 
-    // Es lo que hace LobbyWorker al cerrar el launcher: no tiene que cortar la conexión del juego.
     client.interrupt();
     auto connection = client.take_game_connection();
 
@@ -227,7 +219,6 @@ TEST_F(ServerNetworkLobbyClientTest, ReportsAFullGame) {
     EXPECT_FALSE(third.take_game_connection().has_value());
 }
 
-// Lo que no es válido se rechaza sin mandarlo, así que la conexión sigue lista.
 TEST_F(ServerNetworkLobbyClientTest, ChecksEachRequestBeforeSendingIt) {
     const auto juana = make_character("Juana");
     const auto* world = NetworkLobbyClient::WORLD_ID;
@@ -245,8 +236,6 @@ TEST_F(ServerNetworkLobbyClientTest, ChecksEachRequestBeforeSendingIt) {
     EXPECT_FALSE(create_game().empty());
 }
 
-// El protocolo no manda códigos de más de 256 bytes: si se encolara, el hilo que envía fallaría y
-// join_game() esperaría una respuesta que no llega.
 TEST_F(ServerNetworkLobbyClientTest, RejectsALongCodeWithoutSendingIt) {
     const auto juana = make_character("Juana");
 

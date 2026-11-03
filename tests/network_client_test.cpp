@@ -16,7 +16,6 @@ namespace {
 
 constexpr const char* PORT = "18081";
 
-// Un NetworkClient ya iniciado, conectado a un socket que hace de servidor.
 class NetworkClientReceiveTest: public ::testing::Test {
 protected:
     Socket listener{PORT};

@@ -40,7 +40,6 @@ for test_binary in "${qt_test_binaries[@]}"; do
     fi
 done
 
-# Los tests de Qt corren sin pantalla.
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}"
 
 for test_binary in "${test_binaries[@]}"; do

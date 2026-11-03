@@ -23,7 +23,6 @@ QPoint center_of(int column, int row) {
     return QPoint(column * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2);
 }
 
-// Para que gtest muestre el mensaje si una operación falla cuando no debería.
 std::string error_of(const std::optional<QString>& error) {
     return error ? error->toStdString() : "";
 }
