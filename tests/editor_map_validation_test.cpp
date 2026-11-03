@@ -13,8 +13,6 @@ using Problems = std::vector<std::string>;
 const Tile UNIQUE_TOWN_TILES[] = {Tile::Marnie, Tile::Clint,           Tile::Pierre,
                                   Tile::Robin,  Tile::CommunityCenter, Tile::DungeonEntrance};
 
-// Mundo que cumple todas las reglas, para romper una sola en cada test. En el pueblo, la casilla
-// UNIQUE_TOWN_TILES[i] está en la columna i de la fila 0.
 WorldMap complete_map() {
     WorldMap map = WorldMap::create_empty("Valle Juanceto");
     map.farm.set(1, 1, Tile::Cabin);
@@ -51,7 +49,7 @@ TEST(MapValidationTest, CompleteMapHasNoProblems) {
 TEST(MapValidationTest, EmptyMapListsEverythingMissing) {
     const Problems problems = describe(WorldMap::create_empty("Valle Juanceto"));
 
-    // 2 de la granja, 7 del pueblo, y 10 salidas y 9 escaleras de la mazmorra.
+    // Granja 2, pueblo 7, mazmorra 19.
     EXPECT_EQ(problems.size(), 28u);
     EXPECT_EQ(problems.front(), "Granja: falta «Cabaña»");
     EXPECT_EQ(problems.back(), "Mazmorra, nivel 10: falta «Salida de la mazmorra»");

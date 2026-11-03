@@ -1,11 +1,11 @@
 #include "network_sender.h"
 
+#include <exception>
 #include <variant>
 
-#include "liberror.h"
-
-NetworkSender::NetworkSender(ClientProtocol& protocol, Queue<ClientRequest>& requests):
-        protocol(protocol), requests(requests) {}
+NetworkSender::NetworkSender(ClientProtocol& protocol, Queue<ClientRequest>& requests,
+                             ConnectionCloser& closer):
+        protocol(protocol), requests(requests), closer(closer) {}
 
 void NetworkSender::send_request(const ClientRequest& request) {
     if (const auto* create = std::get_if<CreateMatchRequest>(&request)) {
@@ -22,6 +22,8 @@ void NetworkSender::send_request(const ClientRequest& request) {
 }
 
 void NetworkSender::run() {
+    std::exception_ptr error;
+
     try {
         while (should_keep_running()) {
             const auto request = requests.pop();
@@ -33,30 +35,9 @@ void NetworkSender::run() {
             send_request(request);
         }
     } catch (const ClosedQueue&) {
-    } catch (const LibError&) {
-        if (should_keep_running()) {
-            failure = std::current_exception();
-        }
     } catch (...) {
-        failure = std::current_exception();
+        error = std::current_exception();
     }
 
-    NetworkSender::stop();
-}
-
-void NetworkSender::stop() {
-    Thread::stop();
-
-    std::lock_guard<std::mutex> lock(close_mutex);
-
-    if (!queue_closed) {
-        requests.close();
-        queue_closed = true;
-    }
-}
-
-void NetworkSender::rethrow_if_failed() const {
-    if (failure) {
-        std::rethrow_exception(failure);
-    }
+    closer.close(error);
 }

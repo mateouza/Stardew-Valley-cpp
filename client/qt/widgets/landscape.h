@@ -6,7 +6,6 @@ class QRect;
 
 namespace launcher {
 
-// Fondo del launcher: cielo, nubes, colinas, pasto y una cerca, en bloques sin antialiasing.
 void paint_landscape(QPainter& painter, const QRect& area);
 
 }

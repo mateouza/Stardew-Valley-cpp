@@ -10,7 +10,6 @@ class QPaintEvent;
 
 namespace launcher {
 
-// Muestra el personaje parado sobre un recuadro de pasto, escalado a su tamaño.
 class CharacterPreview: public QWidget {
     Q_OBJECT
 

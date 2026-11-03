@@ -10,8 +10,6 @@ class QPushButton;
 
 namespace launcher {
 
-// Pide el código de invitación de una partida multijugador. El código se muestra en mayúsculas
-// mientras se escribe; la validación la hace el servidor.
 class JoinScreen: public QWidget {
     Q_OBJECT
 
