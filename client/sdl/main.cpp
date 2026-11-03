@@ -47,11 +47,7 @@ std::optional<T> esperar_mensaje(NetworkClient& cliente, std::chrono::steady_clo
                 return *encontrado;
             }
             continue; // se ignoran los mensajes de otro tipo
-        }
-        if (cliente.has_finished()) {
-            return std::nullopt;
-        }
-        
+        }        
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     return std::nullopt;
