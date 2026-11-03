@@ -45,6 +45,23 @@ TEST(NetworkLobbyClientTest, RejectsInvalidUsernameBeforeConnecting) {
     EXPECT_EQ(client.connect(HOST, PORT, "Juan ceto"), LobbyError::InvalidUsername);
 }
 
+// Después de interrupt() ni lo intenta, así el launcher no espera una conexión que va a descartar.
+TEST(NetworkLobbyClientTest, DoesNotTryToConnectAfterInterrupt) {
+    Socket listener{PORT};
+    NetworkLobbyClient client;
+    client.interrupt();
+
+    EXPECT_EQ(client.connect(HOST, PORT, "Juanceto01"), LobbyError::ServerUnavailable);
+
+    // Si el cliente se hubiera conectado, la primera conexión pendiente sería la suya, ya cerrada.
+    Socket probe(HOST, PORT);
+    const char sent = 'x';
+    probe.sendall(&sent, sizeof(sent));
+    Socket first = listener.accept();
+    char received = 0;
+    EXPECT_EQ(first.recvall(&received, sizeof(received)), 1);
+}
+
 // Alcanza con un socket escuchando: el sistema acepta la conexión aunque nadie llame a accept().
 class ConnectedNetworkLobbyClientTest: public ::testing::Test {
 protected:
@@ -67,12 +84,13 @@ TEST_F(ConnectedNetworkLobbyClientTest, OffersTheServerMapAndNoSavedGames) {
     EXPECT_EQ(std::get<LobbyError>(client.resume_game("partida-1")), LobbyError::UnknownGame);
 }
 
-TEST_F(ConnectedNetworkLobbyClientTest, FindGameOnlyChecksThatThereIsACode) {
+TEST_F(ConnectedNetworkLobbyClientTest, FindGameOnlyValidatesTheCode) {
     const auto game = std::get<JoinableGameInfo>(client.find_game("  12 "));
 
     EXPECT_EQ(game.game_id, "12");
     EXPECT_TRUE(game.game_name.empty());
     EXPECT_EQ(std::get<LobbyError>(client.find_game("   ")), LobbyError::InvalidInviteCode);
+    EXPECT_EQ(std::get<LobbyError>(client.find_game("1 2")), LobbyError::InvalidInviteCode);
 }
 
 // Nadie contesta: sin interrupt(), create_game() esperaría para siempre.
@@ -223,6 +241,21 @@ TEST_F(ServerNetworkLobbyClientTest, ChecksEachRequestBeforeSendingIt) {
     EXPECT_EQ(std::get<LobbyError>(client.join_game("  ", juana)), LobbyError::InvalidInviteCode);
     EXPECT_EQ(std::get<LobbyError>(client.join_game("1", make_character(""))),
               LobbyError::InvalidCharacterName);
+
+    EXPECT_FALSE(create_game().empty());
+}
+
+// El protocolo no manda códigos de más de 256 bytes: si se encolara, el hilo que envía fallaría y
+// join_game() esperaría una respuesta que no llega.
+TEST_F(ServerNetworkLobbyClientTest, RejectsALongCodeWithoutSendingIt) {
+    const auto juana = make_character("Juana");
+
+    for (const std::string& code:
+         {std::string(MAX_INVITE_CODE_LENGTH + 1, '1'), std::string(257, '1')}) {
+        EXPECT_EQ(std::get<LobbyError>(client.find_game(code)), LobbyError::InvalidInviteCode);
+        EXPECT_EQ(std::get<LobbyError>(client.join_game(code, juana)),
+                  LobbyError::InvalidInviteCode);
+    }
 
     EXPECT_FALSE(create_game().empty());
 }

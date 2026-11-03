@@ -23,6 +23,10 @@ bool is_username_character(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
+bool is_invite_code_character(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-';
+}
+
 bool is_ascii_name_character(unsigned char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ' ||
            c == '-' || c == '\'';
@@ -70,6 +74,12 @@ bool is_valid_port(std::string_view port) {
     const auto [parsed_until, error] = std::from_chars(port.data(), end, value);
     return !port.empty() && error == std::errc() && parsed_until == end && value >= MIN_PORT &&
            value <= MAX_PORT;
+}
+
+bool is_valid_invite_code(std::string_view invite_code) {
+    const std::string code = trim_spaces(invite_code);
+    return !code.empty() && code.size() <= MAX_INVITE_CODE_LENGTH &&
+           std::all_of(code.begin(), code.end(), is_invite_code_character);
 }
 
 std::string trim_spaces(std::string_view text) {

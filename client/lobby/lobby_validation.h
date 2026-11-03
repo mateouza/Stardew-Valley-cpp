@@ -18,6 +18,10 @@ bool is_valid_username(std::string_view username);
 // Número decimal entre 1 y 65535, sin signo ni espacios.
 bool is_valid_port(std::string_view port);
 
+// Sin los espacios de los extremos, entre 1 y MAX_INVITE_CODE_LENGTH letras ASCII, dígitos o
+// guiones. Los códigos del servidor son números, y así nunca superan lo que manda el protocolo.
+bool is_valid_invite_code(std::string_view invite_code);
+
 // Saca los espacios (U+0020) de los extremos. Es el único espacio que admiten los nombres.
 std::string trim_spaces(std::string_view text);
 

@@ -107,6 +107,13 @@ std::optional<LobbyError> NetworkLobbyClient::connect(const std::string& host,
         return LobbyError::InvalidUsername;
     }
 
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (interrupted) {
+            return LobbyError::ServerUnavailable;
+        }
+    }
+
     // Conectarse bloquea, así que se hace sin el lock para no demorar a interrupt().
     std::unique_ptr<NetworkClient> connection;
     try {
@@ -171,7 +178,7 @@ LobbyResult<JoinableGameInfo> NetworkLobbyClient::find_game(const std::string& i
     }
 
     const std::string code = trim_spaces(invite_code);
-    if (code.empty()) {
+    if (!is_valid_invite_code(code)) {
         return LobbyError::InvalidInviteCode;
     }
 
@@ -182,9 +189,10 @@ LobbyResult<JoinableGameInfo> NetworkLobbyClient::find_game(const std::string& i
 
 LobbyResult<GameTicket> NetworkLobbyClient::join_game(const std::string& invite_code,
                                                       const CharacterDraft& character) {
-    // Un código vacío haría fallar al hilo que envía, y eso cerraría la conexión.
+    // Se valida antes de encolarlo: un código vacío o de más de 256 bytes haría fallar al hilo que
+    // envía, y la respuesta que se espera no llegaría.
     const std::string code = trim_spaces(invite_code);
-    if (code.empty()) {
+    if (!is_valid_invite_code(code)) {
         return LobbyError::InvalidInviteCode;
     }
 

@@ -52,8 +52,8 @@ public:
     // del juego.
     void interrupt() override;
 
-    // interrupt() no corta un intento de conexión en curso: al cerrar el launcher, LobbyWorker
-    // espera a que termine.
+    // Después de interrupt() ni se intenta. Un intento que ya empezó no se corta: al cerrar el
+    // launcher, LobbyWorker espera a que termine.
     std::optional<LobbyError> connect(const std::string& host, const std::string& port,
                                       const std::string& username) override;
 
