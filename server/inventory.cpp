@@ -5,7 +5,7 @@
 namespace game {
 
 InventoryResult Inventory::select(std::size_t slot) {
-    if (slot >= slots.size()) {
+    if (slot >= items.size()) {
         return InventoryResult::InvalidSlot;
     }
 
@@ -15,14 +15,14 @@ InventoryResult Inventory::select(std::size_t slot) {
 
 std::size_t Inventory::get_selected_slot() const { return selected_slot; }
 
-std::optional<ItemStack> Inventory::get_selected_item() const { return slots[selected_slot]; }
+std::optional<ItemStack> Inventory::get_selected_item() const { return items[selected_slot]; }
 
 const std::array<std::optional<ItemStack>, Inventory::CAPACITY>& Inventory::get_slots() const {
-    return slots;
+    return items;
 }
 
 InventoryResult Inventory::remove(std::size_t slot, std::uint32_t quantity) {
-    if (slot >= slots.size()) {
+    if (slot >= items.size()) {
         return InventoryResult::InvalidSlot;
     }
 
@@ -30,7 +30,7 @@ InventoryResult Inventory::remove(std::size_t slot, std::uint32_t quantity) {
         return InventoryResult::InvalidQuantity;
     }
 
-    auto& item = slots[slot];
+    auto& item = items[slot];
 
     if (!item) {
         return InventoryResult::EmptySlot;
@@ -80,7 +80,7 @@ InventoryResult Inventory::add(ItemStack item) {
             return InventoryResult::InvalidItem;
     }
 
-    auto updated_slots = slots;
+    auto updated_slots = items;
     auto remaining = item.quantity;
 
     for (auto& slot: updated_slots) {
@@ -117,9 +117,9 @@ InventoryResult Inventory::add(ItemStack item) {
         return InventoryResult::NotEnoughSpace;
     }
 
-    slots = updated_slots;
+    items = updated_slots;
     return InventoryResult::Accepted;
 }
 
-InventoryState Inventory::get_state() const { return {slots, selected_slot}; }
+InventoryState Inventory::get_state() const { return {items, selected_slot}; }
 }

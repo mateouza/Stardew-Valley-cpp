@@ -26,7 +26,7 @@ private:
     static constexpr std::size_t CAPACITY = InventoryState::CAPACITY;
     static constexpr std::uint32_t MAX_STACK_SIZE = InventoryState::MAX_STACK_SIZE;
 
-    std::array<std::optional<ItemStack>, CAPACITY> slots{};
+    std::array<std::optional<ItemStack>, CAPACITY> items{};
     std::size_t selected_slot = 0;
 
 public:

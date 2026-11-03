@@ -5,6 +5,7 @@
 
 #include "lobby/fake_lobby_client.h"
 #include "lobby/network_lobby_client.h"
+#include "sdl/sdl_client.h"
 
 #include "launcher.h"
 
@@ -34,13 +35,22 @@ int run_with_server(int& argc, char** argv, const launcher::LauncherOptions& opt
 
     const auto connection = lobby_client.take_game_connection();
     if (!connection) {
+        std::cerr << "El lobby no entrego la conexion de la partida\n";
         return EXIT_FAILURE;
     }
 
     std::cout << "Entraste a la partida con código " << connection->invite_code << " como jugador "
-              << connection->player_id << ".\n"
-              << "Todavía no arranca el juego: la conexión se cierra al salir.\n";
-    return EXIT_SUCCESS;
+              << connection->player_id << ".\n";
+
+    NetworkClient& network = *connection->network;
+    const int result = ejecutar_cliente_sdl(network, connection->player_id, connection->game_info,
+                                            connection->invite_code);
+
+    network.stop();
+    network.join();
+    network.rethrow_if_failed();
+
+    return result;
 }
 
 }

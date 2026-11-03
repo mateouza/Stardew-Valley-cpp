@@ -73,6 +73,14 @@ void World::disconnect_player(PlayerId player_id) {
     }
 }
 
+std::optional<InventoryState> World::get_inventory_state(PlayerId player_id) const {
+    const auto entry = players.find(player_id);
+    if (entry == players.end()) {
+        return std::nullopt;
+    }
+    return entry->second.get_inventory_state();
+}
+
 Position World::calculate_position(const Player& player, double distance) const {
     const auto position = player.get_position();
     const auto direction = player.get_direction();
