@@ -159,6 +159,7 @@ target_compile_options(server PRIVATE -Wall -Wextra -Wpedantic)
 
 add_library(client_network STATIC
     client/network/client_protocol.cpp
+    client/network/connection_closer.cpp
     client/network/network_sender.cpp
     client/network/network_receiver.cpp
     client/network/network_client.cpp
@@ -224,7 +225,10 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
             RESOURCE_LOCK protocol_port_18080
     )
 
-    add_executable(network_client_tests tests/network_client_test.cpp)
+    add_executable(network_client_tests
+        tests/network_client_test.cpp
+        tests/connection_closer_test.cpp
+    )
     target_link_libraries(network_client_tests PRIVATE server_core client_network GTest::gtest_main)
     target_compile_options(network_client_tests PRIVATE -Wall -Wextra -Wpedantic)
 
