@@ -71,6 +71,9 @@ void ClientSession::stop() {
     if (sender_joinable) {
         sender->stop();
     }
+    if (!receiver_joinable && !sender_joinable) {
+        return;
+    }
 
     try {
         socket.shutdown(SHUT_RDWR);

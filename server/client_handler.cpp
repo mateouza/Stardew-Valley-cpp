@@ -103,7 +103,7 @@ void ClientHandler::run() {
 }
 
 void ClientHandler::stop() {
-    if (stopped) {
+    if (stopped || joined) {
         return;
     }
 
