@@ -1,9 +1,12 @@
 #include "network_client.h"
 
 #include <chrono>
+#include <cstdint>
 #include <optional>
+#include <stdexcept>
 #include <thread>
 #include <variant>
+#include <vector>
 
 #include <sys/socket.h>
 
@@ -25,6 +28,8 @@ protected:
 
     void SetUp() override { network.start(); }
 };
+
+class NetworkClientCloseTest: public NetworkClientReceiveTest {};
 
 }
 
@@ -58,4 +63,43 @@ TEST_F(NetworkClientReceiveTest, StopWakesUpAWaitingReceive) {
     waiting.join();
 
     EXPECT_FALSE(message.has_value());
+}
+
+TEST_F(NetworkClientCloseTest, SenderFailureAlsoStopsTheReceiver) {
+    ASSERT_TRUE(network.try_send(JoinMatchRequest{"", "Juanceto"}));
+
+    EXPECT_FALSE(network.receive().has_value());
+    network.join();
+
+    char byte = 0;
+    EXPECT_EQ(connection.recvall(&byte, sizeof(byte)), 0);
+    EXPECT_TRUE(network.has_finished());
+    EXPECT_THROW(network.rethrow_if_failed(), std::invalid_argument);
+}
+
+TEST_F(NetworkClientCloseTest, ReceiverFailureAlsoStopsTheSender) {
+    const std::uint8_t unknown_message = 0x7F;
+    ASSERT_EQ(connection.sendall(&unknown_message, sizeof(unknown_message)), 1);
+
+    EXPECT_FALSE(network.receive().has_value());
+    network.join();
+
+    EXPECT_TRUE(network.has_finished());
+    EXPECT_THROW(network.try_send(game::MoveRequest{game::MovementDirection{1, 0}}),
+                 std::logic_error);
+    EXPECT_THROW(network.rethrow_if_failed(), std::runtime_error);
+}
+
+TEST_F(NetworkClientCloseTest, StopCanBeCalledFromSeveralThreadsAtOnce) {
+    std::vector<std::thread> stoppers;
+    for (int i = 0; i < 8; ++i) {
+        stoppers.emplace_back([this] { network.stop(); });
+    }
+    for (std::thread& stopper: stoppers) {
+        stopper.join();
+    }
+    network.join();
+
+    EXPECT_TRUE(network.has_finished());
+    EXPECT_NO_THROW(network.rethrow_if_failed());
 }

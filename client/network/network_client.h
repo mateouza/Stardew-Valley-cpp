@@ -1,11 +1,11 @@
 #ifndef NETWORK_CLIENT_H
 #define NETWORK_CLIENT_H
 
-#include <exception>
 #include <optional>
 
 #include "client_protocol.h"
 #include "client_request.h"
+#include "connection_closer.h"
 #include "network_receiver.h"
 #include "network_sender.h"
 #include "queue.h"
@@ -19,14 +19,12 @@ private:
 
     Queue<ClientRequest> requests;
     Queue<ServerMessage> messages;
+    ConnectionCloser closer;
 
     NetworkSender sender;
     NetworkReceiver receiver;
 
-    std::exception_ptr failure;
-
     bool started = false;
-    bool stopped = false;
     bool sender_joinable = false;
     bool receiver_joinable = false;
 

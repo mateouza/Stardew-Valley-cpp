@@ -3,16 +3,15 @@
 #include <stdexcept>
 #include <utility>
 
-#include <sys/socket.h>
-
 NetworkClient::NetworkClient(Socket&& socket, unsigned int request_capacity,
                              unsigned int message_capacity):
         socket(std::move(socket)),
         protocol(this->socket),
         requests(request_capacity),
         messages(message_capacity),
-        sender(protocol, requests),
-        receiver(protocol, messages) {
+        closer(this->socket, requests, messages),
+        sender(protocol, requests, closer),
+        receiver(protocol, messages, closer) {
     if (request_capacity == 0 || message_capacity == 0) {
         throw std::invalid_argument("Las capacidades de las colas deben ser positivas");
     }
@@ -28,7 +27,7 @@ NetworkClient::~NetworkClient() {
 }
 
 void NetworkClient::start() {
-    if (started || stopped) {
+    if (started || closer.is_closed()) {
         throw std::logic_error("La conexion no puede iniciarse nuevamente");
     }
 
@@ -48,7 +47,7 @@ void NetworkClient::start() {
 }
 
 bool NetworkClient::try_send(const ClientRequest& request) {
-    if (!started || stopped) {
+    if (!started || closer.is_closed()) {
         throw std::logic_error("La conexion no esta activa");
     }
 
@@ -85,29 +84,12 @@ std::optional<ServerMessage> NetworkClient::receive() {
     }
 }
 
-bool NetworkClient::has_finished() const {
-    if (!started) {
-        return stopped;
-    }
-
-    return stopped || !sender.is_alive() || !receiver.is_alive();
-}
+bool NetworkClient::has_finished() const { return closer.is_closed(); }
 
 void NetworkClient::stop() {
-    if (stopped) {
-        return;
-    }
-
-    stopped = true;
-
     sender.stop();
     receiver.stop();
-
-    try {
-        socket.shutdown(SHUT_RDWR);
-    } catch (...) {
-        failure = std::current_exception();
-    }
+    closer.close();
 }
 
 void NetworkClient::join() {
@@ -128,10 +110,5 @@ void NetworkClient::rethrow_if_failed() const {
                 "Se debe esperar el cierre de la conexion antes de consultar errores");
     }
 
-    if (failure) {
-        std::rethrow_exception(failure);
-    }
-
-    sender.rethrow_if_failed();
-    receiver.rethrow_if_failed();
+    closer.rethrow_if_failed();
 }
