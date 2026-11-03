@@ -1,11 +1,24 @@
 #include "player.h"
 
+#include <array>
+#include <stdexcept>
 #include <utility>
 
 namespace game {
 
 Player::Player(PlayerId id, std::string name, Position position):
-        id(id), name(std::move(name)), position(position) {}
+        id(id), name(std::move(name)), position(position) {
+    const std::array<ItemType, 4> tools{ItemType::Pickaxe, ItemType::WateringCan, ItemType::Shovel,
+                                        ItemType::Sword};
+
+    for (const auto tool: tools) {
+        const auto result = inventory.add({tool, ItemQuality::Base, 1});
+
+        if (result != InventoryResult::Accepted) {
+            throw std::logic_error("No se pudo agregar el equipamiento inicial");
+        }
+    }
+}
 
 SetDirectionResult Player::set_direction(MovementDirection direction) {
     if (!connected) {
