@@ -34,6 +34,11 @@ void ClientSender::send_message(const ServerMessage& message) {
         return;
     }
 
+    if (const auto* state = std::get_if<game::InventoryState>(&message)) {
+        protocol.send_inventory_state(*state);
+        return;
+    }
+
     protocol.send_game_state(std::get<game::GameState>(message));
 }
 

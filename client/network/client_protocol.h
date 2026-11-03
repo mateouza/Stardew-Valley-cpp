@@ -6,6 +6,7 @@
 
 #include "game_command.h"
 #include "game_state.h"
+#include "inventory_state.h"
 #include "lobby_request.h"
 #include "protocol_base.h"
 #include "server_message.h"
@@ -18,6 +19,7 @@ private:
     game::GameState receive_game_state();
     MatchResponse receive_match_response();
     game::GameInfo receive_game_info();
+    game::InventoryState receive_inventory_state();
 
 public:
     explicit ClientProtocol(Socket& socket);
