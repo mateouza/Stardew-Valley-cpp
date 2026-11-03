@@ -36,6 +36,7 @@ target_compile_options(course_support PRIVATE -Wall -Wextra -Wpedantic)
 
 add_library(server_model STATIC
     server/player.cpp
+    server/inventory.cpp
     server/map.cpp
     server/world.cpp
     server/world_config.cpp
@@ -183,6 +184,12 @@ if(BUILD_TESTING)
     target_compile_options(player_tests PRIVATE -Wall -Wextra -Wpedantic)
 
     gtest_discover_tests(player_tests)
+
+    add_executable(inventory_tests tests/inventory_test.cpp)
+    target_link_libraries(inventory_tests PRIVATE server_model GTest::gtest_main)
+    target_compile_options(inventory_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(inventory_tests)
 
     add_executable(map_tests
         tests/map_test.cpp

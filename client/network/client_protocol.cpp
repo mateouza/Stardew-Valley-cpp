@@ -105,6 +105,8 @@ std::optional<ServerMessage> ClientProtocol::receive_message() {
             return ServerMessage{receive_match_response()};
         case GAME_INFO_MESSAGE:
             return ServerMessage{receive_game_info()};
+        case INVENTORY_STATE_MESSAGE:
+            return ServerMessage{receive_inventory_state()};
         default:
             throw std::runtime_error("Tipo de mensaje recibido inesperado");
     }
@@ -204,4 +206,72 @@ game::GameInfo ClientProtocol::receive_game_info() {
     }
 
     return info;
+}
+
+game::InventoryState ClientProtocol::receive_inventory_state() {
+    game::InventoryState state;
+
+    std::uint8_t selected_slot{};
+    receive_bytes(&selected_slot, sizeof(selected_slot));
+
+    if (selected_slot >= state.slots.size()) {
+        throw std::runtime_error("El espacio seleccionado recibido es invalido");
+    }
+
+    state.selected_slot = selected_slot;
+
+    for (auto& slot: state.slots) {
+        std::uint8_t presence{};
+        receive_bytes(&presence, sizeof(presence));
+
+        if (presence == INVENTORY_SLOT_EMPTY) {
+            continue;
+        }
+
+        if (presence != INVENTORY_SLOT_OCCUPIED) {
+            throw std::runtime_error("El indicador de espacio ocupado es invalido");
+        }
+
+        std::array<std::uint8_t, 2> item_header{};
+        receive_bytes(item_header.data(), item_header.size());
+
+        const auto type = static_cast<game::ItemType>(item_header[0]);
+        const auto quality = static_cast<game::ItemQuality>(item_header[1]);
+
+        std::uint32_t stack_limit = 1;
+
+        switch (type) {
+            case game::ItemType::Pickaxe:
+            case game::ItemType::WateringCan:
+            case game::ItemType::Shovel:
+            case game::ItemType::Sword:
+                break;
+            case game::ItemType::StrawberrySeed:
+                stack_limit = game::InventoryState::MAX_STACK_SIZE;
+                break;
+            default:
+                throw std::runtime_error("El tipo de objeto recibido es invalido");
+        }
+
+        switch (quality) {
+            case game::ItemQuality::Base:
+            case game::ItemQuality::Good:
+            case game::ItemQuality::Excellent:
+            case game::ItemQuality::Incredible:
+            case game::ItemQuality::Perfect:
+                break;
+            default:
+                throw std::runtime_error("La calidad recibida es invalida");
+        }
+
+        const auto quantity = receive_uint32();
+
+        if (quantity == 0 || quantity > stack_limit) {
+            throw std::runtime_error("La cantidad recibida es invalida");
+        }
+
+        slot = game::ItemStack{type, quality, quantity};
+    }
+
+    return state;
 }
