@@ -96,7 +96,11 @@ if(BUILD_LAUNCHER)
     target_compile_options(qt_launcher PRIVATE -Wall -Wextra -Wpedantic)
 
     add_executable(stardew_launcher client/qt/main.cpp)
-    target_link_libraries(stardew_launcher PRIVATE qt_launcher client_lobby_network)
+    target_link_libraries(stardew_launcher PRIVATE
+        qt_launcher
+        client_lobby_network
+        client_sdl
+    )
     target_compile_options(stardew_launcher PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
