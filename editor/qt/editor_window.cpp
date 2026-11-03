@@ -1,6 +1,8 @@
 #include "editor_window.h"
 
+#include <QAbstractButton>
 #include <QAction>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QFileDialog>
 #include <QHBoxLayout>
@@ -9,7 +11,6 @@
 #include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMessageBox>
 #include <QPixmap>
 #include <QScrollArea>
 #include <QSignalBlocker>
@@ -59,7 +60,7 @@ EditorWindow::EditorWindow(QWidget* parent):
         action->setShortcut(key);
         connect(action, &QAction::triggered, this, slot);
     };
-    add_action("&Nuevo", QKeySequence::New, &EditorWindow::new_map);
+    add_action("&Nuevo", QKeySequence::New, &EditorWindow::ask_new);
     add_action("&Abrir…", QKeySequence::Open, &EditorWindow::ask_open);
     add_action("&Guardar", QKeySequence::Save, &EditorWindow::ask_save);
     add_action("Guardar &como…", QKeySequence::SaveAs, &EditorWindow::ask_save_as);
@@ -179,9 +180,29 @@ std::optional<QString> EditorWindow::save_map_to(const QString& path) {
     return std::nullopt;
 }
 
+bool EditorWindow::can_leave_map() {
+    if (!modified) {
+        return true;
+    }
+    const QMessageBox::StandardButton answer = ask_about_changes();
+    if (answer == QMessageBox::Save) {
+        ask_save();
+        return !modified;
+    }
+    return answer == QMessageBox::Discard;
+}
+
+void EditorWindow::ask_new() {
+    if (can_leave_map()) {
+        new_map();
+    }
+}
+
 void EditorWindow::ask_open() {
-    const QString path =
-            QFileDialog::getOpenFileName(this, "Abrir mapa", current_path, MAP_FILE_FILTER);
+    if (!can_leave_map()) {
+        return;
+    }
+    const QString path = choose_open_path();
     if (path.isEmpty()) {
         return;
     }
@@ -199,8 +220,7 @@ void EditorWindow::ask_save() {
 }
 
 void EditorWindow::ask_save_as() {
-    QString path =
-            QFileDialog::getSaveFileName(this, "Guardar mapa", current_path, MAP_FILE_FILTER);
+    QString path = choose_save_path();
     if (path.isEmpty()) {
         return;
     }
@@ -212,8 +232,35 @@ void EditorWindow::ask_save_as() {
     }
 }
 
+QMessageBox::StandardButton EditorWindow::ask_about_changes() {
+    QMessageBox box(QMessageBox::Warning, "Editor de mapas", "El mapa tiene cambios sin guardar.",
+                    QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
+    box.setInformativeText("¿Querés guardarlos?");
+    box.button(QMessageBox::Save)->setText("Guardar");
+    box.button(QMessageBox::Discard)->setText("Descartar");
+    box.button(QMessageBox::Cancel)->setText("Cancelar");
+    box.setDefaultButton(QMessageBox::Save);
+    return static_cast<QMessageBox::StandardButton>(box.exec());
+}
+
+QString EditorWindow::choose_open_path() {
+    return QFileDialog::getOpenFileName(this, "Abrir mapa", current_path, MAP_FILE_FILTER);
+}
+
+QString EditorWindow::choose_save_path() {
+    return QFileDialog::getSaveFileName(this, "Guardar mapa", current_path, MAP_FILE_FILTER);
+}
+
 void EditorWindow::show_error(const QString& message) {
     QMessageBox::warning(this, "Editor de mapas", message);
+}
+
+void EditorWindow::closeEvent(QCloseEvent* event) {
+    if (can_leave_map()) {
+        event->accept();
+    } else {
+        event->ignore();
+    }
 }
 
 const WorldMap& EditorWindow::get_map() const { return map; }

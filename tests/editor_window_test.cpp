@@ -5,11 +5,13 @@
 #include <QListWidget>
 #include <QPoint>
 #include <QSize>
+#include <QStringList>
 #include <QTemporaryDir>
 #include <QTest>
 #include <optional>
 #include <string>
 
+#include "editor/model/map_file.h"
 #include "editor/qt/tile_grid_view.h"
 #include "gtest/gtest.h"
 
@@ -27,11 +29,29 @@ std::string error_of(const std::optional<QString>& error) {
     return error ? error->toStdString() : "";
 }
 
+class ScriptedEditorWindow: public EditorWindow {
+public:
+    QMessageBox::StandardButton answer = QMessageBox::Cancel;
+    int questions = 0;
+    QString open_path;
+    QString save_path;
+    QStringList errors;
+
+protected:
+    QMessageBox::StandardButton ask_about_changes() override {
+        ++questions;
+        return answer;
+    }
+    QString choose_open_path() override { return open_path; }
+    QString choose_save_path() override { return save_path; }
+    void show_error(const QString& message) override { errors.append(message); }
+};
+
 }
 
 class EditorWindowTest: public ::testing::Test {
 protected:
-    EditorWindow window;
+    ScriptedEditorWindow window;
     QComboBox* zone_selector = window.findChild<QComboBox*>("zone_selector");
     QListWidget* palette = window.findChild<QListWidget*>("palette");
     TileGridView* grid = window.findChild<TileGridView*>("tile_grid");
@@ -45,6 +65,12 @@ protected:
         const auto found = palette->findItems(tile_name(tile), Qt::MatchExactly);
         ASSERT_EQ(found.size(), 1) << tile_name(tile);
         palette->setCurrentItem(found.front());
+    }
+
+    void make_a_change() {
+        choose_brush(Tile::Water);
+        QTest::mouseClick(grid, Qt::LeftButton, Qt::NoModifier, center_of(1, 1));
+        ASSERT_TRUE(window.is_modified());
     }
 };
 
@@ -149,6 +175,73 @@ TEST_F(EditorWindowTest, OpeningOrStartingAMapShowsItsFarmWithoutChanges) {
     window.new_map();
     EXPECT_TRUE(window.get_map() == WorldMap::create_empty("Mundo nuevo"));
     EXPECT_FALSE(window.is_modified());
+}
+
+TEST_F(EditorWindowTest, MapWithoutChangesIsLeftWithoutAsking) {
+    window.open_path = EXAMPLE_MAP_PATH;
+    window.ask_open();
+    window.ask_new();
+
+    EXPECT_TRUE(window.close());
+    EXPECT_EQ(window.questions, 0);
+}
+
+TEST_F(EditorWindowTest, CancelKeepsTheChangedMap) {
+    make_a_change();
+    window.open_path = EXAMPLE_MAP_PATH;
+
+    window.ask_new();
+    window.ask_open();
+    EXPECT_FALSE(window.close());
+
+    EXPECT_EQ(window.questions, 3);
+    EXPECT_TRUE(window.isVisible());
+    EXPECT_EQ(window.get_map().farm.at(1, 1), Tile::Water);
+    EXPECT_TRUE(window.is_modified());
+}
+
+TEST_F(EditorWindowTest, DiscardDropsTheChanges) {
+    make_a_change();
+    window.answer = QMessageBox::Discard;
+    window.open_path = EXAMPLE_MAP_PATH;
+
+    window.ask_open();
+    EXPECT_TRUE(window.get_map() == load_map(EXAMPLE_MAP_PATH));
+
+    make_a_change();
+    EXPECT_TRUE(window.close());
+}
+
+TEST_F(EditorWindowTest, SaveKeepsTheChangesBeforeStartingANewMap) {
+    QTemporaryDir directory;
+    const QString path = directory.filePath("mapa.toml");
+    ASSERT_TRUE(QFile::copy(EXAMPLE_MAP_PATH, path));
+    ASSERT_EQ(error_of(window.open_map(path)), "");
+    make_a_change();
+    window.answer = QMessageBox::Save;
+
+    window.ask_new();
+
+    EXPECT_TRUE(window.errors.isEmpty());
+    EXPECT_TRUE(window.get_map() == WorldMap::create_empty("Mundo nuevo"));
+    EXPECT_EQ(load_map(path.toStdString()).farm.at(1, 1), Tile::Water);
+}
+
+TEST_F(EditorWindowTest, MapIsKeptIfItCouldNotBeSaved) {
+    QTemporaryDir directory;
+    make_a_change();
+    window.answer = QMessageBox::Save;
+
+    window.ask_new();
+    EXPECT_EQ(window.errors.size(), 0);
+
+    window.save_path = directory.filePath("mapa.toml");
+    window.ask_new();
+    EXPECT_EQ(window.errors.size(), 1);
+
+    EXPECT_EQ(window.get_map().farm.at(1, 1), Tile::Water);
+    EXPECT_TRUE(window.is_modified());
+    EXPECT_FALSE(QFile::exists(window.save_path));
 }
 
 }

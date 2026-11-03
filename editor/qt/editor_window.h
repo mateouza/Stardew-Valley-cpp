@@ -2,11 +2,13 @@
 #define EDITOR_QT_EDITOR_WINDOW_H_
 
 #include <QMainWindow>
+#include <QMessageBox>
 #include <QString>
 #include <optional>
 
 #include "editor/model/world_map.h"
 
+class QCloseEvent;
 class QComboBox;
 class QListWidget;
 
@@ -30,14 +32,23 @@ private:
     void show_zone(Zone& zone);
     void choose_brush(int palette_row);
     void show_map();
-
-    void ask_open();
-    void ask_save();
+    bool can_leave_map();
     void ask_save_as();
-    void show_error(const QString& message);
+
+protected:
+    virtual QMessageBox::StandardButton ask_about_changes();
+    virtual QString choose_open_path();
+    virtual QString choose_save_path();
+    virtual void show_error(const QString& message);
+
+    void closeEvent(QCloseEvent* event) override;
 
 public:
     explicit EditorWindow(QWidget* parent = nullptr);
+
+    void ask_new();
+    void ask_open();
+    void ask_save();
 
     void new_map();
 
