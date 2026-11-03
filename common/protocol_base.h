@@ -28,6 +28,9 @@ protected:
     static constexpr std::uint8_t MATCH_NOT_FOUND = 0x01;
     static constexpr std::uint8_t GAME_INFO_MESSAGE = 0x07;
     static constexpr std::uint32_t MAX_MAP_CELLS = 1'000'000;
+    static constexpr std::uint8_t INVENTORY_STATE_MESSAGE = 0x08;
+    static constexpr std::uint8_t INVENTORY_SLOT_EMPTY = 0x00;
+    static constexpr std::uint8_t INVENTORY_SLOT_OCCUPIED = 0x01;
 
     explicit ProtocolBase(Socket& socket);
     ~ProtocolBase() = default;
