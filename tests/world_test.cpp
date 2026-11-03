@@ -389,9 +389,9 @@ TEST_F(WorldTest, QueriesInventoryThroughTheModelInterface) {
 
     ASSERT_TRUE(inventory.has_value());
     EXPECT_EQ(inventory->selected_slot, 0u);
-    ASSERT_TRUE(inventory->slots[2].has_value());
-    EXPECT_EQ(inventory->slots[2]->type, ItemType::Shovel);
-    EXPECT_EQ(inventory->slots[2]->quantity, 1u);
+    ASSERT_TRUE(inventory->items[2].has_value());
+    EXPECT_EQ(inventory->items[2]->type, ItemType::Shovel);
+    EXPECT_EQ(inventory->items[2]->quantity, 1u);
 }
 
 TEST_F(WorldTest, ReturnsNoInventoryForUnknownPlayerWithoutCreatingOne) {
@@ -412,27 +412,27 @@ TEST_F(WorldTest, KeepsInventoryAvailableWhilePlayerIsDisconnected) {
     EXPECT_TRUE(world.get_state().players.empty());
     ASSERT_TRUE(inventory.has_value());
     EXPECT_EQ(inventory->selected_slot, 0u);
-    ASSERT_TRUE(inventory->slots[2].has_value());
-    EXPECT_EQ(inventory->slots[2]->type, ItemType::Shovel);
-    EXPECT_EQ(inventory->slots[2]->quantity, 1u);
+    ASSERT_TRUE(inventory->items[2].has_value());
+    EXPECT_EQ(inventory->items[2]->type, ItemType::Shovel);
+    EXPECT_EQ(inventory->items[2]->quantity, 1u);
 }
 
 TEST_F(WorldTest, InventorySnapshotDoesNotModifyTheRegisteredPlayer) {
     const auto id = add_player();
     auto snapshot = world.get_inventory_state(id);
     ASSERT_TRUE(snapshot.has_value());
-    ASSERT_TRUE(snapshot->slots[2].has_value());
+    ASSERT_TRUE(snapshot->items[2].has_value());
     snapshot->selected_slot = 8;
-    snapshot->slots[0].reset();
-    snapshot->slots[2]->quantity = 99;
+    snapshot->items[0].reset();
+    snapshot->items[2]->quantity = 99;
 
     const auto current = world.get_inventory_state(id);
 
     ASSERT_TRUE(current.has_value());
     EXPECT_EQ(current->selected_slot, 0u);
-    EXPECT_TRUE(current->slots[0].has_value());
-    ASSERT_TRUE(current->slots[2].has_value());
-    EXPECT_EQ(current->slots[2]->quantity, 1u);
+    EXPECT_TRUE(current->items[0].has_value());
+    ASSERT_TRUE(current->items[2].has_value());
+    EXPECT_EQ(current->items[2]->quantity, 1u);
 }
 
 TEST(WorldMovementTest, AppliesConfiguredSpeed) {

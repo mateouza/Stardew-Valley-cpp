@@ -1098,8 +1098,8 @@ TEST(ServerProtocolTest, RejectsReceivedMapAboveCellLimit) {
 TEST_F(ClientServerProtocolTest, ReceivesInventoryPreservingSlotsAndSelection) {
     game::InventoryState state;
     state.selected_slot = 8;
-    state.slots[1] = game::ItemStack{game::ItemType::Shovel, game::ItemQuality::Base, 1};
-    state.slots[8] = game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Good, 50};
+    state.items[1] = game::ItemStack{game::ItemType::Shovel, game::ItemQuality::Base, 1};
+    state.items[8] = game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Good, 50};
 
     server_protocol.send_inventory_state(state);
     connection.shutdown(SHUT_WR);
@@ -1111,13 +1111,13 @@ TEST_F(ClientServerProtocolTest, ReceivesInventoryPreservingSlotsAndSelection) {
     ASSERT_NE(received, nullptr);
     EXPECT_EQ(received->selected_slot, 8u);
 
-    for (std::size_t index = 0; index < state.slots.size(); ++index) {
-        ASSERT_EQ(received->slots[index].has_value(), state.slots[index].has_value());
+    for (std::size_t index = 0; index < state.items.size(); ++index) {
+        ASSERT_EQ(received->items[index].has_value(), state.items[index].has_value());
 
-        if (state.slots[index]) {
-            EXPECT_EQ(received->slots[index]->type, state.slots[index]->type);
-            EXPECT_EQ(received->slots[index]->quality, state.slots[index]->quality);
-            EXPECT_EQ(received->slots[index]->quantity, state.slots[index]->quantity);
+        if (state.items[index]) {
+            EXPECT_EQ(received->items[index]->type, state.items[index]->type);
+            EXPECT_EQ(received->items[index]->quality, state.items[index]->quality);
+            EXPECT_EQ(received->items[index]->quantity, state.items[index]->quantity);
         }
     }
 
@@ -1127,7 +1127,7 @@ TEST_F(ClientServerProtocolTest, ReceivesInventoryPreservingSlotsAndSelection) {
 TEST_F(ClientServerProtocolTest, SendsInventoryUsingExpectedBytes) {
     game::InventoryState state;
     state.selected_slot = 1;
-    state.slots[1] = game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Good, 50};
+    state.items[1] = game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Good, 50};
 
     server_protocol.send_inventory_state(state);
     connection.shutdown(SHUT_WR);
@@ -1147,15 +1147,15 @@ TEST_F(ClientServerProtocolTest, RejectsInvalidInventoryBeforeSendingAnyBytes) {
     std::array<game::InventoryState, 6> invalid_states{};
 
     invalid_states[0].selected_slot = game::InventoryState::CAPACITY;
-    invalid_states[1].slots[8] =
+    invalid_states[1].items[8] =
             game::ItemStack{static_cast<game::ItemType>(255), game::ItemQuality::Base, 1};
-    invalid_states[2].slots[8] =
+    invalid_states[2].items[8] =
             game::ItemStack{game::ItemType::StrawberrySeed, static_cast<game::ItemQuality>(255), 1};
-    invalid_states[3].slots[8] =
+    invalid_states[3].items[8] =
             game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Base, 0};
-    invalid_states[4].slots[8] =
+    invalid_states[4].items[8] =
             game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Base, 51};
-    invalid_states[5].slots[8] =
+    invalid_states[5].items[8] =
             game::ItemStack{game::ItemType::Shovel, game::ItemQuality::Base, 2};
 
     for (const auto& state: invalid_states) {

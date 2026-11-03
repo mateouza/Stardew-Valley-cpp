@@ -36,13 +36,13 @@ TEST(InventoryTest, FillsExistingStackBeforeUsingEmptySlot) {
     ASSERT_EQ(inventory.add({game::ItemType::StrawberrySeed, game::ItemQuality::Base, 15}),
               game::InventoryResult::Accepted);
 
-    const auto& slots = inventory.get_slots();
+    const auto& items = inventory.get_slots();
 
-    ASSERT_TRUE(slots[0].has_value());
-    ASSERT_TRUE(slots[1].has_value());
-    EXPECT_EQ(slots[0]->quantity, 50u);
-    EXPECT_EQ(slots[1]->quantity, 5u);
-    EXPECT_FALSE(slots[2].has_value());
+    ASSERT_TRUE(items[0].has_value());
+    ASSERT_TRUE(items[1].has_value());
+    EXPECT_EQ(items[0]->quantity, 50u);
+    EXPECT_EQ(items[1]->quantity, 5u);
+    EXPECT_FALSE(items[2].has_value());
 }
 
 TEST(InventoryTest, KeepsDifferentQualitiesInSeparateSlots) {
@@ -53,14 +53,14 @@ TEST(InventoryTest, KeepsDifferentQualitiesInSeparateSlots) {
     ASSERT_EQ(inventory.add({game::ItemType::StrawberrySeed, game::ItemQuality::Good, 4}),
               game::InventoryResult::Accepted);
 
-    const auto& slots = inventory.get_slots();
+    const auto& items = inventory.get_slots();
 
-    ASSERT_TRUE(slots[0].has_value());
-    ASSERT_TRUE(slots[1].has_value());
-    EXPECT_EQ(slots[0]->quality, game::ItemQuality::Base);
-    EXPECT_EQ(slots[0]->quantity, 3u);
-    EXPECT_EQ(slots[1]->quality, game::ItemQuality::Good);
-    EXPECT_EQ(slots[1]->quantity, 4u);
+    ASSERT_TRUE(items[0].has_value());
+    ASSERT_TRUE(items[1].has_value());
+    EXPECT_EQ(items[0]->quality, game::ItemQuality::Base);
+    EXPECT_EQ(items[0]->quantity, 3u);
+    EXPECT_EQ(items[1]->quality, game::ItemQuality::Good);
+    EXPECT_EQ(items[1]->quantity, 4u);
 }
 
 TEST(InventoryTest, PlacesEachToolInItsOwnSlot) {
@@ -69,15 +69,15 @@ TEST(InventoryTest, PlacesEachToolInItsOwnSlot) {
     ASSERT_EQ(inventory.add({game::ItemType::Shovel, game::ItemQuality::Base, 2}),
               game::InventoryResult::Accepted);
 
-    const auto& slots = inventory.get_slots();
+    const auto& items = inventory.get_slots();
 
     for (std::size_t index = 0; index < 2; ++index) {
-        ASSERT_TRUE(slots[index].has_value());
-        EXPECT_EQ(slots[index]->type, game::ItemType::Shovel);
-        EXPECT_EQ(slots[index]->quantity, 1u);
+        ASSERT_TRUE(items[index].has_value());
+        EXPECT_EQ(items[index]->type, game::ItemType::Shovel);
+        EXPECT_EQ(items[index]->quantity, 1u);
     }
 
-    EXPECT_FALSE(slots[2].has_value());
+    EXPECT_FALSE(items[2].has_value());
 }
 
 TEST(InventoryTest, RejectsAdditionWithoutPartiallyFillingExistingStack) {
@@ -92,15 +92,15 @@ TEST(InventoryTest, RejectsAdditionWithoutPartiallyFillingExistingStack) {
     EXPECT_EQ(inventory.add({game::ItemType::StrawberrySeed, game::ItemQuality::Base, 3}),
               game::InventoryResult::NotEnoughSpace);
 
-    const auto& slots = inventory.get_slots();
+    const auto& items = inventory.get_slots();
 
-    ASSERT_TRUE(slots[0].has_value());
-    EXPECT_EQ(slots[0]->quantity, 48u);
+    ASSERT_TRUE(items[0].has_value());
+    EXPECT_EQ(items[0]->quantity, 48u);
 
-    for (std::size_t index = 1; index < slots.size(); ++index) {
-        ASSERT_TRUE(slots[index].has_value());
-        EXPECT_EQ(slots[index]->type, game::ItemType::Shovel);
-        EXPECT_EQ(slots[index]->quantity, 1u);
+    for (std::size_t index = 1; index < items.size(); ++index) {
+        ASSERT_TRUE(items[index].has_value());
+        EXPECT_EQ(items[index]->type, game::ItemType::Shovel);
+        EXPECT_EQ(items[index]->quantity, 1u);
     }
 
     EXPECT_EQ(inventory.get_selected_slot(), 4u);

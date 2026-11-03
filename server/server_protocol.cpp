@@ -207,11 +207,11 @@ void ServerProtocol::send_game_info(const game::GameInfo& info) {
 }
 
 void ServerProtocol::validate_inventory_state(const game::InventoryState& state) {
-    if (state.selected_slot >= state.slots.size()) {
+    if (state.selected_slot >= state.items.size()) {
         throw std::invalid_argument("El espacio seleccionado es invalido");
     }
 
-    for (const auto& slot: state.slots) {
+    for (const auto& slot: state.items) {
         if (!slot) {
             continue;
         }
@@ -256,7 +256,7 @@ void ServerProtocol::send_inventory_state(const game::InventoryState& state) {
 
     send_bytes(header.data(), header.size());
 
-    for (const auto& slot: state.slots) {
+    for (const auto& slot: state.items) {
         if (!slot) {
             const std::uint8_t presence = INVENTORY_SLOT_EMPTY;
             send_bytes(&presence, sizeof(presence));
