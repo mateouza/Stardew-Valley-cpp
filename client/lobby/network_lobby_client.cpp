@@ -10,9 +10,6 @@ namespace lobby {
 
 namespace {
 
-// Espera el próximo mensaje, que tiene que ser del tipo Message: el servidor contesta siempre en
-// el orden MatchResponse, JoinResponse, GameInfo. Si llega otro o se cerró la conexión, devuelve
-// nada.
 template <typename Message>
 std::optional<Message> receive_expected(NetworkClient& network) {
     const auto message = network.receive();
@@ -38,7 +35,6 @@ bool NetworkLobbyClient::send(const ClientRequest& request) {
     try {
         return network->try_send(request);
     } catch (const std::exception&) {
-        // La conexión ya se cerró: la cola de pedidos está cerrada o NetworkClient se detuvo.
         return false;
     }
 }
@@ -50,14 +46,12 @@ LobbyResult<GameTicket> NetworkLobbyClient::enter_game(const ClientRequest& requ
         return LobbyError::ServerUnavailable;
     }
 
-    // Se espera sin el lock: así interrupt() puede cerrar la conexión, y eso despierta a receive().
-    // Solo este hilo cambia network, así que se puede leer sin el lock.
+    // Sin el lock, para que interrupt() pueda cerrar la conexión.
     const auto match = receive_expected<MatchResponse>(*network);
     if (!match) {
         return LobbyError::ServerUnavailable;
     }
 
-    // Solo pasa al unirse con un código que no es de ninguna partida.
     if (!match->invitation_code) {
         return LobbyError::InvalidInviteCode;
     }
@@ -82,7 +76,7 @@ LobbyResult<GameTicket> NetworkLobbyClient::enter_game(const ClientRequest& requ
         return LobbyError::ServerUnavailable;
     }
 
-    // Desde acá la conexión es del juego, e interrupt() ya no la toca.
+    // Desde acá la conexión es del juego.
     game_connection =
             GameConnection{std::move(network), *match->invitation_code, *player_id, *game_info};
     return GameTicket{*match->invitation_code, game_name, character, true};
@@ -114,7 +108,7 @@ std::optional<LobbyError> NetworkLobbyClient::connect(const std::string& host,
         }
     }
 
-    // Conectarse bloquea, así que se hace sin el lock para no demorar a interrupt().
+    // Conecta sin el lock para no demorar a interrupt().
     std::unique_ptr<NetworkClient> connection;
     try {
         connection = std::make_unique<NetworkClient>(host.c_str(), port.c_str(), REQUEST_CAPACITY,
@@ -124,8 +118,7 @@ std::optional<LobbyError> NetworkLobbyClient::connect(const std::string& host,
         return LobbyError::ServerUnavailable;
     }
 
-    // Se declara después de connection, así se libera antes: la conexión anterior, si había, se
-    // cierra sin el lock.
+    // Se libera antes que connection, que cierra la anterior.
     std::lock_guard<std::mutex> lock(mutex);
     if (interrupted) {
         return LobbyError::ServerUnavailable;
@@ -182,15 +175,13 @@ LobbyResult<JoinableGameInfo> NetworkLobbyClient::find_game(const std::string& i
         return LobbyError::InvalidInviteCode;
     }
 
-    // El protocolo no deja consultar una partida sin entrar: el código se confirma en join_game(),
-    // y hasta entonces no se sabe el nombre ni cuántos jugadores tiene.
+    // El protocolo no deja consultar una partida sin entrar.
     return JoinableGameInfo{code, "", "", 0, 0};
 }
 
 LobbyResult<GameTicket> NetworkLobbyClient::join_game(const std::string& invite_code,
                                                       const CharacterDraft& character) {
-    // Se valida antes de encolarlo: un código vacío o de más de 256 bytes haría fallar al hilo que
-    // envía, y la respuesta que se espera no llegaría.
+    // Un código inválido haría fallar al hilo que envía.
     const std::string code = trim_spaces(invite_code);
     if (!is_valid_invite_code(code)) {
         return LobbyError::InvalidInviteCode;
@@ -201,7 +192,6 @@ LobbyResult<GameTicket> NetworkLobbyClient::join_game(const std::string& invite_
         return *error;
     }
 
-    // El servidor no le dice el nombre de la partida a quien se une.
     return enter_game(JoinMatchRequest{code, draft.name}, "", draft);
 }
 

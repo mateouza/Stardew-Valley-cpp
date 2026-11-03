@@ -10,9 +10,6 @@
 
 namespace lobby {
 
-// Un pedido por operación de LobbyClient, con sus parámetros, para pasarlo entre hilos por una
-// cola. Cada uno tiene su respuesta con el mismo nombre, que trae lo que devolvió LobbyClient.
-
 struct ConnectRequest {
     std::string host;
     std::string port;

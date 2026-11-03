@@ -7,8 +7,6 @@
 
 namespace launcher {
 
-// Tarjeta clickeable de una partida guardada: personaje, nombres y si es multijugador. Su
-// objectName es "saved_game_<id de la partida>".
 class SavedGameCard: public QPushButton {
     Q_OBJECT
 

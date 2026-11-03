@@ -61,7 +61,6 @@ target_compile_options(client_lobby PRIVATE -Wall -Wextra -Wpedantic)
 if(BUILD_LAUNCHER OR BUILD_EDITOR)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
-    # Hoja de estilo y helpers que comparten el launcher y el editor.
     add_library(qt_ui STATIC
         client/qt/launcher_style.cpp
         client/qt/widgets/ui_helpers.cpp
@@ -102,7 +101,6 @@ endif()
 if(BUILD_EDITOR)
     find_package(tomlplusplus 3.4 CONFIG REQUIRED)
 
-    # Modelo del mapa, sin Qt.
     add_library(editor_model STATIC
         editor/model/map_file.cpp
         editor/model/map_validation.cpp
@@ -172,8 +170,6 @@ target_link_libraries(client_network PUBLIC course_support game_contracts)
 
 target_compile_options(client_network PRIVATE -Wall -Wextra -Wpedantic)
 
-# El lobby real va aparte de client_lobby, así el editor y los tests del lobby falso no necesitan
-# la red.
 add_library(client_lobby_network STATIC client/lobby/network_lobby_client.cpp)
 target_link_libraries(client_lobby_network PUBLIC client_lobby client_network)
 target_compile_options(client_lobby_network PRIVATE -Wall -Wextra -Wpedantic)

@@ -13,8 +13,6 @@ class QVBoxLayout;
 
 namespace launcher {
 
-// Lista las partidas en las que participa el usuario, creadas por él o a las que se unió.
-// Cliquear una la carga.
 class ResumeScreen: public QWidget {
     Q_OBJECT
 

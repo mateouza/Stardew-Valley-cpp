@@ -24,10 +24,8 @@ namespace launcher {
 
 namespace {
 
-// Cada cuánto se consulta, mientras se espera, si llegó la respuesta del lobby.
 constexpr std::chrono::milliseconds RESPONSE_POLL_INTERVAL{20};
 
-// Si el lobby devolvió un error, lo muestra en la pantalla que hizo el pedido.
 template <typename Screen>
 std::optional<lobby::GameTicket> ticket_or_show_error(
         const lobby::LobbyResult<lobby::GameTicket>& result, Screen* screen) {
@@ -163,7 +161,6 @@ void LauncherWindow::handle(const lobby::FindGameResponse& response) {
 
     const auto& game = std::get<lobby::JoinableGameInfo>(response.result);
     character_purpose = CharacterPurpose::JoinGame;
-    // El lobby real no conoce la partida hasta unirse, así que la devuelve sin nombre.
     const QString context = game.game_name.empty() ?
                                     QString("Te unís a la partida con código %1")
                                             .arg(QString::fromStdString(game.game_id)) :

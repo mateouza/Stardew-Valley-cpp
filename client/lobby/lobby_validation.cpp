@@ -32,9 +32,7 @@ bool is_ascii_name_character(unsigned char c) {
            c == '-' || c == '\'';
 }
 
-// Bytes que ocupa el primer carácter de `text` si está en la lista de los nombres, o 0 si no.
-// Las letras con tilde admitidas se codifican en UTF-8 con dos bytes: 110xxxxx 10xxxxxx. Un byte
-// de continuación suelto, una secuencia cortada o una forma sobrelarga no dan una letra admitida.
+// Las letras con tilde son dos bytes UTF-8: 110xxxxx 10xxxxxx.
 std::size_t admitted_character_length(std::string_view text) {
     const auto lead = static_cast<unsigned char>(text[0]);
     if (lead < 0x80) {

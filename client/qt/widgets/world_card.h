@@ -7,8 +7,6 @@
 
 namespace launcher {
 
-// Tarjeta seleccionable con el nombre y la descripción de un mundo. Su objectName es
-// "world_<id del mundo>".
 class WorldCard: public QPushButton {
     Q_OBJECT
 

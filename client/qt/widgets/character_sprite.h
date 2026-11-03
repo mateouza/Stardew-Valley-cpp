@@ -10,10 +10,8 @@ class QPainter;
 
 namespace launcher {
 
-// Sprite del granjero en tamaño original (un píxel por celda), con contorno incluido.
 QImage render_character(const lobby::CharacterAppearance& appearance);
 
-// Rectángulo más grande dentro de `area` donde el sprite entra con escala entera, centrado.
 QRect fit_character(const QRect& area);
 
 void paint_character(QPainter& painter, const QRect& target,

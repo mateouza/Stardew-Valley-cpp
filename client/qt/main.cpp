@@ -10,7 +10,6 @@
 
 namespace {
 
-// Lobby en memoria, para probar las pantallas sin servidor.
 int run_demo(int& argc, char** argv, const launcher::LauncherOptions& options) {
     lobby::FakeLobbyClient lobby_client;
     std::cout << "Lobby local de prueba. Código para unirse: "
@@ -33,7 +32,6 @@ int run_with_server(int& argc, char** argv, const launcher::LauncherOptions& opt
         return EXIT_SUCCESS;
     }
 
-    // Con el servidor real, solo crear o unirse dan un ticket, y los dos dejan una conexión.
     const auto connection = lobby_client.take_game_connection();
     if (!connection) {
         return EXIT_FAILURE;

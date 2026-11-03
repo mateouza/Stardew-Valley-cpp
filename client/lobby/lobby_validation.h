@@ -10,37 +10,22 @@
 
 namespace lobby {
 
-// Reglas que comparten el lobby y las pantallas, para que los dos acepten exactamente lo mismo.
-
-// Letras ASCII, dígitos y guion bajo, entre 1 y MAX_USERNAME_LENGTH caracteres.
 bool is_valid_username(std::string_view username);
 
-// Número decimal entre 1 y 65535, sin signo ni espacios.
 bool is_valid_port(std::string_view port);
 
-// Sin los espacios de los extremos, entre 1 y MAX_INVITE_CODE_LENGTH letras ASCII, dígitos o
-// guiones. Los códigos del servidor son números, y así nunca superan lo que manda el protocolo.
 bool is_valid_invite_code(std::string_view invite_code);
 
-// Saca los espacios (U+0020) de los extremos. Es el único espacio que admiten los nombres.
 std::string trim_spaces(std::string_view text);
 
-// Cantidad de caracteres de un nombre en UTF-8, o nada si tiene bytes inválidos o algún carácter
-// fuera de la lista: A-Z, a-z, áéíóúüñ, ÁÉÍÓÚÜÑ, dígitos, espacio, guion y apóstrofo. Un carácter
-// es un punto de código; con esta lista también es una unidad de QString y un símbolo en pantalla.
 std::optional<std::size_t> count_name_characters(std::string_view name);
 
-// Sin los espacios de los extremos, entre 1 y MAX_GAME_NAME_LENGTH caracteres de la lista.
 bool is_valid_game_name(std::string_view name);
 
-// Sin los espacios de los extremos, entre 1 y MAX_CHARACTER_NAME_LENGTH caracteres de la lista.
 bool is_valid_character_name(std::string_view name);
 
-// Cada opción de la apariencia es menor que su cantidad (SKIN_TONE_COUNT y las demás).
 bool is_valid_appearance(const CharacterAppearance& appearance);
 
-// InvalidCharacterName o InvalidAppearance, en ese orden, o nada si el personaje es válido. No saca
-// los espacios del nombre.
 std::optional<LobbyError> validate_character(const CharacterDraft& character);
 
 }
