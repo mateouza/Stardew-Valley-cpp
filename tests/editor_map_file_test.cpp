@@ -54,7 +54,6 @@ std::string farm(const std::string& body) { return "[farm]\n" + body; }
 
 const std::string FARM = farm("width = 3\nheight = 2\nrows = ['gH.', 'g>g']\n");
 
-// Mapa chico escrito a mano. Cada test cambia una parte: el encabezado, la granja o los niveles.
 std::string map_text(const std::string& header = HEADER, const std::string& farm_table = FARM,
                      int levels = WorldMap::DUNGEON_LEVELS) {
     std::string text = header + farm_table + "[town]\nwidth = 2\nheight = 1\nrows = ['MU']\n";

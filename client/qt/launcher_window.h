@@ -25,14 +25,10 @@ class MainMenuScreen;
 class NewGameScreen;
 class ResumeScreen;
 
-// Controlador del launcher: cambia de pantalla, le pide cada operación al lobby y se cierra
-// cuando consigue un ticket de partida. Los pedidos los ejecuta LobbyWorker en otro hilo; un
-// QTimer consulta si llegó la respuesta, así que el hilo de Qt nunca espera al servidor.
 class LauncherWindow: public QWidget {
     Q_OBJECT
 
 private:
-    // La pantalla de personaje se comparte: esto indica si al confirmar se crea o se une.
     enum class CharacterPurpose { NewGame, JoinGame };
 
     lobby::LobbyWorker lobby_worker;
@@ -66,7 +62,6 @@ private:
     void confirm_character(const lobby::CharacterDraft& character);
     void finish(lobby::GameTicket game_ticket);
 
-    // Deshabilita las pantallas hasta que llegue la respuesta, para no mandar otro pedido.
     void send_to_lobby(const lobby::LobbyRequest& request);
     void poll_lobby();
     void handle(const lobby::ConnectResponse& response);

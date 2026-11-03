@@ -20,7 +20,9 @@ public:
 
     void limpiar();
 
-    void dibujar(SDL2pp::Texture& textura, int x, int y, int ancho, int alto);
+    void dibujar(SDL2pp::Texture& textura, int x, int y, int ancho, int alto, Uint8 r, Uint8 g, Uint8 b);
+
+    void dibujar_rectangulo(int x, int y, int ancho, int alto, Uint8 r, Uint8 g, Uint8 b);
 
     void presentar();
 };

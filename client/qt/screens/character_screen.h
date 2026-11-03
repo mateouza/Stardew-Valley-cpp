@@ -16,8 +16,6 @@ namespace launcher {
 class CharacterPreview;
 class OptionSelector;
 
-// Nombre y apariencia del personaje. La usan tanto "Nueva partida" como "Unirse a partida": el
-// controlador ajusta el texto de contexto y el del botón de confirmar.
 class CharacterScreen: public QWidget {
     Q_OBJECT
 

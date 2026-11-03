@@ -135,8 +135,6 @@ void add_field(QVBoxLayout* layout, const QString& caption, QWidget* field) {
 }
 
 void set_name_rules(QLineEdit* input, std::size_t max_length) {
-    // Con los caracteres admitidos, cada uno ocupa una unidad de QString: el límite de Qt corta lo
-    // que se pega y el validator rechaza lo que no está en la lista.
     input->setMaxLength(static_cast<int>(max_length));
     input->setValidator(new NameValidator(max_length, input));
 }

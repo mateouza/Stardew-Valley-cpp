@@ -6,11 +6,17 @@
 
 
 InputResultado InputHandler::procesar_eventos() {
-    InputResultado resultado{{0, 0}, false};
+    InputResultado resultado{{0, 0}, false, std::nullopt};
     SDL_Event evento;
     while (SDL_PollEvent(&evento)) {
         if (evento.type == SDL_QUIT) {
             resultado.salir = true;
+        }
+        if (evento.type == SDL_KEYDOWN) {
+            const SDL_Scancode tecla = evento.key.keysym.scancode;
+            if (tecla >= SDL_SCANCODE_1 && tecla <= SDL_SCANCODE_9) {
+                resultado.slot_seleccionado = static_cast<std::size_t>(tecla - SDL_SCANCODE_1);
+            }
         }
     }
 

@@ -11,8 +11,6 @@
 
 namespace lobby {
 
-// Lobby falso cuyo connect() se queda bloqueado, como esperando a un servidor lento, hasta que el
-// test lo libera o alguien lo interrumpe. Sirve para probar respuestas demoradas y cierres.
 class BlockingLobbyClient: public FakeLobbyClient {
 private:
     static constexpr std::chrono::seconds MAX_WAIT{2};
@@ -44,7 +42,6 @@ public:
         changed.notify_all();
     }
 
-    // Espera, con un plazo máximo, a que connect() haya empezado.
     bool wait_until_started() {
         std::unique_lock<std::mutex> lock(mutex);
         return changed.wait_for(lock, MAX_WAIT, [this] { return started; });

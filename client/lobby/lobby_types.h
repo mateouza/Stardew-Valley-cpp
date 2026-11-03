@@ -11,6 +11,7 @@ namespace lobby {
 inline constexpr std::size_t MAX_USERNAME_LENGTH = 16;
 inline constexpr std::size_t MAX_GAME_NAME_LENGTH = 24;
 inline constexpr std::size_t MAX_CHARACTER_NAME_LENGTH = 16;
+inline constexpr std::size_t MAX_INVITE_CODE_LENGTH = 12;
 
 inline constexpr std::uint8_t SKIN_TONE_COUNT = 5;
 inline constexpr std::uint8_t HAIR_STYLE_COUNT = 4;

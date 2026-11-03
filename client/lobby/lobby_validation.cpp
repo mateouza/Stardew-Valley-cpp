@@ -23,14 +23,16 @@ bool is_username_character(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
 }
 
+bool is_invite_code_character(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-';
+}
+
 bool is_ascii_name_character(unsigned char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ' ||
            c == '-' || c == '\'';
 }
 
-// Bytes que ocupa el primer carácter de `text` si está en la lista de los nombres, o 0 si no.
-// Las letras con tilde admitidas se codifican en UTF-8 con dos bytes: 110xxxxx 10xxxxxx. Un byte
-// de continuación suelto, una secuencia cortada o una forma sobrelarga no dan una letra admitida.
+// Las letras con tilde son dos bytes UTF-8: 110xxxxx 10xxxxxx.
 std::size_t admitted_character_length(std::string_view text) {
     const auto lead = static_cast<unsigned char>(text[0]);
     if (lead < 0x80) {
@@ -72,6 +74,12 @@ bool is_valid_port(std::string_view port) {
            value <= MAX_PORT;
 }
 
+bool is_valid_invite_code(std::string_view invite_code) {
+    const std::string code = trim_spaces(invite_code);
+    return !code.empty() && code.size() <= MAX_INVITE_CODE_LENGTH &&
+           std::all_of(code.begin(), code.end(), is_invite_code_character);
+}
+
 std::string trim_spaces(std::string_view text) {
     const auto first = text.find_first_not_of(' ');
     if (first == std::string_view::npos) {
@@ -100,6 +108,24 @@ bool is_valid_game_name(std::string_view name) { return is_valid_name(name, MAX_
 
 bool is_valid_character_name(std::string_view name) {
     return is_valid_name(name, MAX_CHARACTER_NAME_LENGTH);
+}
+
+bool is_valid_appearance(const CharacterAppearance& appearance) {
+    return appearance.skin_tone < SKIN_TONE_COUNT && appearance.hair_style < HAIR_STYLE_COUNT &&
+           appearance.hair_color < HAIR_COLOR_COUNT && appearance.shirt_color < SHIRT_COLOR_COUNT &&
+           appearance.pants_color < PANTS_COLOR_COUNT;
+}
+
+std::optional<LobbyError> validate_character(const CharacterDraft& character) {
+    if (!is_valid_character_name(character.name)) {
+        return LobbyError::InvalidCharacterName;
+    }
+
+    if (!is_valid_appearance(character.appearance)) {
+        return LobbyError::InvalidAppearance;
+    }
+
+    return std::nullopt;
 }
 
 }

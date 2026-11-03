@@ -59,7 +59,6 @@ void paint_fence(QPainter& painter, const QRect& area, int top) {
 }
 
 void paint_flowers(QPainter& painter, const QRect& meadow) {
-    // Posiciones fijas (pseudoaleatorias) para que no cambien entre repintados.
     for (int i = 0; i < 60; ++i) {
         const int x = meadow.left() + (i * 7919) % meadow.width();
         const int y = meadow.top() + 12 + (i * 104729) % std::max(1, meadow.height() - 20);

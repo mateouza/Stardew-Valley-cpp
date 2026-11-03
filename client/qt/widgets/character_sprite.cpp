@@ -23,9 +23,6 @@ constexpr int IMAGE_HEIGHT = static_cast<int>(SPRITE_HEIGHT) + 2 * OUTLINE;
 
 using Sprite = std::array<std::string_view, SPRITE_HEIGHT>;
 
-// S piel, s piel en sombra, E ojos, B mejillas, M boca, T remera, t remera en sombra,
-// K cinturón, P pantalón, p pantalón en sombra, O zapatos, H pelo, h pelo en sombra.
-// Las filas que faltan al final de un sprite quedan transparentes.
 // clang-format off
 constexpr Sprite BODY = {
         "................",
@@ -56,7 +53,6 @@ constexpr Sprite BODY = {
 
 constexpr std::array<Sprite, lobby::HAIR_STYLE_COUNT> HAIR_STYLE_SPRITES{{
         {
-                // Corto
                 "................",
                 "................",
                 ".....HHHHHH.....",
@@ -66,7 +62,6 @@ constexpr std::array<Sprite, lobby::HAIR_STYLE_COUNT> HAIR_STYLE_SPRITES{{
                 "....h......h....",
         },
         {
-                // Largo
                 "................",
                 "................",
                 ".....HHHHHH.....",
@@ -82,7 +77,6 @@ constexpr std::array<Sprite, lobby::HAIR_STYLE_COUNT> HAIR_STYLE_SPRITES{{
                 "...hh......hh...",
         },
         {
-                // Puntas
                 "................",
                 "....H..HH..H....",
                 "....HHHHHHHH....",
@@ -92,7 +86,6 @@ constexpr std::array<Sprite, lobby::HAIR_STYLE_COUNT> HAIR_STYLE_SPRITES{{
                 "....h......h....",
         },
         {
-                // Rodete
                 "......hHHh......",
                 "......HHHH......",
                 ".....HHHHHH.....",
