@@ -381,6 +381,60 @@ TEST_F(WorldTest, DifferentWorldsDoNotSharePlayerState) {
     EXPECT_FALSE(other.get_state().players.at(0).moving);
 }
 
+TEST_F(WorldTest, QueriesInventoryThroughTheModelInterface) {
+    const auto id = add_player();
+    const GameModel& model = world;
+
+    const auto inventory = model.get_inventory_state(id);
+
+    ASSERT_TRUE(inventory.has_value());
+    EXPECT_EQ(inventory->selected_slot, 0u);
+    ASSERT_TRUE(inventory->slots[2].has_value());
+    EXPECT_EQ(inventory->slots[2]->type, ItemType::Shovel);
+    EXPECT_EQ(inventory->slots[2]->quantity, 1u);
+}
+
+TEST_F(WorldTest, ReturnsNoInventoryForUnknownPlayerWithoutCreatingOne) {
+    EXPECT_FALSE(world.get_inventory_state(0).has_value());
+    EXPECT_TRUE(world.get_state().players.empty());
+    const auto id = add_player();
+
+    EXPECT_FALSE(world.get_inventory_state(id + 1).has_value());
+    EXPECT_EQ(world.get_state().players.size(), 1u);
+}
+
+TEST_F(WorldTest, KeepsInventoryAvailableWhilePlayerIsDisconnected) {
+    const auto id = add_player();
+    world.disconnect_player(id);
+
+    const auto inventory = world.get_inventory_state(id);
+
+    EXPECT_TRUE(world.get_state().players.empty());
+    ASSERT_TRUE(inventory.has_value());
+    EXPECT_EQ(inventory->selected_slot, 0u);
+    ASSERT_TRUE(inventory->slots[2].has_value());
+    EXPECT_EQ(inventory->slots[2]->type, ItemType::Shovel);
+    EXPECT_EQ(inventory->slots[2]->quantity, 1u);
+}
+
+TEST_F(WorldTest, InventorySnapshotDoesNotModifyTheRegisteredPlayer) {
+    const auto id = add_player();
+    auto snapshot = world.get_inventory_state(id);
+    ASSERT_TRUE(snapshot.has_value());
+    ASSERT_TRUE(snapshot->slots[2].has_value());
+    snapshot->selected_slot = 8;
+    snapshot->slots[0].reset();
+    snapshot->slots[2]->quantity = 99;
+
+    const auto current = world.get_inventory_state(id);
+
+    ASSERT_TRUE(current.has_value());
+    EXPECT_EQ(current->selected_slot, 0u);
+    EXPECT_TRUE(current->slots[0].has_value());
+    ASSERT_TRUE(current->slots[2].has_value());
+    EXPECT_EQ(current->slots[2]->quantity, 1u);
+}
+
 TEST(WorldMovementTest, AppliesConfiguredSpeed) {
     World world{Map{{{TileType::Walkable, TileType::Walkable, TileType::Walkable}}},
                 {0.5, 0.5},
