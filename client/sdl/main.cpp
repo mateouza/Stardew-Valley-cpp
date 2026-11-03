@@ -41,9 +41,6 @@ template <typename T>
 std::optional<T> esperar_mensaje(NetworkClient& cliente, std::chrono::steady_clock::duration timeout) {
     const std::chrono::steady_clock::time_point limite = std::chrono::steady_clock::now() + timeout;
     while (std::chrono::steady_clock::now() < limite) {
-        if (cliente.has_finished()) {
-            return std::nullopt;
-        }
         std::optional<ServerMessage> mensaje = cliente.try_receive();
         if (mensaje) {
             if (T* encontrado = std::get_if<T>(&*mensaje)) {
@@ -51,6 +48,10 @@ std::optional<T> esperar_mensaje(NetworkClient& cliente, std::chrono::steady_clo
             }
             continue; // se ignoran los mensajes de otro tipo
         }
+        if (cliente.has_finished()) {
+            return std::nullopt;
+        }
+        
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     return std::nullopt;
