@@ -73,6 +73,8 @@ void Menu::dibujar(Renderer& renderer, SDL2pp::Font& fuente, const std::string& 
         return;
     }
 
+    renderer.dibujar_rectangulo_blur(0, 0, ancho_ventana, alto_ventana, 0, 0, 0, 150);
+
     const int panel_x = (ancho_ventana - PANEL_ANCHO_PX) / 2;
     const int panel_y = (alto_ventana - PANEL_ALTO_PX) / 2;
 

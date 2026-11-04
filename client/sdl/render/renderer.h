@@ -27,6 +27,8 @@ public:
 
     void dibujar_rectangulo(int x, int y, int ancho, int alto, Uint8 r, Uint8 g, Uint8 b);
 
+    void dibujar_rectangulo_blur(int x, int y, int ancho, int alto, Uint8 r, Uint8 g, Uint8 b, Uint8 alpha);
+
     void presentar();
 };
 

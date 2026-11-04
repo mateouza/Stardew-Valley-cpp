@@ -36,4 +36,10 @@ void Renderer::dibujar_rectangulo(int x, int y, int ancho, int alto, Uint8 r, Ui
     renderer.FillRect(SDL2pp::Rect(x, y, ancho, alto));
 }
 
+void Renderer::dibujar_rectangulo_blur(int x, int y, int ancho, int alto, Uint8 r, Uint8 g, Uint8 b, Uint8 alpha) {
+    renderer.SetDrawBlendMode(SDL_BLENDMODE_BLEND);
+    renderer.SetDrawColor(r, g, b, alpha);
+    renderer.FillRect(SDL2pp::Rect(x, y, ancho, alto));
+}
+
 void Renderer::presentar() { renderer.Present(); }
