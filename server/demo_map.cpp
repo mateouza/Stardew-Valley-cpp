@@ -7,8 +7,8 @@
 namespace game {
 
 DemoMap make_demo_map() {
-    constexpr std::size_t WIDTH = 10;
-    constexpr std::size_t HEIGHT = 10;
+    constexpr std::size_t WIDTH = 50;
+    constexpr std::size_t HEIGHT = 40;
     std::vector<std::vector<TileType>> tiles(HEIGHT,
                                              std::vector<TileType>(WIDTH, TileType::Walkable));
 

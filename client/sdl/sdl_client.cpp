@@ -30,7 +30,9 @@ namespace {
     constexpr int ANCHO_VENTANA = 800;
     constexpr int ALTO_VENTANA = 600;
     constexpr int TAMANIO_FUENTE_PX = 12;
+    constexpr int TAMANIO_VISUAL_JUGADOR_PX = 32;
     const std::string RUTA_FUENTE = "assets/Press_Start/PressStart2P-Regular.ttf";   
+    const SDL2pp::Rect ORIGEN_SPRITE_JUGADOR(43, 23, 11, 16);
 }
 
 void actualizar_direccion_pendiente(const game::MovementDirection& direccion_actual,
@@ -102,9 +104,9 @@ void dibujar_jugadores(Renderer& renderer, SDL2pp::Texture& textura, const Clien
         const int y = camara.transformar_y(centro_y_px) - alto_sprite / 2;
 
         if (jugador.id == estado_cliente.obtener_id_propio()) {
-            renderer.dibujar(textura, x, y, ancho_sprite, alto_sprite, 255, 255, 255); //blanco
+            renderer.dibujar(textura, ORIGEN_SPRITE_JUGADOR, x, y, ancho_sprite, alto_sprite, 255, 255, 255); //blanco
         } else {
-            renderer.dibujar(textura, x, y, ancho_sprite, alto_sprite, 67, 38, 255); //azul
+            renderer.dibujar(textura, ORIGEN_SPRITE_JUGADOR, x, y, ancho_sprite, alto_sprite, 67, 38, 255); //azul
         }
     }
 }
@@ -113,7 +115,7 @@ void dibujar_jugadores(Renderer& renderer, SDL2pp::Texture& textura, const Clien
 bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHandler& input_handler,
                           Renderer& renderer, TextureManager& texturas, SDL2pp::Font& fuente, SDL2pp::Texture& textura, const game::MapData& mapa,
                           InventoryBar& inventario, const StatBars& estadisticas, Camera& camara,
-                          int ancho_sprite, int alto_sprite) {
+                          int ancho_sprite_jugador, int alto_sprite_jugador) {
     game::MovementDirection ultima_direccion_enviada{0, 0};
     std::optional<game::MovementDirection> pendiente;
 
@@ -149,7 +151,7 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
 
         renderer.limpiar();
         dibujar_mapa(renderer, mapa, camara);
-        dibujar_jugadores(renderer, textura, estado, camara, ancho_sprite, alto_sprite);
+        dibujar_jugadores(renderer, textura, estado, camara, ancho_sprite_jugador, alto_sprite_jugador);
         estadisticas.dibujar(renderer);
         inventario.dibujar(renderer, texturas, fuente, ANCHO_VENTANA, ALTO_VENTANA);
         renderer.presentar();
@@ -163,16 +165,14 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
     try {
         SDL2pp::SDL sdl(SDL_INIT_VIDEO);
         SDL2pp::SDLImage sdl_image(IMG_INIT_PNG);
+        SDL2pp::SDLTTF sdl_ttf;
 
         const std::string titulo = codigo_invitacion.empty() ? "Stardew Valley" : "Stardew Valley - Código: " + codigo_invitacion;
         SDLWindow ventana(titulo.c_str(), ANCHO_VENTANA, ALTO_VENTANA, false);
         Renderer renderer(ventana.obtener_handle());
         TextureManager texturas(renderer);
-        SDL2pp::Texture& textura = texturas.obtener_textura("assets/rock.png");
+        SDL2pp::Texture& textura = texturas.obtener_textura("assets/Characters/Generic/IDLE/base_idle_strip9.png");
         SDL2pp::Font fuente(RUTA_FUENTE, TAMANIO_FUENTE_PX);
-
-        const int ancho_sprite_px = static_cast<int>(info_partida.player_width * PIXELS_POR_CELDA);
-        const int alto_sprite_px = static_cast<int>(info_partida.player_height * PIXELS_POR_CELDA);
 
         ClientState estado_cliente(id_propio);
         InputHandler input_handler;
@@ -180,7 +180,18 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
         StatBars estadisticas;
         Camera camara(ANCHO_VENTANA, ALTO_VENTANA);
 
-        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, texturas, fuente, textura, info_partida.map, inventario, estadisticas, camara, ancho_sprite_px, alto_sprite_px);
+        // TODO temporal: sacar esto apenas José conecte el envio real de InventoryState.
+        game::InventoryState estado_prueba;
+        estado_prueba.selected_slot = 2;
+        estado_prueba.items[0] = game::ItemStack{game::ItemType::Pickaxe, game::ItemQuality::Base, 1};
+        estado_prueba.items[1] = game::ItemStack{game::ItemType::Shovel, game::ItemQuality::Base, 1};
+        estado_prueba.items[2] = game::ItemStack{game::ItemType::Sword, game::ItemQuality::Base, 1};
+        estado_prueba.items[3] = game::ItemStack{game::ItemType::WateringCan, game::ItemQuality::Base, 1};
+        estado_prueba.items[4] = game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Good, 12};
+        // slots 5 a 8 quedan vacios (std::nullopt por defecto)
+        inventario.actualizar(estado_prueba);
+
+        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, texturas, fuente, textura, info_partida.map, inventario, estadisticas, camara, TAMANIO_VISUAL_JUGADOR_PX, TAMANIO_VISUAL_JUGADOR_PX);
         
         if (conexion_perdida) {
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Conexion perdida",
