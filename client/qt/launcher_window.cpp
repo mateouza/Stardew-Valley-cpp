@@ -24,10 +24,8 @@ namespace launcher {
 
 namespace {
 
-// Cada cuánto se consulta, mientras se espera, si llegó la respuesta del lobby.
 constexpr std::chrono::milliseconds RESPONSE_POLL_INTERVAL{20};
 
-// Si el lobby devolvió un error, lo muestra en la pantalla que hizo el pedido.
 template <typename Screen>
 std::optional<lobby::GameTicket> ticket_or_show_error(
         const lobby::LobbyResult<lobby::GameTicket>& result, Screen* screen) {
@@ -163,11 +161,15 @@ void LauncherWindow::handle(const lobby::FindGameResponse& response) {
 
     const auto& game = std::get<lobby::JoinableGameInfo>(response.result);
     character_purpose = CharacterPurpose::JoinGame;
-    character_screen->prepare(
-            QString("Te unís a «%1», de %2 · %3/%4 jugadores")
-                    .arg(QString::fromStdString(game.game_name), QString::fromStdString(game.owner),
-                         QString::number(game.player_count), QString::number(game.max_players)),
-            "Unirme a la partida");
+    const QString context = game.game_name.empty() ?
+                                    QString("Te unís a la partida con código %1")
+                                            .arg(QString::fromStdString(game.game_id)) :
+                                    QString("Te unís a «%1», de %2 · %3/%4 jugadores")
+                                            .arg(QString::fromStdString(game.game_name),
+                                                 QString::fromStdString(game.owner),
+                                                 QString::number(game.player_count),
+                                                 QString::number(game.max_players));
+    character_screen->prepare(context, "Unirme a la partida");
     show_screen(character_screen);
 }
 

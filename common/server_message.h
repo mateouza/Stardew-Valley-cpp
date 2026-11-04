@@ -8,6 +8,7 @@
 #include "game_info.h"
 #include "game_results.h"
 #include "game_state.h"
+#include "inventory_state.h"
 
 struct JoinResponse {
     game::AddPlayerResult result;
@@ -17,6 +18,6 @@ struct MatchResponse {
     std::optional<std::string> invitation_code;
 };
 
-using ServerMessage = std::variant<JoinResponse, game::GameState, MatchResponse, game::GameInfo>;
-
+using ServerMessage = std::variant<JoinResponse, game::GameState, MatchResponse, game::GameInfo,
+                                   game::InventoryState>;
 #endif

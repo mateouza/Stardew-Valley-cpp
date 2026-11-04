@@ -12,7 +12,6 @@
 
 namespace lobby {
 
-// Simula en memoria las respuestas del servidor mientras el protocolo no tenga mensajes de lobby.
 class FakeLobbyClient: public LobbyClient {
 private:
     struct StoredGame {
@@ -45,7 +44,6 @@ public:
 
     explicit FakeLobbyClient(bool with_demo_games = true);
 
-    // Responde en memoria y nunca bloquea, así que no hay nada que interrumpir.
     void interrupt() override;
 
     std::optional<LobbyError> connect(const std::string& host, const std::string& port,

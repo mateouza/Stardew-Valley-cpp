@@ -5,16 +5,20 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 test_binaries=(
     build/player_tests
+    build/inventory_tests
     build/map_tests
+    build/soil_tests
     build/world_tests
     build/world_config_tests
     build/server_protocol_tests
+    build/network_client_tests
     build/game_loop_tests
     build/world_game_loop_tests
     build/match_tests
     build/fake_lobby_client_tests
     build/lobby_validation_tests
     build/lobby_worker_tests
+    build/network_lobby_client_tests
 )
 
 # Solo existen si se compilo con BUILD_LAUNCHER=ON.
@@ -38,7 +42,6 @@ for test_binary in "${qt_test_binaries[@]}"; do
     fi
 done
 
-# Los tests de Qt corren sin pantalla.
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}"
 
 for test_binary in "${test_binaries[@]}"; do

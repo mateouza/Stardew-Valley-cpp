@@ -6,6 +6,7 @@
 
 #include "game_command.h"
 #include "game_state.h"
+#include "inventory_state.h"
 #include "lobby_request.h"
 #include "protocol_base.h"
 #include "server_message.h"
@@ -16,6 +17,7 @@ private:
     void validate_game_state(const game::GameState& state);
     void send_player_state(const game::PlayerState& player);
     void validate_game_info(const game::GameInfo& info);
+    void validate_inventory_state(const game::InventoryState& state);
 
 public:
     explicit ServerProtocol(Socket& socket);
@@ -26,6 +28,7 @@ public:
     std::optional<LobbyRequest> receive_lobby_request();
     void send_match_response(const MatchResponse& response);
     void send_game_info(const game::GameInfo& info);
+    void send_inventory_state(const game::InventoryState& state);
 };
 
 #endif

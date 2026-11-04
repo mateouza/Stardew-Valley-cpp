@@ -7,7 +7,6 @@ namespace lobby {
 
 namespace {
 
-// Llama a la operación de LobbyClient que corresponde a cada pedido y arma su respuesta.
 class RequestRunner {
 private:
     LobbyClient& client;

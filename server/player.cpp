@@ -1,11 +1,24 @@
 #include "player.h"
 
+#include <array>
+#include <stdexcept>
 #include <utility>
 
 namespace game {
 
 Player::Player(PlayerId id, std::string name, Position position):
-        id(id), name(std::move(name)), position(position) {}
+        id(id), name(std::move(name)), position(position) {
+    const std::array<ItemType, 4> tools{ItemType::Pickaxe, ItemType::WateringCan, ItemType::Shovel,
+                                        ItemType::Sword};
+
+    for (const auto tool: tools) {
+        const auto result = inventory.add({tool, ItemQuality::Base, 1});
+
+        if (result != InventoryResult::Accepted) {
+            throw std::logic_error("No se pudo agregar el equipamiento inicial");
+        }
+    }
+}
 
 SetDirectionResult Player::set_direction(MovementDirection direction) {
     if (!connected) {
@@ -53,5 +66,19 @@ ReconnectPlayerResult Player::reconnect() {
 bool Player::is_connected() const { return connected; }
 
 PlayerState Player::get_state() const { return {id, name, position, facing, moving}; }
+
+InventoryResult Player::add_item(ItemStack item) { return inventory.add(item); }
+
+InventoryResult Player::remove_item(std::size_t slot, std::uint32_t quantity) {
+    return inventory.remove(slot, quantity);
+}
+
+InventoryResult Player::select_slot(std::size_t slot) { return inventory.select(slot); }
+
+std::size_t Player::get_selected_slot() const { return inventory.get_selected_slot(); }
+
+std::optional<ItemStack> Player::get_selected_item() const { return inventory.get_selected_item(); }
+
+InventoryState Player::get_inventory_state() const { return inventory.get_state(); }
 
 }

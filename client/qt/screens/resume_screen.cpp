@@ -77,7 +77,6 @@ void ResumeScreen::set_games(const std::vector<lobby::SavedGameInfo>& games) {
                 [this, game_id] { emit game_selected(game_id); });
     }
 
-    // La lista crece con las partidas hasta VISIBLE_CARDS tarjetas; a partir de ahí, scroll.
     const int visible_cards = std::min(static_cast<int>(games.size()), VISIBLE_CARDS);
     games_scroll->setFixedHeight(
             std::max(0, visible_cards * (SavedGameCard::HEIGHT + CARD_SPACING) - CARD_SPACING));

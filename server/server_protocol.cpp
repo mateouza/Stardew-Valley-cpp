@@ -205,3 +205,69 @@ void ServerProtocol::send_game_info(const game::GameInfo& info) {
     send_double(info.player_height);
     send_bytes(tiles.data(), static_cast<unsigned int>(tiles.size()));
 }
+
+void ServerProtocol::validate_inventory_state(const game::InventoryState& state) {
+    if (state.selected_slot >= state.items.size()) {
+        throw std::invalid_argument("El espacio seleccionado es invalido");
+    }
+
+    for (const auto& slot: state.items) {
+        if (!slot) {
+            continue;
+        }
+
+        std::uint32_t stack_limit = 1;
+
+        switch (slot->type) {
+            case game::ItemType::Pickaxe:
+            case game::ItemType::WateringCan:
+            case game::ItemType::Shovel:
+            case game::ItemType::Sword:
+                break;
+            case game::ItemType::StrawberrySeed:
+                stack_limit = game::InventoryState::MAX_STACK_SIZE;
+                break;
+            default:
+                throw std::invalid_argument("El inventario contiene un objeto invalido");
+        }
+
+        switch (slot->quality) {
+            case game::ItemQuality::Base:
+            case game::ItemQuality::Good:
+            case game::ItemQuality::Excellent:
+            case game::ItemQuality::Incredible:
+            case game::ItemQuality::Perfect:
+                break;
+            default:
+                throw std::invalid_argument("El inventario contiene una calidad invalida");
+        }
+
+        if (slot->quantity == 0 || slot->quantity > stack_limit) {
+            throw std::invalid_argument("El inventario contiene una cantidad invalida");
+        }
+    }
+}
+
+void ServerProtocol::send_inventory_state(const game::InventoryState& state) {
+    validate_inventory_state(state);
+
+    const std::array<std::uint8_t, 2> header{INVENTORY_STATE_MESSAGE,
+                                             static_cast<std::uint8_t>(state.selected_slot)};
+
+    send_bytes(header.data(), header.size());
+
+    for (const auto& slot: state.items) {
+        if (!slot) {
+            const std::uint8_t presence = INVENTORY_SLOT_EMPTY;
+            send_bytes(&presence, sizeof(presence));
+            continue;
+        }
+
+        const std::array<std::uint8_t, 3> item_header{INVENTORY_SLOT_OCCUPIED,
+                                                      static_cast<std::uint8_t>(slot->type),
+                                                      static_cast<std::uint8_t>(slot->quality)};
+
+        send_bytes(item_header.data(), item_header.size());
+        send_uint32(slot->quantity);
+    }
+}

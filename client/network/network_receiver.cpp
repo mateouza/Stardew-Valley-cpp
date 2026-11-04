@@ -1,13 +1,15 @@
 #include "network_receiver.h"
 
+#include <exception>
 #include <stdexcept>
 
-#include "liberror.h"
-
-NetworkReceiver::NetworkReceiver(ClientProtocol& protocol, Queue<ServerMessage>& messages):
-        protocol(protocol), messages(messages) {}
+NetworkReceiver::NetworkReceiver(ClientProtocol& protocol, Queue<ServerMessage>& messages,
+                                 ConnectionCloser& closer):
+        protocol(protocol), messages(messages), closer(closer) {}
 
 void NetworkReceiver::run() {
+    std::exception_ptr error;
+
     try {
         while (should_keep_running()) {
             const auto message = protocol.receive_message();
@@ -21,30 +23,9 @@ void NetworkReceiver::run() {
             }
         }
     } catch (const ClosedQueue&) {
-    } catch (const LibError&) {
-        if (should_keep_running()) {
-            failure = std::current_exception();
-        }
     } catch (...) {
-        failure = std::current_exception();
+        error = std::current_exception();
     }
 
-    NetworkReceiver::stop();
-}
-
-void NetworkReceiver::stop() {
-    Thread::stop();
-
-    std::lock_guard<std::mutex> lock(close_mutex);
-
-    if (!queue_closed) {
-        messages.close();
-        queue_closed = true;
-    }
-}
-
-void NetworkReceiver::rethrow_if_failed() const {
-    if (failure) {
-        std::rethrow_exception(failure);
-    }
+    closer.close(error);
 }

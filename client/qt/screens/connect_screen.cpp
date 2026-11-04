@@ -31,7 +31,6 @@ ConnectScreen::ConnectScreen(const LauncherOptions& options, QWidget* parent):
             new QRegularExpressionValidator(QRegularExpression("[A-Za-z0-9_]*"), username_input));
     host_input->setObjectName("host_input");
     port_input->setObjectName("port_input");
-    // Solo filtra lo que se escribe; si el puerto es válido lo decide lobby::is_valid_port().
     port_input->setValidator(
             new QRegularExpressionValidator(QRegularExpression("[0-9]{0,5}"), port_input));
     connect_button->setObjectName("connect_button");

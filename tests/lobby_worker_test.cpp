@@ -17,7 +17,6 @@ namespace lobby {
 
 namespace {
 
-// Consulta sin bloquear, como hace la ventana, hasta que llega una respuesta o vence el plazo.
 std::optional<LobbyResponse> wait_for_response(LobbyWorker& worker) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
     LobbyResponse response;
@@ -81,7 +80,6 @@ TEST(LobbyWorkerTest, DestroyingInterruptsThePendingRequestAndJoins) {
     worker->submit(ConnectRequest{"localhost", "8080", "Juanceto02"});
     ASSERT_TRUE(client.wait_until_started());
 
-    // Si no interrumpiera, el destructor esperaría para siempre y vencería el timeout de ctest.
     worker.reset();
 
     EXPECT_TRUE(client.was_interrupted());
@@ -93,7 +91,6 @@ TEST(LobbyWorkerTest, SubmitNeverWaitsAndFailsWhenTheQueueIsFull) {
     worker.submit(ConnectRequest{"localhost", "8080", "Juanceto02"});
     ASSERT_TRUE(client.wait_until_started());
 
-    // El worker quedó bloqueado en el primer pedido: los siguientes se acumulan en la cola.
     for (unsigned int i = 0; i < LobbyWorker::MAX_PENDING_REQUESTS; ++i) {
         worker.submit(ListWorldsRequest{});
     }

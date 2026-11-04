@@ -15,8 +15,7 @@ struct LauncherOptions {
     std::string username;
 };
 
-// Muestra el launcher y bloquea hasta que se cierra. Devuelve la partida elegida, o nada si el
-// usuario salió. La QApplication se destruye antes de retornar, así SDL puede abrir su ventana.
+// Destruye la QApplication al retornar, así SDL puede abrir ventana.
 std::optional<lobby::GameTicket> run_launcher(int& argc, char** argv,
                                               lobby::LobbyClient& lobby_client,
                                               const LauncherOptions& options);

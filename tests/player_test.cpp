@@ -1,5 +1,7 @@
 #include "player.h"
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 
 #include "gtest/gtest.h"
@@ -207,5 +209,121 @@ TEST_F(PlayerTest, StateIsAnIndependentSnapshot) {
 
     player.set_position({4.0, 3.5});
     EXPECT_DOUBLE_EQ(state.position.x, 99.0);
+}
+
+TEST_F(PlayerTest, KeepsInventoriesIndependentBetweenPlayers) {
+    Player other(8, "Mateo", {0.5, 0.5});
+
+    ASSERT_EQ(player.add_item({ItemType::StrawberrySeed, ItemQuality::Base, 12}),
+              InventoryResult::Accepted);
+
+    ASSERT_EQ(player.select_slot(4), InventoryResult::Accepted);
+    ASSERT_EQ(other.select_slot(4), InventoryResult::Accepted);
+
+    const auto item = player.get_selected_item();
+    ASSERT_TRUE(item.has_value());
+    EXPECT_EQ(item->type, ItemType::StrawberrySeed);
+    EXPECT_EQ(item->quantity, 12u);
+
+    EXPECT_FALSE(other.get_selected_item().has_value());
+
+    ASSERT_EQ(player.select_slot(2), InventoryResult::Accepted);
+    EXPECT_EQ(player.get_selected_slot(), 2u);
+    EXPECT_EQ(other.get_selected_slot(), 4u);
+}
+
+TEST_F(PlayerTest, DelegatesRemovalAndPreservesStateOnRejection) {
+    ASSERT_EQ(player.add_item({ItemType::StrawberrySeed, ItemQuality::Base, 2}),
+              InventoryResult::Accepted);
+    ASSERT_EQ(player.select_slot(4), InventoryResult::Accepted);
+
+    EXPECT_EQ(player.remove_item(4, 3), InventoryResult::NotEnoughItems);
+
+    const auto item = player.get_selected_item();
+    ASSERT_TRUE(item.has_value());
+    EXPECT_EQ(item->quantity, 2u);
+
+    EXPECT_EQ(player.select_slot(9), InventoryResult::InvalidSlot);
+    EXPECT_EQ(player.get_selected_slot(), 4u);
+
+    ASSERT_EQ(player.remove_item(4, 2), InventoryResult::Accepted);
+    EXPECT_FALSE(player.get_selected_item().has_value());
+}
+
+TEST_F(PlayerTest, StartsWithFourToolsAndFiveEmptySlots) {
+    const std::array<ItemType, 4> expected{ItemType::Pickaxe, ItemType::WateringCan,
+                                           ItemType::Shovel, ItemType::Sword};
+
+    EXPECT_EQ(player.get_selected_slot(), 0u);
+
+    for (std::size_t slot = 0; slot < expected.size(); ++slot) {
+        ASSERT_EQ(player.select_slot(slot), InventoryResult::Accepted);
+
+        const auto item = player.get_selected_item();
+        ASSERT_TRUE(item.has_value());
+        EXPECT_EQ(item->type, expected[slot]);
+        EXPECT_EQ(item->quality, ItemQuality::Base);
+        EXPECT_EQ(item->quantity, 1u);
+    }
+
+    for (std::size_t slot = expected.size(); slot < 9; ++slot) {
+        ASSERT_EQ(player.select_slot(slot), InventoryResult::Accepted);
+        EXPECT_FALSE(player.get_selected_item().has_value());
+    }
+}
+
+TEST_F(PlayerTest, ReconnectPreservesInventoryWithoutAddingToolsAgain) {
+    ASSERT_EQ(player.add_item({ItemType::StrawberrySeed, ItemQuality::Base, 12}),
+              InventoryResult::Accepted);
+    ASSERT_EQ(player.select_slot(4), InventoryResult::Accepted);
+
+    player.disconnect();
+    ASSERT_EQ(player.reconnect(), ReconnectPlayerResult::Accepted);
+
+    EXPECT_EQ(player.get_selected_slot(), 4u);
+
+    const auto item = player.get_selected_item();
+    ASSERT_TRUE(item.has_value());
+    EXPECT_EQ(item->type, ItemType::StrawberrySeed);
+    EXPECT_EQ(item->quantity, 12u);
+
+    const std::array<ItemType, 4> expected{ItemType::Pickaxe, ItemType::WateringCan,
+                                           ItemType::Shovel, ItemType::Sword};
+
+    for (std::size_t slot = 0; slot < expected.size(); ++slot) {
+        ASSERT_EQ(player.select_slot(slot), InventoryResult::Accepted);
+
+        const auto tool = player.get_selected_item();
+        ASSERT_TRUE(tool.has_value());
+        EXPECT_EQ(tool->type, expected[slot]);
+        EXPECT_EQ(tool->quantity, 1u);
+    }
+
+    for (std::size_t slot = 5; slot < 9; ++slot) {
+        ASSERT_EQ(player.select_slot(slot), InventoryResult::Accepted);
+        EXPECT_FALSE(player.get_selected_item().has_value());
+    }
+}
+
+TEST_F(PlayerTest, InventoryStateIsAnIndependentSnapshot) {
+    ASSERT_EQ(player.add_item({ItemType::StrawberrySeed, ItemQuality::Base, 12}),
+              InventoryResult::Accepted);
+    ASSERT_EQ(player.select_slot(4), InventoryResult::Accepted);
+
+    const auto snapshot = player.get_inventory_state();
+
+    ASSERT_EQ(player.remove_item(4, 1), InventoryResult::Accepted);
+    ASSERT_EQ(player.select_slot(2), InventoryResult::Accepted);
+
+    ASSERT_TRUE(snapshot.items[4].has_value());
+    EXPECT_EQ(snapshot.items[4]->type, ItemType::StrawberrySeed);
+    EXPECT_EQ(snapshot.items[4]->quantity, 12u);
+    EXPECT_EQ(snapshot.selected_slot, 4u);
+
+    const auto current = player.get_inventory_state();
+
+    ASSERT_TRUE(current.items[4].has_value());
+    EXPECT_EQ(current.items[4]->quantity, 11u);
+    EXPECT_EQ(current.selected_slot, 2u);
 }
 }

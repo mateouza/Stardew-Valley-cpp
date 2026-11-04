@@ -21,6 +21,8 @@
 #include "client_receiver.h"
 #include "client_sender.h"
 #include "client_session.h"
+#include "inventory_state.h"
+#include "item.h"
 #include "liberror.h"
 #include "match_manager.h"
 #include "network_client.h"
@@ -1091,4 +1093,129 @@ TEST(ServerProtocolTest, RejectsReceivedMapAboveCellLimit) {
     ClientProtocol protocol(client);
 
     EXPECT_THROW(protocol.receive_message(), std::length_error);
+}
+
+TEST_F(ClientServerProtocolTest, ReceivesInventoryPreservingSlotsAndSelection) {
+    game::InventoryState state;
+    state.selected_slot = 8;
+    state.items[1] = game::ItemStack{game::ItemType::Shovel, game::ItemQuality::Base, 1};
+    state.items[8] = game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Good, 50};
+
+    server_protocol.send_inventory_state(state);
+    connection.shutdown(SHUT_WR);
+
+    const auto message = client_protocol.receive_message();
+    ASSERT_TRUE(message.has_value());
+
+    const auto* received = std::get_if<game::InventoryState>(&*message);
+    ASSERT_NE(received, nullptr);
+    EXPECT_EQ(received->selected_slot, 8u);
+
+    for (std::size_t index = 0; index < state.items.size(); ++index) {
+        ASSERT_EQ(received->items[index].has_value(), state.items[index].has_value());
+
+        if (state.items[index]) {
+            EXPECT_EQ(received->items[index]->type, state.items[index]->type);
+            EXPECT_EQ(received->items[index]->quality, state.items[index]->quality);
+            EXPECT_EQ(received->items[index]->quantity, state.items[index]->quantity);
+        }
+    }
+
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, SendsInventoryUsingExpectedBytes) {
+    game::InventoryState state;
+    state.selected_slot = 1;
+    state.items[1] = game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Good, 50};
+
+    server_protocol.send_inventory_state(state);
+    connection.shutdown(SHUT_WR);
+
+    std::array<std::uint8_t, 17> received{};
+    ASSERT_EQ(client.recvall(received.data(), received.size()), 17);
+
+    const std::array<std::uint8_t, 17> expected{0x08, 0x01, 0x00, 0x01, 0x04, 0x01,
+                                                0x00, 0x00, 0x00, 0x32, 0x00, 0x00,
+                                                0x00, 0x00, 0x00, 0x00, 0x00};
+
+    EXPECT_EQ(received, expected);
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, RejectsInvalidInventoryBeforeSendingAnyBytes) {
+    std::array<game::InventoryState, 6> invalid_states{};
+
+    invalid_states[0].selected_slot = game::InventoryState::CAPACITY;
+    invalid_states[1].items[8] =
+            game::ItemStack{static_cast<game::ItemType>(255), game::ItemQuality::Base, 1};
+    invalid_states[2].items[8] =
+            game::ItemStack{game::ItemType::StrawberrySeed, static_cast<game::ItemQuality>(255), 1};
+    invalid_states[3].items[8] =
+            game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Base, 0};
+    invalid_states[4].items[8] =
+            game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Base, 51};
+    invalid_states[5].items[8] =
+            game::ItemStack{game::ItemType::Shovel, game::ItemQuality::Base, 2};
+
+    for (const auto& state: invalid_states) {
+        EXPECT_THROW(server_protocol.send_inventory_state(state), std::invalid_argument);
+    }
+
+    connection.shutdown(SHUT_WR);
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedInventoryWithInvalidSelection) {
+    const std::array<std::uint8_t, 2> message{0x08, 0x09};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 2);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedInventoryWithInvalidPresence) {
+    const std::array<std::uint8_t, 3> message{0x08, 0x00, 0x02};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 3);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedInventoryWithUnknownItem) {
+    const std::array<std::uint8_t, 5> message{0x08, 0x00, 0x01, 0xFF, 0x00};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 5);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedInventoryWithUnknownQuality) {
+    const std::array<std::uint8_t, 5> message{0x08, 0x00, 0x01, 0x04, 0xFF};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 5);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedInventoryAboveStackLimit) {
+    const std::array<std::uint8_t, 9> message{0x08, 0x00, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x33};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 9);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsInventoryWithTruncatedQuantity) {
+    const std::array<std::uint8_t, 7> message{0x08, 0x00, 0x01, 0x04, 0x00, 0x00, 0x00};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 7);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), LibError);
 }

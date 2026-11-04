@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <optional>
+#include "inventory_state.h"
 
 #include "game_model.h"
 #include "game_state.h"
@@ -37,6 +39,7 @@ public:
     void disconnect_player(PlayerId player_id) override;
     void update_world(std::chrono::duration<double> elapsed) override;
     GameState get_state() const override;
+    std::optional<InventoryState> get_inventory_state(PlayerId player_id) const override;
 };
 
 }
