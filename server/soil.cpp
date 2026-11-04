@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <utility>
+#include <cstdint>
 
 namespace game {
 
@@ -27,6 +28,27 @@ Soil::Soil(std::vector<std::vector<SoilState>> cells): cells(std::move(cells)) {
 std::size_t Soil::get_width() const { return cells.front().size(); }
 
 std::size_t Soil::get_height() const { return cells.size(); }
+
+SoilData Soil::get_data() const {
+    const auto width = get_width();
+    const auto height = get_height();
+    if (!std::in_range<std::uint32_t>(width) || !std::in_range<std::uint32_t>(height)) {
+        throw std::overflow_error("Las dimensiones del suelo no entran en SoilData");
+    }
+
+    SoilData data;
+    data.width = static_cast<std::uint32_t>(width);
+    data.height = static_cast<std::uint32_t>(height);
+    if (height > data.cells.max_size() / width) {
+        throw std::length_error("El suelo supera la capacidad del vector de celdas");
+    }
+
+    data.cells.reserve(width * height);
+    for (const auto& row: cells) {
+        data.cells.insert(data.cells.end(), row.begin(), row.end());
+    }
+    return data;
+}
 
 bool Soil::contains(std::size_t row, std::size_t column) const {
     return row < get_height() && column < get_width();

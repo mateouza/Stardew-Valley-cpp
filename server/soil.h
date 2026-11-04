@@ -5,15 +5,9 @@
 #include <vector>
 
 #include "game_results.h"
+#include "soil_data.h"
 
 namespace game {
-
-enum class SoilState {
-    NotCultivable,
-    Unprepared,
-    Prepared,
-};
-
 
 class Soil {
 private:
@@ -30,6 +24,8 @@ public:
     PrepareSoilResult prepare(std::size_t row, std::size_t column);
 
     SoilState get_state(std::size_t row, std::size_t column) const;
+
+    SoilData get_data() const;
 };
 
 }

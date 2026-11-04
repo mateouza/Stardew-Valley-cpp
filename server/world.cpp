@@ -131,6 +131,13 @@ PrepareSoilResult World::prepare_soil(PlayerId player_id, CellPosition cell) {
     return soil->prepare(cell.row, cell.column);
 }
 
+std::optional<SoilData> World::get_soil_state() const {
+    if (!soil) {
+        return std::nullopt;
+    }
+    return soil->get_data();
+}
+
 
 Position World::calculate_position(const Player& player, double distance) const {
     const auto position = player.get_position();

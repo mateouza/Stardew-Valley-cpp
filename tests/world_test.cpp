@@ -8,6 +8,7 @@
 #include <variant>
 #include <vector>
 #include <cstddef>
+#include <optional>
 
 #include "gtest/gtest.h"
 
@@ -120,6 +121,32 @@ TEST_F(WorldTest, RejectsPreparingSoilWhenTheMapHasNoSoil) {
     ASSERT_EQ(world.select_slot(player, 2), SelectSlotResult::Accepted);
 
     EXPECT_EQ(world.prepare_soil(player, {2, 2}), PrepareSoilResult::NotCultivable);
+}
+
+TEST_F(PrepareSoilTest, ReturnsIndependentSoilSnapshotsInRowOrder) {
+    GameModel& model = world;
+    const auto before = model.get_soil_state();
+    ASSERT_TRUE(before.has_value());
+    EXPECT_EQ(before->width, 3u);
+    EXPECT_EQ(before->height, 2u);
+    const std::vector<SoilState> initial_cells{
+            SoilState::Unprepared, SoilState::Unprepared, SoilState::Unprepared,
+            SoilState::NotCultivable, SoilState::Unprepared, SoilState::Unprepared};
+    EXPECT_EQ(before->cells, initial_cells);
+
+    ASSERT_EQ(model.select_slot(player, SHOVEL_SLOT), SelectSlotResult::Accepted);
+    ASSERT_EQ(model.prepare_soil(player, {0, 1}), PrepareSoilResult::Accepted);
+
+    const auto after = model.get_soil_state();
+    ASSERT_TRUE(after.has_value());
+    auto expected = initial_cells;
+    expected.at(1) = SoilState::Prepared;
+    EXPECT_EQ(after->cells, expected);
+    EXPECT_EQ(before->cells, initial_cells);
+}
+
+TEST_F(WorldTest, ReturnsNoSoilStateWhenTheMapHasNoSoil) {
+    EXPECT_EQ(world.get_soil_state(), std::nullopt);
 }
 
 

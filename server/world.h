@@ -44,6 +44,7 @@ public:
     std::optional<InventoryState> get_inventory_state(PlayerId player_id) const override;
     SelectSlotResult select_slot(PlayerId player_id, std::size_t slot) override;
     PrepareSoilResult prepare_soil(PlayerId player_id, CellPosition cell) override;
+    std::optional<SoilData> get_soil_state() const override;
 };
 
 }
