@@ -7,6 +7,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <cstddef>
 
 #include "gtest/gtest.h"
 
@@ -27,6 +28,100 @@ protected:
 };
 
 TEST_F(WorldTest, StartsWithoutPlayers) { EXPECT_TRUE(world.get_state().players.empty()); }
+
+TEST(WorldSoilTest, AcceptsSoilWithMatchingDimensions) {
+    const Map map{{{TileType::Walkable, TileType::Walkable}}};
+    const Soil soil{{{SoilState::Unprepared, SoilState::NotCultivable}}};
+
+    EXPECT_NO_THROW((World{map, {0.5, 0.5}, {2, 1.0, 0.5, 0.5}, soil}));
+}
+
+TEST(WorldSoilTest, RejectsSoilWithDifferentWidth) {
+    const Map map{{{TileType::Walkable, TileType::Walkable}}};
+    const Soil soil{{{SoilState::Unprepared}}};
+
+    EXPECT_THROW((World{map, {0.5, 0.5}, {2, 1.0, 0.5, 0.5}, soil}), std::invalid_argument);
+}
+
+TEST(WorldSoilTest, RejectsSoilWithDifferentHeight) {
+    const Map map{{{TileType::Walkable}, {TileType::Walkable}}};
+    const Soil soil{{{SoilState::Unprepared}}};
+
+    EXPECT_THROW((World{map, {0.5, 0.5}, {2, 1.0, 0.5, 0.5}, soil}), std::invalid_argument);
+}
+
+class PrepareSoilTest: public ::testing::Test {
+protected:
+    static constexpr std::size_t SHOVEL_SLOT = 2;
+
+    World world{Map{{{TileType::Walkable, TileType::Walkable, TileType::Walkable},
+                     {TileType::Walkable, TileType::Walkable, TileType::Walkable}}},
+                {0.5, 0.5},
+                {2, 1.0, 0.5, 0.5},
+                Soil{{{SoilState::Unprepared, SoilState::Unprepared, SoilState::Unprepared},
+                      {SoilState::NotCultivable, SoilState::Unprepared, SoilState::Unprepared}}}};
+    const PlayerId player = std::get<PlayerId>(world.add_player("Jose"));
+};
+
+TEST_F(PrepareSoilTest, PreparesAtExactReachWithoutConsumingShovel) {
+    GameModel& model = world;
+    ASSERT_EQ(model.select_slot(player, SHOVEL_SLOT), SelectSlotResult::Accepted);
+
+    EXPECT_EQ(model.prepare_soil(player, {0, 1}), PrepareSoilResult::Accepted);
+    EXPECT_EQ(model.prepare_soil(player, {0, 1}), PrepareSoilResult::AlreadyPrepared);
+
+    const auto inventory = model.get_inventory_state(player);
+    ASSERT_TRUE(inventory.has_value());
+    ASSERT_TRUE(inventory->items.at(SHOVEL_SLOT).has_value());
+    EXPECT_EQ(inventory->items.at(SHOVEL_SLOT)->type, ItemType::Shovel);
+    EXPECT_EQ(inventory->items.at(SHOVEL_SLOT)->quantity, 1u);
+}
+
+TEST_F(PrepareSoilTest, UsesContinuousPositionToMeasureDiagonalReach) {
+    ASSERT_EQ(world.select_slot(player, SHOVEL_SLOT), SelectSlotResult::Accepted);
+    EXPECT_EQ(world.prepare_soil(player, {1, 1}), PrepareSoilResult::OutOfReach);
+
+    ASSERT_EQ(world.set_direction(player, {1, 1}), SetDirectionResult::Accepted);
+    world.update_world(std::chrono::duration<double>{0.5});
+
+    EXPECT_EQ(world.prepare_soil(player, {1, 1}), PrepareSoilResult::Accepted);
+}
+
+TEST_F(PrepareSoilTest, RejectsOutOfBoundsAndNonCultivableCells) {
+    ASSERT_EQ(world.select_slot(player, SHOVEL_SLOT), SelectSlotResult::Accepted);
+
+    EXPECT_EQ(world.prepare_soil(player, {2, 0}), PrepareSoilResult::OutOfBounds);
+    EXPECT_EQ(world.prepare_soil(player, {0, 3}), PrepareSoilResult::OutOfBounds);
+    EXPECT_EQ(world.prepare_soil(player, {1, 0}), PrepareSoilResult::NotCultivable);
+}
+
+TEST_F(PrepareSoilTest, RequiresTheSelectedItemToBeAShovel) {
+    EXPECT_EQ(world.prepare_soil(player, {0, 0}), PrepareSoilResult::ShovelNotSelected);
+    ASSERT_EQ(world.select_slot(player, 4), SelectSlotResult::Accepted);
+    EXPECT_EQ(world.prepare_soil(player, {0, 0}), PrepareSoilResult::ShovelNotSelected);
+    ASSERT_EQ(world.select_slot(player, SHOVEL_SLOT), SelectSlotResult::Accepted);
+    EXPECT_EQ(world.select_slot(player, 9), SelectSlotResult::InvalidSlot);
+
+    EXPECT_EQ(world.prepare_soil(player, {0, 0}), PrepareSoilResult::Accepted);
+}
+
+TEST_F(PrepareSoilTest, RejectsUnknownAndDisconnectedPlayers) {
+    const auto unknown = std::numeric_limits<PlayerId>::max();
+    EXPECT_EQ(world.select_slot(unknown, SHOVEL_SLOT), SelectSlotResult::UnknownPlayer);
+    EXPECT_EQ(world.prepare_soil(unknown, {0, 0}), PrepareSoilResult::UnknownPlayer);
+
+    world.disconnect_player(player);
+    EXPECT_EQ(world.select_slot(player, SHOVEL_SLOT), SelectSlotResult::DisconnectedPlayer);
+    EXPECT_EQ(world.prepare_soil(player, {0, 0}), PrepareSoilResult::DisconnectedPlayer);
+}
+
+TEST_F(WorldTest, RejectsPreparingSoilWhenTheMapHasNoSoil) {
+    const auto player = add_player();
+    ASSERT_EQ(world.select_slot(player, 2), SelectSlotResult::Accepted);
+
+    EXPECT_EQ(world.prepare_soil(player, {2, 2}), PrepareSoilResult::NotCultivable);
+}
+
 
 TEST_F(WorldTest, RejectsZeroPlayerCapacity) {
     EXPECT_THROW((World{make_map(), {2.5, 2.5}, {0, 1.0, 0.5, 0.5}}), std::invalid_argument);
@@ -379,6 +474,60 @@ TEST_F(WorldTest, DifferentWorldsDoNotSharePlayerState) {
     EXPECT_EQ(other.get_state().players.at(0).id, other_id);
     EXPECT_DOUBLE_EQ(other.get_state().players.at(0).position.x, 2.5);
     EXPECT_FALSE(other.get_state().players.at(0).moving);
+}
+
+TEST_F(WorldTest, QueriesInventoryThroughTheModelInterface) {
+    const auto id = add_player();
+    const GameModel& model = world;
+
+    const auto inventory = model.get_inventory_state(id);
+
+    ASSERT_TRUE(inventory.has_value());
+    EXPECT_EQ(inventory->selected_slot, 0u);
+    ASSERT_TRUE(inventory->items[2].has_value());
+    EXPECT_EQ(inventory->items[2]->type, ItemType::Shovel);
+    EXPECT_EQ(inventory->items[2]->quantity, 1u);
+}
+
+TEST_F(WorldTest, ReturnsNoInventoryForUnknownPlayerWithoutCreatingOne) {
+    EXPECT_FALSE(world.get_inventory_state(0).has_value());
+    EXPECT_TRUE(world.get_state().players.empty());
+    const auto id = add_player();
+
+    EXPECT_FALSE(world.get_inventory_state(id + 1).has_value());
+    EXPECT_EQ(world.get_state().players.size(), 1u);
+}
+
+TEST_F(WorldTest, KeepsInventoryAvailableWhilePlayerIsDisconnected) {
+    const auto id = add_player();
+    world.disconnect_player(id);
+
+    const auto inventory = world.get_inventory_state(id);
+
+    EXPECT_TRUE(world.get_state().players.empty());
+    ASSERT_TRUE(inventory.has_value());
+    EXPECT_EQ(inventory->selected_slot, 0u);
+    ASSERT_TRUE(inventory->items[2].has_value());
+    EXPECT_EQ(inventory->items[2]->type, ItemType::Shovel);
+    EXPECT_EQ(inventory->items[2]->quantity, 1u);
+}
+
+TEST_F(WorldTest, InventorySnapshotDoesNotModifyTheRegisteredPlayer) {
+    const auto id = add_player();
+    auto snapshot = world.get_inventory_state(id);
+    ASSERT_TRUE(snapshot.has_value());
+    ASSERT_TRUE(snapshot->items[2].has_value());
+    snapshot->selected_slot = 8;
+    snapshot->items[0].reset();
+    snapshot->items[2]->quantity = 99;
+
+    const auto current = world.get_inventory_state(id);
+
+    ASSERT_TRUE(current.has_value());
+    EXPECT_EQ(current->selected_slot, 0u);
+    EXPECT_TRUE(current->items[0].has_value());
+    ASSERT_TRUE(current->items[2].has_value());
+    EXPECT_EQ(current->items[2]->quantity, 1u);
 }
 
 TEST(WorldMovementTest, AppliesConfiguredSpeed) {

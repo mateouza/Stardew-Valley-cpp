@@ -41,6 +41,7 @@ add_library(server_model STATIC
     server/world.cpp
     server/world_config.cpp
     server/demo_map.cpp
+    server/soil.cpp
 )
 
 target_include_directories(server_model PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/server)
@@ -62,7 +63,6 @@ target_compile_options(client_lobby PRIVATE -Wall -Wextra -Wpedantic)
 if(BUILD_LAUNCHER OR BUILD_EDITOR)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
-    # Hoja de estilo y helpers que comparten el launcher y el editor.
     add_library(qt_ui STATIC
         client/qt/launcher_style.cpp
         client/qt/widgets/ui_helpers.cpp
@@ -96,14 +96,17 @@ if(BUILD_LAUNCHER)
     target_compile_options(qt_launcher PRIVATE -Wall -Wextra -Wpedantic)
 
     add_executable(stardew_launcher client/qt/main.cpp)
-    target_link_libraries(stardew_launcher PRIVATE qt_launcher)
+    target_link_libraries(stardew_launcher PRIVATE
+        qt_launcher
+        client_lobby_network
+        client_sdl
+    )
     target_compile_options(stardew_launcher PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 if(BUILD_EDITOR)
     find_package(tomlplusplus 3.4 CONFIG REQUIRED)
 
-    # Modelo del mapa, sin Qt.
     add_library(editor_model STATIC
         editor/model/map_file.cpp
         editor/model/map_validation.cpp
@@ -119,6 +122,7 @@ if(BUILD_EDITOR)
     add_library(qt_editor STATIC
         editor/qt/editor_window.cpp
         editor/qt/tile_colors.cpp
+        editor/qt/tile_grid_view.cpp
     )
 
     set_target_properties(qt_editor PROPERTIES AUTOMOC ON)
@@ -161,6 +165,7 @@ target_compile_options(server PRIVATE -Wall -Wextra -Wpedantic)
 
 add_library(client_network STATIC
     client/network/client_protocol.cpp
+    client/network/connection_closer.cpp
     client/network/network_sender.cpp
     client/network/network_receiver.cpp
     client/network/network_client.cpp
@@ -171,6 +176,10 @@ target_include_directories(client_network PUBLIC client/network)
 target_link_libraries(client_network PUBLIC course_support game_contracts)
 
 target_compile_options(client_network PRIVATE -Wall -Wextra -Wpedantic)
+
+add_library(client_lobby_network STATIC client/lobby/network_lobby_client.cpp)
+target_link_libraries(client_lobby_network PUBLIC client_lobby client_network)
+target_compile_options(client_lobby_network PRIVATE -Wall -Wextra -Wpedantic)
 
 include(CTest)
 
@@ -199,6 +208,12 @@ if(BUILD_TESTING)
 
     gtest_discover_tests(map_tests)
 
+    add_executable(soil_tests tests/soil_test.cpp)
+    target_link_libraries(soil_tests PRIVATE server_model GTest::gtest_main)
+    target_compile_options(soil_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(soil_tests)
+
     add_executable(world_tests tests/world_test.cpp)
     target_link_libraries(world_tests PRIVATE server_model GTest::gtest_main)
     target_compile_options(world_tests PRIVATE -Wall -Wextra -Wpedantic)
@@ -226,6 +241,19 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
         PROPERTIES
             TIMEOUT 5
             RESOURCE_LOCK protocol_port_18080
+    )
+
+    add_executable(network_client_tests
+        tests/network_client_test.cpp
+        tests/connection_closer_test.cpp
+    )
+    target_link_libraries(network_client_tests PRIVATE server_core client_network GTest::gtest_main)
+    target_compile_options(network_client_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(network_client_tests
+        PROPERTIES
+            TIMEOUT 5
+            RESOURCE_LOCK protocol_port_18081
     )
 
     add_executable(game_loop_tests tests/game_loop_test.cpp)
@@ -262,17 +290,29 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
 
     gtest_discover_tests(lobby_worker_tests PROPERTIES TIMEOUT 5)
 
+    add_executable(network_lobby_client_tests tests/network_lobby_client_test.cpp)
+    target_link_libraries(network_lobby_client_tests PRIVATE client_lobby_network server_core GTest::gtest_main)
+    target_compile_options(network_lobby_client_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+    gtest_discover_tests(network_lobby_client_tests
+        PROPERTIES
+            TIMEOUT 5
+            RESOURCE_LOCK protocol_port_18082
+    )
+
     if(BUILD_LAUNCHER)
         find_package(Qt6 REQUIRED COMPONENTS Test)
 
         add_executable(launcher_window_tests tests/launcher_window_test.cpp)
-        target_link_libraries(launcher_window_tests PRIVATE qt_launcher Qt6::Test GTest::gtest)
+        target_link_libraries(launcher_window_tests PRIVATE
+            qt_launcher client_lobby_network server_core Qt6::Test GTest::gtest)
         target_compile_options(launcher_window_tests PRIVATE -Wall -Wextra -Wpedantic)
 
         gtest_discover_tests(launcher_window_tests
             PROPERTIES
                 ENVIRONMENT QT_QPA_PLATFORM=offscreen
                 TIMEOUT 10
+                RESOURCE_LOCK protocol_port_18083
         )
 
         add_executable(character_widgets_tests tests/character_widgets_test.cpp)
@@ -288,6 +328,7 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
 
     if(BUILD_EDITOR)
         add_executable(editor_model_tests
+            tests/editor_example_map_test.cpp
             tests/editor_map_file_test.cpp
             tests/editor_map_validation_test.cpp
             tests/editor_tile_test.cpp
@@ -297,6 +338,9 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
         target_link_libraries(editor_model_tests
             PRIVATE editor_model tomlplusplus::tomlplusplus GTest::gtest_main)
         target_compile_options(editor_model_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_definitions(editor_model_tests PRIVATE
+            EXAMPLE_MAP_PATH="${CMAKE_CURRENT_SOURCE_DIR}/maps/example.toml"
+        )
 
         gtest_discover_tests(editor_model_tests)
 
@@ -305,9 +349,14 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
         add_executable(editor_qt_tests
             tests/editor_qt_main.cpp
             tests/editor_tile_colors_test.cpp
+            tests/editor_tile_grid_view_test.cpp
+            tests/editor_window_test.cpp
         )
         target_link_libraries(editor_qt_tests PRIVATE qt_editor Qt6::Test GTest::gtest)
         target_compile_options(editor_qt_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_definitions(editor_qt_tests PRIVATE
+            EXAMPLE_MAP_PATH="${CMAKE_CURRENT_SOURCE_DIR}/maps/example.toml"
+        )
 
         gtest_discover_tests(editor_qt_tests
             PROPERTIES
@@ -319,24 +368,40 @@ add_executable(server_protocol_tests tests/server_protocol_test.cpp)
     gtest_discover_tests(match_tests PROPERTIES TIMEOUT 5)
 endif()
 
-if(BUILD_CLIENT)
+if(BUILD_CLIENT OR BUILD_LAUNCHER)
     find_package(SDL2 REQUIRED)
     find_package(SDL2pp REQUIRED)
 
-    add_executable(stardew_client
-        client/sdl/main.cpp
+    add_library(client_sdl STATIC
+        client/sdl/sdl_client.cpp
         client/sdl/render/renderer.cpp
+        client/sdl/render/texture_manager.cpp
         client/sdl/render/sdl_window.cpp
         client/sdl/state/client_state.cpp
         client/sdl/core/input_handler.cpp
+        client/sdl/core/inventory_bar.cpp
     )
 
-    target_link_libraries(stardew_client PRIVATE
+    target_link_libraries(client_sdl PUBLIC
         client_network
-        course_support
         game_contracts
         SDL2pp::SDL2pp
     )
 
-    target_compile_options(stardew_client PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(client_sdl PRIVATE -Wall -Wextra -Wpedantic)
+
+    if (BUILD_CLIENT)
+        add_executable(stardew_client
+            client/sdl/main.cpp
+        )
+
+        target_link_libraries(stardew_client PRIVATE
+            client_sdl
+            client_network
+            course_support
+            game_contracts
+        )
+
+        target_compile_options(stardew_client PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
 endif()

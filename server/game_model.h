@@ -3,6 +3,9 @@
 
 #include <chrono>
 #include <string>
+#include <optional>
+#include <cstddef>
+#include "inventory_state.h"
 
 #include "game_results.h"
 #include "game_state.h"
@@ -25,6 +28,12 @@ public:
     virtual void update_world(std::chrono::duration<double> elapsed) = 0;
 
     virtual GameState get_state() const = 0;
+
+    virtual std::optional<InventoryState> get_inventory_state(PlayerId player_id) const = 0;
+
+    virtual SelectSlotResult select_slot(PlayerId player_id, std::size_t slot) = 0;
+
+    virtual PrepareSoilResult prepare_soil(PlayerId player_id, CellPosition cell) = 0;
 };
 
 }

@@ -9,24 +9,6 @@ namespace lobby {
 
 namespace {
 
-bool is_valid_appearance(const CharacterAppearance& appearance) {
-    return appearance.skin_tone < SKIN_TONE_COUNT && appearance.hair_style < HAIR_STYLE_COUNT &&
-           appearance.hair_color < HAIR_COLOR_COUNT && appearance.shirt_color < SHIRT_COLOR_COUNT &&
-           appearance.pants_color < PANTS_COLOR_COUNT;
-}
-
-std::optional<LobbyError> validate_character(const CharacterDraft& character) {
-    if (!is_valid_character_name(character.name)) {
-        return LobbyError::InvalidCharacterName;
-    }
-
-    if (!is_valid_appearance(character.appearance)) {
-        return LobbyError::InvalidAppearance;
-    }
-
-    return std::nullopt;
-}
-
 std::string normalize_invite_code(const std::string& invite_code) {
     std::string normalized = trim_spaces(invite_code);
     std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](char c) {

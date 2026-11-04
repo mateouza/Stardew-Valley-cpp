@@ -315,15 +315,15 @@ TEST_F(PlayerTest, InventoryStateIsAnIndependentSnapshot) {
     ASSERT_EQ(player.remove_item(4, 1), InventoryResult::Accepted);
     ASSERT_EQ(player.select_slot(2), InventoryResult::Accepted);
 
-    ASSERT_TRUE(snapshot.slots[4].has_value());
-    EXPECT_EQ(snapshot.slots[4]->type, ItemType::StrawberrySeed);
-    EXPECT_EQ(snapshot.slots[4]->quantity, 12u);
+    ASSERT_TRUE(snapshot.items[4].has_value());
+    EXPECT_EQ(snapshot.items[4]->type, ItemType::StrawberrySeed);
+    EXPECT_EQ(snapshot.items[4]->quantity, 12u);
     EXPECT_EQ(snapshot.selected_slot, 4u);
 
     const auto current = player.get_inventory_state();
 
-    ASSERT_TRUE(current.slots[4].has_value());
-    EXPECT_EQ(current.slots[4]->quantity, 11u);
+    ASSERT_TRUE(current.items[4].has_value());
+    EXPECT_EQ(current.items[4]->quantity, 11u);
     EXPECT_EQ(current.selected_slot, 2u);
 }
 }

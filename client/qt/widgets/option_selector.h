@@ -11,7 +11,6 @@ class QLabel;
 
 namespace launcher {
 
-// Selector "◀ valor ▶" que recorre las opciones en forma circular.
 class OptionSelector: public QWidget {
     Q_OBJECT
 

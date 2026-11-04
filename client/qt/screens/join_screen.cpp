@@ -8,15 +8,10 @@
 #include <QRegularExpressionValidator>
 #include <QVBoxLayout>
 
+#include "lobby/lobby_types.h"
 #include "qt/widgets/ui_helpers.h"
 
 namespace launcher {
-
-namespace {
-
-constexpr int MAX_INVITE_CODE_LENGTH = 12;
-
-}
 
 JoinScreen::JoinScreen(QWidget* parent):
         QWidget(parent),
@@ -30,7 +25,7 @@ JoinScreen::JoinScreen(QWidget* parent):
     invite_code_input->setProperty("role", "invite_code");
     invite_code_input->setAlignment(Qt::AlignCenter);
     invite_code_input->setPlaceholderText("Ej: ABC123");
-    invite_code_input->setMaxLength(MAX_INVITE_CODE_LENGTH);
+    invite_code_input->setMaxLength(static_cast<int>(lobby::MAX_INVITE_CODE_LENGTH));
     invite_code_input->setValidator(new QRegularExpressionValidator(
             QRegularExpression("[A-Za-z0-9-]*"), invite_code_input));
     find_game_button->setObjectName("find_game_button");

@@ -41,6 +41,22 @@ TEST(UsernameValidationTest, RejectsEmptyLongOrOtherCharacters) {
     }
 }
 
+TEST(InviteCodeValidationTest, AcceptsLettersDigitsAndHyphen) {
+    EXPECT_TRUE(is_valid_invite_code("12"));
+    EXPECT_TRUE(is_valid_invite_code("Valle-1"));
+    EXPECT_TRUE(is_valid_invite_code("  12 "));
+    EXPECT_TRUE(is_valid_invite_code(std::string(MAX_INVITE_CODE_LENGTH, '9')));
+}
+
+TEST(InviteCodeValidationTest, RejectsEmptyLongOrOtherCharacters) {
+    EXPECT_FALSE(is_valid_invite_code(""));
+    EXPECT_FALSE(is_valid_invite_code("   "));
+    EXPECT_FALSE(is_valid_invite_code(std::string(MAX_INVITE_CODE_LENGTH + 1, '9')));
+    for (const char* code: {"1 2", "año", "a_b", "12\n"}) {
+        EXPECT_FALSE(is_valid_invite_code(code)) << code;
+    }
+}
+
 std::string repeat(const std::string& text, std::size_t times) {
     std::string result;
     for (std::size_t i = 0; i < times; ++i) {
@@ -108,6 +124,29 @@ TEST(NameValidationTest, GameNameLimitIsCountedInCharacters) {
     EXPECT_FALSE(is_valid_game_name(std::string(MAX_GAME_NAME_LENGTH + 1, 'g')));
     EXPECT_TRUE(is_valid_game_name(repeat("é", MAX_GAME_NAME_LENGTH)));
     EXPECT_FALSE(is_valid_game_name(repeat("é", MAX_GAME_NAME_LENGTH + 1)));
+}
+
+TEST(CharacterValidationTest, AcceptsTheLastOptionOfEachChoice) {
+    const CharacterAppearance last{SKIN_TONE_COUNT - 1, HAIR_STYLE_COUNT - 1, HAIR_COLOR_COUNT - 1,
+                                   SHIRT_COLOR_COUNT - 1, PANTS_COLOR_COUNT - 1};
+
+    EXPECT_EQ(validate_character(CharacterDraft{"Juanceto01", last}), std::nullopt);
+}
+
+TEST(CharacterValidationTest, RejectsAnOptionOutOfRange) {
+    CharacterAppearance appearance;
+    appearance.pants_color = PANTS_COLOR_COUNT;
+
+    EXPECT_FALSE(is_valid_appearance(appearance));
+    EXPECT_EQ(validate_character(CharacterDraft{"Juanceto01", appearance}),
+              LobbyError::InvalidAppearance);
+}
+
+TEST(CharacterValidationTest, ReportsTheNameBeforeTheAppearance) {
+    CharacterAppearance appearance;
+    appearance.skin_tone = SKIN_TONE_COUNT;
+
+    EXPECT_EQ(validate_character(CharacterDraft{"", appearance}), LobbyError::InvalidCharacterName);
 }
 
 }

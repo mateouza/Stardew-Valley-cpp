@@ -15,6 +15,23 @@ QMainWindow[role="editor"] {
     background-color: #fbefd5;
 }
 
+QListWidget {
+    background-color: #fff6e0;
+    border: 3px solid #c99a66;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+QListWidget::item {
+    padding: 4px;
+}
+
+QListWidget::item:selected {
+    color: #3b2416;
+    background-color: #ffe0a3;
+    border-radius: 4px;
+}
+
 QLabel[role="logo_title"] {
     font-size: 56px;
     font-weight: bold;

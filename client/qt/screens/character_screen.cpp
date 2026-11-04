@@ -146,7 +146,6 @@ void CharacterScreen::update_confirm_button() {
 }
 
 void CharacterScreen::reset_character(const QString& default_name) {
-    // El usuario puede tener "_", que no se admite en nombres de personaje: ahí arranca vacío.
     const bool usable = lobby::is_valid_character_name(default_name.toStdString());
     name_input->setText(usable ? default_name : QString());
     randomize_appearance();

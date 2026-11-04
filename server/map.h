@@ -33,6 +33,9 @@ private:
 public:
     explicit Map(std::vector<std::vector<TileType>> tiles);
 
+    std::size_t get_width() const;
+    std::size_t get_height() const;
+
     MapData get_data() const;
 
     bool can_occupy(Position position, double width, double height) const;

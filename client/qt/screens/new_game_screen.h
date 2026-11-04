@@ -15,7 +15,6 @@ class QVBoxLayout;
 
 namespace launcher {
 
-// Primer paso de una partida nueva: su nombre y el mundo donde se juega.
 class NewGameScreen: public QWidget {
     Q_OBJECT
 

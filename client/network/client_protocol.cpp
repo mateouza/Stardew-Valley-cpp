@@ -214,13 +214,13 @@ game::InventoryState ClientProtocol::receive_inventory_state() {
     std::uint8_t selected_slot{};
     receive_bytes(&selected_slot, sizeof(selected_slot));
 
-    if (selected_slot >= state.slots.size()) {
+    if (selected_slot >= state.items.size()) {
         throw std::runtime_error("El espacio seleccionado recibido es invalido");
     }
 
     state.selected_slot = selected_slot;
 
-    for (auto& slot: state.slots) {
+    for (auto& slot: state.items) {
         std::uint8_t presence{};
         receive_bytes(&presence, sizeof(presence));
 

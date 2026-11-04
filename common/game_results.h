@@ -27,6 +27,24 @@ enum class SetDirectionResult {
     InvalidDirection,
 };
 
+enum class SelectSlotResult {
+    Accepted,
+    UnknownPlayer,
+    DisconnectedPlayer,
+    InvalidSlot,
+};
+
+enum class PrepareSoilResult {
+    Accepted,
+    OutOfBounds,
+    NotCultivable,
+    AlreadyPrepared,
+    UnknownPlayer,
+    DisconnectedPlayer,
+    OutOfReach,
+    ShovelNotSelected,
+};
+
 }
 
 #endif

@@ -40,7 +40,6 @@ Zone zone_from_toml(const toml::table* table, ZoneKind kind, const std::string& 
     if (table == nullptr) {
         throw MapFileError(place + ": falta la tabla de la zona");
     }
-    // read_side controla el tamaño antes de que Zone reserve ancho por alto casillas.
     Zone zone(kind, read_side(*table, "width", place), read_side(*table, "height", place));
 
     const toml::array* rows = (*table)["rows"].as_array();
@@ -80,8 +79,7 @@ void save_map(const WorldMap& map, const std::string& path) {
                                {"town", zone_to_toml(map.town)},
                                {"dungeon", std::move(dungeon)}};
 
-    // Escribe en un archivo aparte y después lo renombra, para no romper el mapa anterior si falla
-    // a mitad de camino.
+    // Temporal y rename: si falla, el mapa anterior queda intacto.
     const std::string temporary = path + ".tmp";
     std::ofstream file(temporary);
     file << document << '\n';
