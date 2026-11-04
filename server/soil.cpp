@@ -24,8 +24,12 @@ Soil::Soil(std::vector<std::vector<SoilState>> cells): cells(std::move(cells)) {
     }
 }
 
+std::size_t Soil::get_width() const { return cells.front().size(); }
+
+std::size_t Soil::get_height() const { return cells.size(); }
+
 bool Soil::contains(std::size_t row, std::size_t column) const {
-    return row < cells.size() && column < cells.front().size();
+    return row < get_height() && column < get_width();
 }
 
 PrepareSoilResult Soil::prepare(std::size_t row, std::size_t column) {

@@ -27,9 +27,13 @@ Map::Map(std::vector<std::vector<TileType>> tiles): tiles(std::move(tiles)) {
     }
 }
 
+std::size_t Map::get_width() const { return tiles.front().size(); }
+
+std::size_t Map::get_height() const { return tiles.size(); }
+
 MapData Map::get_data() const {
-    const auto width = tiles.front().size();
-    const auto height = tiles.size();
+    const auto width = get_width();
+    const auto height = get_height();
     if (!std::in_range<std::uint32_t>(width) || !std::in_range<std::uint32_t>(height)) {
         throw std::overflow_error("Las dimensiones del mapa no entran en MapData");
     }

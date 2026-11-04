@@ -28,6 +28,28 @@ protected:
 
 TEST_F(WorldTest, StartsWithoutPlayers) { EXPECT_TRUE(world.get_state().players.empty()); }
 
+TEST(WorldSoilTest, AcceptsSoilWithMatchingDimensions) {
+    const Map map{{{TileType::Walkable, TileType::Walkable}}};
+    const Soil soil{{{SoilState::Unprepared, SoilState::NotCultivable}}};
+
+    EXPECT_NO_THROW((World{map, {0.5, 0.5}, {2, 1.0, 0.5, 0.5}, soil}));
+}
+
+TEST(WorldSoilTest, RejectsSoilWithDifferentWidth) {
+    const Map map{{{TileType::Walkable, TileType::Walkable}}};
+    const Soil soil{{{SoilState::Unprepared}}};
+
+    EXPECT_THROW((World{map, {0.5, 0.5}, {2, 1.0, 0.5, 0.5}, soil}), std::invalid_argument);
+}
+
+TEST(WorldSoilTest, RejectsSoilWithDifferentHeight) {
+    const Map map{{{TileType::Walkable}, {TileType::Walkable}}};
+    const Soil soil{{{SoilState::Unprepared}}};
+
+    EXPECT_THROW((World{map, {0.5, 0.5}, {2, 1.0, 0.5, 0.5}, soil}), std::invalid_argument);
+}
+
+
 TEST_F(WorldTest, RejectsZeroPlayerCapacity) {
     EXPECT_THROW((World{make_map(), {2.5, 2.5}, {0, 1.0, 0.5, 0.5}}), std::invalid_argument);
 }

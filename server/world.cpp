@@ -7,8 +7,12 @@
 
 namespace game {
 
-World::World(Map map, Position spawn_position, WorldConfig config):
-        map(std::move(map)), spawn_position(spawn_position), config(config) {
+World::World(Map map, Position spawn_position, WorldConfig config, std::optional<Soil> soil):
+        map(std::move(map)), soil(std::move(soil)), spawn_position(spawn_position), config(config) {
+    if (this->soil && (this->soil->get_width() != this->map.get_width() ||
+                       this->soil->get_height() != this->map.get_height())) {
+        throw std::invalid_argument("El suelo debe tener las mismas dimensiones que el mapa");
+    }
     if (config.max_players == 0) {
         throw std::invalid_argument("El cupo debe ser mayor que cero");
     }

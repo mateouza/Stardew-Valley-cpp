@@ -14,6 +14,7 @@
 #include "game_types.h"
 #include "map.h"
 #include "player.h"
+#include "soil.h"
 #include "world_config.h"
 
 namespace game {
@@ -22,6 +23,7 @@ namespace game {
 class World: public GameModel {
 private:
     Map map;
+    std::optional<Soil> soil;
     Position spawn_position;
     WorldConfig config;
     std::map<PlayerId, Player> players;
@@ -31,8 +33,8 @@ private:
     Position calculate_position(const Player& player, double distance) const;
 
 public:
-    World(Map map, Position spawn_position, WorldConfig config);
-
+    World(Map map, Position spawn_position, WorldConfig config,
+        std::optional<Soil> soil = std::nullopt);
     AddPlayerResult add_player(const std::string& name) override;
     ReconnectPlayerResult reconnect_player(PlayerId player_id) override;
     SetDirectionResult set_direction(PlayerId player_id, MovementDirection direction) override;
