@@ -16,6 +16,8 @@ InputResultado InputHandler::procesar_eventos() {
             const SDL_Scancode tecla = evento.key.keysym.scancode;
             if (tecla >= SDL_SCANCODE_1 && tecla <= SDL_SCANCODE_9) {
                 resultado.slot_seleccionado = static_cast<std::size_t>(tecla - SDL_SCANCODE_1);
+            } else if (tecla >= SDL_SCANCODE_KP_1 && tecla <= SDL_SCANCODE_KP_9) {
+                resultado.slot_seleccionado = static_cast<std::size_t>(tecla - SDL_SCANCODE_KP_1);
             }
         }
     }
