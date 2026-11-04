@@ -8,8 +8,10 @@
 
 #include <SDL.h>
 #include <SDL2pp/Exception.hh>
+#include <SDL2pp/Font.hh>
 #include <SDL2pp/SDL.hh>
 #include <SDL2pp/SDLImage.hh>
+#include <SDL2pp/SDLTTF.hh>
 #include <SDL_image.h>
 
 #include "core/input_handler.h"
@@ -26,7 +28,9 @@
 namespace {
     constexpr double PIXELS_POR_CELDA = 32.0;
     constexpr int ANCHO_VENTANA = 800;
-    constexpr int ALTO_VENTANA = 600;   
+    constexpr int ALTO_VENTANA = 600;
+    constexpr int TAMANIO_FUENTE_PX = 12;
+    const std::string RUTA_FUENTE = "assets/Press_Start/PressStart2P-Regular.ttf";   
 }
 
 void actualizar_direccion_pendiente(const game::MovementDirection& direccion_actual,
@@ -40,13 +44,17 @@ void actualizar_direccion_pendiente(const game::MovementDirection& direccion_act
     }
 }
 
-void procesar_mensajes_entrantes(NetworkClient& cliente, ClientState& estado){
+void procesar_mensajes_entrantes(NetworkClient& cliente, ClientState& estado, InventoryBar& inventario) {
     std::optional<ServerMessage> mensaje = cliente.try_receive();
     while (mensaje) {
         game::GameState* nuevo_estado = std::get_if<game::GameState>(&*mensaje);
         if (nuevo_estado) {
             estado.actualizar(*nuevo_estado);
         } 
+        game::InventoryState* nuevo_inventario = std::get_if<game::InventoryState>(&*mensaje);
+        if (nuevo_inventario) {
+            inventario.actualizar(*nuevo_inventario);
+        }
         mensaje = cliente.try_receive();
     }
 }
@@ -103,7 +111,7 @@ void dibujar_jugadores(Renderer& renderer, SDL2pp::Texture& textura, const Clien
 
 
 bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHandler& input_handler,
-                          Renderer& renderer, SDL2pp::Texture& textura, const game::MapData& mapa,
+                          Renderer& renderer, TextureManager& texturas, SDL2pp::Font& fuente, SDL2pp::Texture& textura, const game::MapData& mapa,
                           InventoryBar& inventario, const StatBars& estadisticas, Camera& camara,
                           int ancho_sprite, int alto_sprite) {
     game::MovementDirection ultima_direccion_enviada{0, 0};
@@ -125,9 +133,7 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
             continue;
         }
 
-        if (entrada.slot_seleccionado) {
-            inventario.seleccionar(*entrada.slot_seleccionado);
-        }
+        //TO-DO: manejar seleccion de slot de inventario
 
         actualizar_direccion_pendiente(entrada.direccion, ultima_direccion_enviada, pendiente);
 
@@ -138,14 +144,14 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
             }
         }
 
-        procesar_mensajes_entrantes(cliente, estado);
+        procesar_mensajes_entrantes(cliente, estado, inventario);
         actualizar_camara(camara, estado, mapa);
 
         renderer.limpiar();
         dibujar_mapa(renderer, mapa, camara);
         dibujar_jugadores(renderer, textura, estado, camara, ancho_sprite, alto_sprite);
         estadisticas.dibujar(renderer);
-        inventario.dibujar(renderer, ANCHO_VENTANA, ALTO_VENTANA);
+        inventario.dibujar(renderer, texturas, fuente, ANCHO_VENTANA, ALTO_VENTANA);
         renderer.presentar();
     }
 
@@ -163,6 +169,7 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
         Renderer renderer(ventana.obtener_handle());
         TextureManager texturas(renderer);
         SDL2pp::Texture& textura = texturas.obtener_textura("assets/rock.png");
+        SDL2pp::Font fuente(RUTA_FUENTE, TAMANIO_FUENTE_PX);
 
         const int ancho_sprite_px = static_cast<int>(info_partida.player_width * PIXELS_POR_CELDA);
         const int alto_sprite_px = static_cast<int>(info_partida.player_height * PIXELS_POR_CELDA);
@@ -173,7 +180,7 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
         StatBars estadisticas;
         Camera camara(ANCHO_VENTANA, ALTO_VENTANA);
 
-        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, textura, info_partida.map, inventario, estadisticas, camara, ancho_sprite_px, alto_sprite_px);
+        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, texturas, fuente, textura, info_partida.map, inventario, estadisticas, camara, ancho_sprite_px, alto_sprite_px);
         
         if (conexion_perdida) {
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Conexion perdida",
