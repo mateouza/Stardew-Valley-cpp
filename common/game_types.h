@@ -12,6 +12,11 @@ struct Position {
     double y = 0.0;
 };
 
+struct CellPosition {
+    std::uint32_t row = 0;
+    std::uint32_t column = 0;
+};
+
 struct MovementDirection {
     std::int8_t horizontal = 0;
     std::int8_t vertical = 0;

@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <vector>
 
+#include "game_results.h"
+
 namespace game {
 
 enum class SoilState {
@@ -12,12 +14,6 @@ enum class SoilState {
     Prepared,
 };
 
-enum class PrepareSoilResult {
-    Accepted,
-    OutOfBounds,
-    NotCultivable,
-    AlreadyPrepared,
-};
 
 class Soil {
 private:
@@ -27,6 +23,9 @@ private:
 
 public:
     explicit Soil(std::vector<std::vector<SoilState>> cells);
+
+    std::size_t get_width() const;
+    std::size_t get_height() const;
 
     PrepareSoilResult prepare(std::size_t row, std::size_t column);
 
