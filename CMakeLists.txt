@@ -384,6 +384,7 @@ if(BUILD_CLIENT OR BUILD_LAUNCHER)
         client/sdl/core/inventory_bar.cpp
         client/sdl/core/stat_bars.cpp
         client/sdl/core/item_icons.cpp
+        client/sdl/core/menu.cpp
     )
 
     target_link_libraries(client_sdl PUBLIC

@@ -17,6 +17,7 @@
 #include "core/input_handler.h"
 #include "core/inventory_bar.h"
 #include "core/stat_bars.h"
+#include "core/menu.h"
 #include "game_command.h"
 #include "render/camera.h"
 #include "render/renderer.h"
@@ -114,7 +115,7 @@ void dibujar_jugadores(Renderer& renderer, SDL2pp::Texture& textura, const Clien
 
 bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHandler& input_handler,
                           Renderer& renderer, TextureManager& texturas, SDL2pp::Font& fuente, SDL2pp::Texture& textura, const game::MapData& mapa,
-                          InventoryBar& inventario, const StatBars& estadisticas, Camera& camara,
+                          InventoryBar& inventario, const StatBars& estadisticas, Menu& menu, const std::string& codigo_invitacion, Camera& camara,
                           int ancho_sprite_jugador, int alto_sprite_jugador) {
     game::MovementDirection ultima_direccion_enviada{0, 0};
     std::optional<game::MovementDirection> pendiente;
@@ -137,13 +138,24 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
 
         //TO-DO: manejar seleccion de slot de inventario
 
-        actualizar_direccion_pendiente(entrada.direccion, ultima_direccion_enviada, pendiente);
+        if (entrada.click_mouse) {
+            const bool pidio_salir = menu.procesar_click(entrada.click_mouse->x, entrada.click_mouse->y, ANCHO_VENTANA, ALTO_VENTANA);
 
-        if (pendiente) {
-            if(cliente.try_send(game::MoveRequest{*pendiente})) {
-                ultima_direccion_enviada = *pendiente;
-                pendiente.reset();
+            if (pidio_salir) {
+                corriendo = false;
+                continue;
             }
+        }
+
+        if (!menu.esta_abierto()) {
+            actualizar_direccion_pendiente(entrada.direccion, ultima_direccion_enviada, pendiente);
+
+            if (pendiente) {
+                if(cliente.try_send(game::MoveRequest{*pendiente})) {
+                    ultima_direccion_enviada = *pendiente;
+                    pendiente.reset();
+                }
+}
         }
 
         procesar_mensajes_entrantes(cliente, estado, inventario);
@@ -154,6 +166,7 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
         dibujar_jugadores(renderer, textura, estado, camara, ancho_sprite_jugador, alto_sprite_jugador);
         estadisticas.dibujar(renderer);
         inventario.dibujar(renderer, texturas, fuente, ANCHO_VENTANA, ALTO_VENTANA);
+        menu.dibujar(renderer, fuente, codigo_invitacion, ANCHO_VENTANA, ALTO_VENTANA);
         renderer.presentar();
     }
 
@@ -179,6 +192,7 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
         InventoryBar inventario;
         StatBars estadisticas;
         Camera camara(ANCHO_VENTANA, ALTO_VENTANA);
+        Menu menu;
 
         // TODO temporal: sacar esto apenas José conecte el envio real de InventoryState.
         game::InventoryState estado_prueba;
@@ -191,7 +205,7 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
         // slots 5 a 8 quedan vacios (std::nullopt por defecto)
         inventario.actualizar(estado_prueba);
 
-        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, texturas, fuente, textura, info_partida.map, inventario, estadisticas, camara, TAMANIO_VISUAL_JUGADOR_PX, TAMANIO_VISUAL_JUGADOR_PX);
+        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, texturas, fuente, textura, info_partida.map, inventario, estadisticas, menu, codigo_invitacion, camara, TAMANIO_VISUAL_JUGADOR_PX, TAMANIO_VISUAL_JUGADOR_PX);
         
         if (conexion_perdida) {
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Conexion perdida",

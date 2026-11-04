@@ -8,10 +8,16 @@
 
 #include "game_types.h"
 
+struct ClickMouse {
+    int x;
+    int y;
+};
+
 struct InputResultado {
     game::MovementDirection direccion;
     bool salir;
     std::optional<std::size_t> slot_seleccionado;
+    std::optional<ClickMouse> click_mouse;
 };
 
 class InputHandler {

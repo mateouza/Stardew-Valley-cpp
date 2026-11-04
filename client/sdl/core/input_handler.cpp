@@ -6,7 +6,7 @@
 
 
 InputResultado InputHandler::procesar_eventos() {
-    InputResultado resultado{{0, 0}, false, std::nullopt};
+    InputResultado resultado{{0, 0}, false, std::nullopt, std::nullopt};
     SDL_Event evento;
     while (SDL_PollEvent(&evento)) {
         if (evento.type == SDL_QUIT) {
@@ -19,6 +19,9 @@ InputResultado InputHandler::procesar_eventos() {
             } else if (tecla >= SDL_SCANCODE_KP_1 && tecla <= SDL_SCANCODE_KP_9) {
                 resultado.slot_seleccionado = static_cast<std::size_t>(tecla - SDL_SCANCODE_KP_1);
             }
+        }
+        if (evento.type == SDL_MOUSEBUTTONDOWN && evento.button.button == SDL_BUTTON_LEFT) {
+            resultado.click_mouse = ClickMouse{evento.button.x, evento.button.y};
         }
     }
 
