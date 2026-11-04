@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <vector>
 
+#include "game_results.h"
+
 namespace game {
 
 enum class SoilState {
@@ -12,12 +14,6 @@ enum class SoilState {
     Prepared,
 };
 
-enum class PrepareSoilResult {
-    Accepted,
-    OutOfBounds,
-    NotCultivable,
-    AlreadyPrepared,
-};
 
 class Soil {
 private:

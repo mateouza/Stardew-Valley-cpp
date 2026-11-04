@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <utility>
 
+#include "item.h"
+
 namespace game {
 
 World::World(Map map, Position spawn_position, WorldConfig config, std::optional<Soil> soil):
@@ -84,6 +86,51 @@ std::optional<InventoryState> World::get_inventory_state(PlayerId player_id) con
     }
     return entry->second.get_inventory_state();
 }
+
+
+SelectSlotResult World::select_slot(PlayerId player_id, std::size_t slot) {
+    const auto entry = players.find(player_id);
+    if (entry == players.end()) {
+        return SelectSlotResult::UnknownPlayer;
+    }
+    auto& player = entry->second;
+    if (!player.is_connected()) {
+        return SelectSlotResult::DisconnectedPlayer;
+    }
+    return player.select_slot(slot) == InventoryResult::Accepted ? SelectSlotResult::Accepted :
+                                                                   SelectSlotResult::InvalidSlot;
+}
+
+PrepareSoilResult World::prepare_soil(PlayerId player_id, CellPosition cell) {
+    constexpr double MAX_REACH = 1.0;
+
+    const auto entry = players.find(player_id);
+    if (entry == players.end()) {
+        return PrepareSoilResult::UnknownPlayer;
+    }
+    const auto& player = entry->second;
+    if (!player.is_connected()) {
+        return PrepareSoilResult::DisconnectedPlayer;
+    }
+    if (cell.row >= map.get_height() || cell.column >= map.get_width()) {
+        return PrepareSoilResult::OutOfBounds;
+    }
+    if (!soil) {
+        return PrepareSoilResult::NotCultivable;
+    }
+
+    const auto position = player.get_position();
+    if (std::hypot(cell.column + 0.5 - position.x, cell.row + 0.5 - position.y) > MAX_REACH) {
+        return PrepareSoilResult::OutOfReach;
+    }
+
+    const auto item = player.get_selected_item();
+    if (!item || item->type != ItemType::Shovel) {
+        return PrepareSoilResult::ShovelNotSelected;
+    }
+    return soil->prepare(cell.row, cell.column);
+}
+
 
 Position World::calculate_position(const Player& player, double distance) const {
     const auto position = player.get_position();

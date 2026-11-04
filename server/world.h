@@ -42,6 +42,8 @@ public:
     void update_world(std::chrono::duration<double> elapsed) override;
     GameState get_state() const override;
     std::optional<InventoryState> get_inventory_state(PlayerId player_id) const override;
+    SelectSlotResult select_slot(PlayerId player_id, std::size_t slot) override;
+    PrepareSoilResult prepare_soil(PlayerId player_id, CellPosition cell) override;
 };
 
 }
