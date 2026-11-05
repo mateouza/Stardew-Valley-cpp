@@ -147,15 +147,13 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
             }
         }
 
-        if (!menu.esta_abierto()) {
-            actualizar_direccion_pendiente(entrada.direccion, ultima_direccion_enviada, pendiente);
-
-            if (pendiente) {
-                if(cliente.try_send(game::MoveRequest{*pendiente})) {
-                    ultima_direccion_enviada = *pendiente;
-                    pendiente.reset();
-                }
-}
+        const game::MovementDirection direccion_obj = menu.esta_abierto() ? game::MovementDirection{0, 0} : entrada.direccion;
+        actualizar_direccion_pendiente(direccion_obj, ultima_direccion_enviada, pendiente);
+        if (pendiente) {
+            if (cliente.try_send(game::MoveRequest{*pendiente})) {
+                ultima_direccion_enviada = *pendiente;
+                pendiente.reset();
+            }
         }
 
         procesar_mensajes_entrantes(cliente, estado, inventario);
@@ -193,17 +191,6 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
         StatBars estadisticas;
         Camera camara(ANCHO_VENTANA, ALTO_VENTANA);
         Menu menu;
-
-        // TODO temporal: sacar esto apenas José conecte el envio real de InventoryState.
-        game::InventoryState estado_prueba;
-        estado_prueba.selected_slot = 2;
-        estado_prueba.items[0] = game::ItemStack{game::ItemType::Pickaxe, game::ItemQuality::Base, 1};
-        estado_prueba.items[1] = game::ItemStack{game::ItemType::Shovel, game::ItemQuality::Base, 1};
-        estado_prueba.items[2] = game::ItemStack{game::ItemType::Sword, game::ItemQuality::Base, 1};
-        estado_prueba.items[3] = game::ItemStack{game::ItemType::WateringCan, game::ItemQuality::Base, 1};
-        estado_prueba.items[4] = game::ItemStack{game::ItemType::StrawberrySeed, game::ItemQuality::Good, 12};
-        // slots 5 a 8 quedan vacios (std::nullopt por defecto)
-        inventario.actualizar(estado_prueba);
 
         const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, texturas, fuente, textura, info_partida.map, inventario, estadisticas, menu, codigo_invitacion, camara, TAMANIO_VISUAL_JUGADOR_PX, TAMANIO_VISUAL_JUGADOR_PX);
         
