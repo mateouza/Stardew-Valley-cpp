@@ -371,21 +371,27 @@ endif()
 if(BUILD_CLIENT OR BUILD_LAUNCHER)
     find_package(SDL2 REQUIRED)
     find_package(SDL2pp REQUIRED)
+    find_package(SDL2_ttf REQUIRED)
 
     add_library(client_sdl STATIC
         client/sdl/sdl_client.cpp
         client/sdl/render/renderer.cpp
         client/sdl/render/texture_manager.cpp
         client/sdl/render/sdl_window.cpp
+        client/sdl/render/camera.cpp
         client/sdl/state/client_state.cpp
         client/sdl/core/input_handler.cpp
         client/sdl/core/inventory_bar.cpp
+        client/sdl/core/stat_bars.cpp
+        client/sdl/core/item_icons.cpp
+        client/sdl/core/menu.cpp
     )
 
     target_link_libraries(client_sdl PUBLIC
         client_network
         game_contracts
         SDL2pp::SDL2pp
+        SDL2_ttf::SDL2_ttf
     )
 
     target_compile_options(client_sdl PRIVATE -Wall -Wextra -Wpedantic)
