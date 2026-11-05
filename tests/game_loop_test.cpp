@@ -242,6 +242,9 @@ TEST(GameLoopTest, RepliesWithPlayerIdWhenAdmissionSucceeds) {
     EXPECT_DOUBLE_EQ(received_info->player_width, info.player_width);
     EXPECT_DOUBLE_EQ(received_info->player_height, info.player_height);
 
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+    ASSERT_TRUE(std::holds_alternative<game::InventoryState>(message));
+    EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
     EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
     EXPECT_TRUE(channel->is_closing());
     EXPECT_TRUE(world.get_state().players.empty());
@@ -282,9 +285,9 @@ private:
     std::size_t updates = 0;
 
 public:
-    PublishingWorld():
-            game::World(game::Map{{{game::TileType::Walkable, game::TileType::Walkable}}},
-                        {0.5, 0.5}, game::WorldConfig{1, 1.0, 0.5, 0.5}) {}
+    explicit PublishingWorld(std::size_t max_players = 1):
+        game::World(game::Map{{{game::TileType::Walkable, game::TileType::Walkable}}},
+                    {0.5, 0.5}, game::WorldConfig{max_players, 1.0, 0.5, 0.5}) {}
 
     void update_world(std::chrono::duration<double> elapsed) override {
         ++updates;
@@ -326,7 +329,8 @@ TEST(GameLoopTest, PublishesStateAfterApplyingMovement) {
     EXPECT_EQ(received_info->map.tiles, info.map.tiles);
     EXPECT_DOUBLE_EQ(received_info->player_width, info.player_width);
     EXPECT_DOUBLE_EQ(received_info->player_height, info.player_height);
-
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+    ASSERT_TRUE(std::holds_alternative<game::InventoryState>(message));
     ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
 
     const auto* state = std::get_if<game::GameState>(&message);
@@ -345,6 +349,52 @@ TEST(GameLoopTest, PublishesStateAfterApplyingMovement) {
 
     EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
     EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
+}
+
+TEST(GameLoopTest, SendsUpdatedInventoryOnlyToSelectingSession) {
+    PublishingWorld world{2};
+    Queue<MatchCommand> commands(16);
+    auto first = std::make_shared<SessionChannel>(7, 16);
+    auto second = std::make_shared<SessionChannel>(8, 16);
+    const game::GameInfo info{
+            {2, 1, {game::TileType::Walkable, game::TileType::Walkable}}, 0.5, 0.5};
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", first}));
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Jose", second}));
+    ASSERT_TRUE(commands.try_push(SelectSlotCommand{7, game::SelectSlotRequest{2}}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{20}, info);
+    game_loop.start();
+    game_loop.join();
+
+    for (const auto& channel: {first, second}) {
+        auto& outgoing = channel->get_outgoing_queue();
+        ServerMessage message;
+
+        ASSERT_TRUE(outgoing.try_pop(message));
+        const auto* join = std::get_if<JoinResponse>(&message);
+        ASSERT_NE(join, nullptr);
+        ASSERT_TRUE(std::holds_alternative<game::PlayerId>(join->result));
+
+        ASSERT_TRUE(outgoing.try_pop(message));
+        ASSERT_TRUE(std::holds_alternative<game::GameInfo>(message));
+
+        ASSERT_TRUE(outgoing.try_pop(message));
+        const auto* initial_inventory = std::get_if<game::InventoryState>(&message);
+        ASSERT_NE(initial_inventory, nullptr);
+        EXPECT_EQ(initial_inventory->selected_slot, 0u);
+    }
+
+    ServerMessage message;
+    ASSERT_TRUE(first->get_outgoing_queue().try_pop(message));
+    const auto* updated_inventory = std::get_if<game::InventoryState>(&message);
+    ASSERT_NE(updated_inventory, nullptr);
+    EXPECT_EQ(updated_inventory->selected_slot, 2u);
+
+    auto& second_outgoing = second->get_outgoing_queue();
+    ASSERT_TRUE(second_outgoing.try_pop(message));
+    ASSERT_TRUE(std::holds_alternative<game::GameState>(message));
+    EXPECT_THROW(second_outgoing.try_pop(message), ClosedQueue);
 }
 
 class PendingJoinFailureWorld: public game::World {
@@ -495,6 +545,9 @@ TEST(GameLoopTest, OwnsGameInfoPassedAsTemporary) {
     EXPECT_DOUBLE_EQ(info->player_height, 0.5);
 
     EXPECT_TRUE(channel->is_closing());
+    ASSERT_TRUE(channel->get_outgoing_queue().try_pop(message));
+    ASSERT_TRUE(std::holds_alternative<game::InventoryState>(message));
+    EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
     EXPECT_THROW(channel->get_outgoing_queue().try_pop(message), ClosedQueue);
 
     try {

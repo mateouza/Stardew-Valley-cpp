@@ -40,6 +40,8 @@ private:
     void close_sessions();
     void publish_state();
     void close_pending_channels();
+    void process_selection(const SelectSlotCommand& command);
+    void send_inventory(game::PlayerId player_id, SessionChannel& channel);
 
 public:
     GameLoop(game::GameModel& model, Queue<MatchCommand>& commands,

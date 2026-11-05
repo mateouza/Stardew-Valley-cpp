@@ -773,6 +773,9 @@ TEST_F(ClientServerProtocolTest, TwoHandlersShareMatchAndPublishMovement) {
     EXPECT_EQ(first_info->map.tiles[1], game::TileType::Walkable);
     EXPECT_DOUBLE_EQ(first_info->player_width, 0.5);
     EXPECT_DOUBLE_EQ(first_info->player_height, 0.5);
+    const auto first_inventory_message = client_protocol.receive_message();
+    ASSERT_TRUE(first_inventory_message.has_value());
+    ASSERT_TRUE(std::holds_alternative<game::InventoryState>(*first_inventory_message));
 
     Socket second_client("127.0.0.1", "18080");
     Socket second_connection = listener.accept();
@@ -811,6 +814,9 @@ TEST_F(ClientServerProtocolTest, TwoHandlersShareMatchAndPublishMovement) {
     EXPECT_EQ(second_info->map.tiles, first_info->map.tiles);
     EXPECT_DOUBLE_EQ(second_info->player_width, first_info->player_width);
     EXPECT_DOUBLE_EQ(second_info->player_height, first_info->player_height);
+    const auto second_inventory_message = second_protocol.receive_message();
+    ASSERT_TRUE(second_inventory_message.has_value());
+    ASSERT_TRUE(std::holds_alternative<game::InventoryState>(*second_inventory_message));
 
     second_protocol.send_move(game::MoveRequest{game::MovementDirection{1, 0}});
 
