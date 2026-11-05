@@ -28,6 +28,7 @@ public:
     std::optional<ServerMessage> receive_message();
     void send_create_match(const CreateMatchRequest& request);
     void send_join_match(const JoinMatchRequest& request);
+    void send_select_slot(const game::SelectSlotRequest& request);
 };
 
 #endif

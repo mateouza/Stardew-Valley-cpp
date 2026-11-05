@@ -18,6 +18,7 @@ private:
     void send_player_state(const game::PlayerState& player);
     void validate_game_info(const game::GameInfo& info);
     void validate_inventory_state(const game::InventoryState& state);
+    game::MoveRequest receive_move_payload();
 
 public:
     explicit ServerProtocol(Socket& socket);
@@ -29,6 +30,7 @@ public:
     void send_match_response(const MatchResponse& response);
     void send_game_info(const game::GameInfo& info);
     void send_inventory_state(const game::InventoryState& state);
+    std::optional<game::GameRequest> receive_game_request();
 };
 
 #endif

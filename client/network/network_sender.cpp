@@ -18,6 +18,11 @@ void NetworkSender::send_request(const ClientRequest& request) {
         return;
     }
 
+    if (const auto* selection = std::get_if<game::SelectSlotRequest>(&request)) {
+        protocol.send_select_slot(*selection);
+        return;
+    }
+
     protocol.send_move(std::get<game::MoveRequest>(request));
 }
 
