@@ -26,7 +26,7 @@ namespace{
     };
 }
 
-Menu::Menu() : abierto(false), volumen_musica(VOLUMEN_MUSICA_INICIAL) {}
+Menu::Menu() : abierto(false), volumen_musica(VOLUMEN_MUSICA_INICIAL), arrastrando_perilla(false) {}
 
 bool Menu::esta_abierto() const {
     return abierto;
@@ -78,6 +78,7 @@ bool Menu::procesar_click(int x, int y, int ancho_ventana, int alto_ventana, SDL
     if (punto_en_rectangulo(x, y, barra_musica.x, barra_musica.y, barra_musica.w, barra_musica.h)) {
         const double proporcion = static_cast<double>(x - barra_musica.x) / barra_musica.w;
         volumen_musica = std::clamp(proporcion, 0.0, 1.0);
+        arrastrando_perilla = true;
         return false;
     }   
     
@@ -89,6 +90,20 @@ bool Menu::procesar_click(int x, int y, int ancho_ventana, int alto_ventana, SDL
     }
 
     return false;
+}
+
+void Menu::procesar_arrastre(int x, int y, bool boton_presionado, int ancho_ventana, int alto_ventana, SDL2pp::Font& fuente) {
+    if (!boton_presionado || !abierto) {
+        arrastrando_perilla = false;
+        return;
+    }
+    if (!arrastrando_perilla) {
+        return;
+    }
+    
+    const SDL2pp::Rect barra_musica = calcular_barra_musica(fuente, ancho_ventana, alto_ventana);
+    const double proporcion = static_cast<double>(x - barra_musica.x) / barra_musica.w;
+    volumen_musica = std::clamp(proporcion, 0.0, 1.0);
 }
 
 void Menu::dibujar(Renderer& renderer, SDL2pp::Font& fuente, const std::string& codigo_invitacion,

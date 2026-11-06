@@ -12,6 +12,7 @@ class Menu{
     private:
         bool abierto;
         double volumen_musica; //0.0 a 1.0
+        bool arrastrando_perilla;
 
         SDL2pp::Rect calcular_barra_musica(SDL2pp::Font& fuente, int ancho_ventana, int alto_ventana) const;
     public:
@@ -20,6 +21,7 @@ class Menu{
         double obtener_volumen_musica() const;  
 
         bool procesar_click(int x, int y, int ancho_ventana, int alto_ventana, SDL2pp::Font& fuente);
+        void procesar_arrastre(int x, int y, bool boton_presionado, int ancho_ventana, int alto_ventana, SDL2pp::Font& fuente);
 
         void dibujar(Renderer& renderer, SDL2pp::Font& fuente, const std::string& codigo_invitacion, int ancho_ventana, int alto_ventana) const;
 };

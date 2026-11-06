@@ -158,6 +158,7 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
                 continue;
             }
         }
+        menu.procesar_arrastre(entrada.posicion_mouse.x, entrada.posicion_mouse.y, entrada.click_izquierdo_presionado, ANCHO_VENTANA, ALTO_VENTANA, fuente);
         mixer.SetMusicVolume(static_cast<int>(menu.obtener_volumen_musica() * MIX_MAX_VOLUME));
 
         const game::MovementDirection direccion_obj = menu.esta_abierto() ? game::MovementDirection{0, 0} : entrada.direccion;

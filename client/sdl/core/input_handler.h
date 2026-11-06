@@ -18,6 +18,8 @@ struct InputResultado {
     bool salir;
     std::optional<std::size_t> slot_seleccionado;
     std::optional<ClickMouse> click_mouse;
+    ClickMouse posicion_mouse;
+    bool click_izquierdo_presionado;
 };
 
 class InputHandler {

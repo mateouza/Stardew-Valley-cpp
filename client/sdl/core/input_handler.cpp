@@ -6,7 +6,7 @@
 
 
 InputResultado InputHandler::procesar_eventos() {
-    InputResultado resultado{{0, 0}, false, std::nullopt, std::nullopt};
+    InputResultado resultado{{0, 0}, false, std::nullopt, std::nullopt, {0, 0}, false};
     SDL_Event evento;
     while (SDL_PollEvent(&evento)) {
         if (evento.type == SDL_QUIT) {
@@ -24,6 +24,13 @@ InputResultado InputHandler::procesar_eventos() {
             resultado.click_mouse = ClickMouse{evento.button.x, evento.button.y};
         }
     }
+    
+    int x_mouse = 0;
+    int y_mouse = 0;
+
+    const Uint32 estado_mouse = SDL_GetMouseState(&x_mouse, &y_mouse);
+    resultado.posicion_mouse = ClickMouse{x_mouse, y_mouse};
+    resultado.click_izquierdo_presionado = (estado_mouse & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;
 
     const Uint8* teclas = SDL_GetKeyboardState(nullptr);
 
