@@ -26,6 +26,7 @@ private:
     std::unique_ptr<ClientSender> sender;
     std::exception_ptr failure;
     std::mutex workers_mutex;
+    bool socket_closed = false;
 
     bool started = false;
     bool stopped = false;

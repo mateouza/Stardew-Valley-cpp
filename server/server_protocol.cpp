@@ -22,8 +22,17 @@ std::int8_t ServerProtocol::decode_direction(std::uint8_t value) {
     }
 }
 
+game::MoveRequest ServerProtocol::receive_move_payload() {
+    std::array<std::uint8_t, 2> direction{};
+    receive_bytes(direction.data(), direction.size());
+
+    return game::MoveRequest{
+            game::MovementDirection{decode_direction(direction[0]),
+                                    decode_direction(direction[1])}};
+}
+
 std::optional<game::MoveRequest> ServerProtocol::receive_move() {
-    auto message_type = receive_first_byte();
+    const auto message_type = receive_first_byte();
 
     if (!message_type) {
         return std::nullopt;
@@ -33,11 +42,34 @@ std::optional<game::MoveRequest> ServerProtocol::receive_move() {
         throw std::runtime_error("Tipo de mensaje inesperado");
     }
 
-    std::array<std::uint8_t, 2> direction{};
-    receive_bytes(direction.data(), direction.size());
+    return receive_move_payload();
+}
 
-    return game::MoveRequest{game::MovementDirection{decode_direction(direction[0]),
-                                                     decode_direction(direction[1])}};
+std::optional<game::GameRequest> ServerProtocol::receive_game_request() {
+    const auto message_type = receive_first_byte();
+
+    if (!message_type) {
+        return std::nullopt;
+    }
+
+    switch (*message_type) {
+        case MOVE_MESSAGE:
+            return game::GameRequest{receive_move_payload()};
+
+        case SELECT_SLOT_MESSAGE: {
+            std::uint8_t slot{};
+            receive_bytes(&slot, sizeof(slot));
+
+            if (slot >= game::InventoryState::CAPACITY) {
+                throw std::runtime_error("El espacio seleccionado recibido es invalido");
+            }
+
+            return game::GameRequest{game::SelectSlotRequest{slot}};
+        }
+
+        default:
+            throw std::runtime_error("Tipo de mensaje inesperado");
+    }
 }
 
 void ServerProtocol::send_join_response(const JoinResponse& response) {

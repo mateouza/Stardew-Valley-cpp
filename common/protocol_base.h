@@ -33,6 +33,7 @@ protected:
     static constexpr std::uint8_t INVENTORY_STATE_MESSAGE = 0x08;
     static constexpr std::uint8_t INVENTORY_SLOT_EMPTY = 0x00;
     static constexpr std::uint8_t INVENTORY_SLOT_OCCUPIED = 0x01;
+    static constexpr std::uint8_t SELECT_SLOT_MESSAGE = 0x09;
 
     explicit ProtocolBase(Socket& socket);
     ~ProtocolBase() = default;

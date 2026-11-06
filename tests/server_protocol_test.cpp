@@ -218,6 +218,37 @@ TEST(ServerProtocolTest, CoordinatesReceiverStopShutdownAndJoin) {
     EXPECT_TRUE(connection.is_stream_recv_closed());
 }
 
+TEST(ServerProtocolTest, SessionClosesChannelWhenAdmissionQueueIsFull) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    Queue<MatchCommand> commands(1);
+    auto queued_channel = std::make_shared<SessionChannel>(6, 16);
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Jose", queued_channel}));
+
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+    ClientSession session(std::move(connection));
+
+    EXPECT_THROW(session.start(commands, "Mateo", channel), std::runtime_error);
+    EXPECT_TRUE(channel->is_closing());
+}
+
+TEST(ServerProtocolTest, SessionClosesChannelWhenAdmissionQueueIsClosed) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    Queue<MatchCommand> commands(1);
+    commands.close();
+
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+    ClientSession session(std::move(connection));
+
+    EXPECT_THROW(session.start(commands, "Mateo", channel), ClosedQueue);
+    EXPECT_TRUE(channel->is_closing());
+}
+
 TEST(ServerProtocolTest, SessionEnqueuesAdmissionAndCoordinatesReceiverCleanup) {
     Socket server("18080");
     Socket client("127.0.0.1", "18080");
@@ -773,6 +804,9 @@ TEST_F(ClientServerProtocolTest, TwoHandlersShareMatchAndPublishMovement) {
     EXPECT_EQ(first_info->map.tiles[1], game::TileType::Walkable);
     EXPECT_DOUBLE_EQ(first_info->player_width, 0.5);
     EXPECT_DOUBLE_EQ(first_info->player_height, 0.5);
+    const auto first_inventory_message = client_protocol.receive_message();
+    ASSERT_TRUE(first_inventory_message.has_value());
+    ASSERT_TRUE(std::holds_alternative<game::InventoryState>(*first_inventory_message));
 
     Socket second_client("127.0.0.1", "18080");
     Socket second_connection = listener.accept();
@@ -811,6 +845,24 @@ TEST_F(ClientServerProtocolTest, TwoHandlersShareMatchAndPublishMovement) {
     EXPECT_EQ(second_info->map.tiles, first_info->map.tiles);
     EXPECT_DOUBLE_EQ(second_info->player_width, first_info->player_width);
     EXPECT_DOUBLE_EQ(second_info->player_height, first_info->player_height);
+    const auto second_inventory_message = second_protocol.receive_message();
+    ASSERT_TRUE(second_inventory_message.has_value());
+    ASSERT_TRUE(std::holds_alternative<game::InventoryState>(*second_inventory_message));
+    second_protocol.send_select_slot(game::SelectSlotRequest{2});
+
+    bool observed_selection = false;
+    for (std::size_t attempt = 0; attempt < 128 && !observed_selection; ++attempt) {
+        const auto message = second_protocol.receive_message();
+        ASSERT_TRUE(message.has_value());
+
+        if (const auto* inventory = std::get_if<game::InventoryState>(&*message)) {
+            EXPECT_EQ(inventory->selected_slot, 2u);
+            observed_selection = true;
+        } else {
+            ASSERT_TRUE(std::holds_alternative<game::GameState>(*message));
+        }
+    }
+    ASSERT_TRUE(observed_selection);
 
     second_protocol.send_move(game::MoveRequest{game::MovementDirection{1, 0}});
 
@@ -1218,4 +1270,65 @@ TEST_F(ClientServerProtocolTest, RejectsInventoryWithTruncatedQuantity) {
     connection.shutdown(SHUT_WR);
 
     EXPECT_THROW(client_protocol.receive_message(), LibError);
+}
+
+TEST_F(ClientServerProtocolTest, DecodesMovementSelectionAndStopInOrder) {
+    client_protocol.send_move(game::MoveRequest{{1, 0}});
+    client_protocol.send_select_slot(game::SelectSlotRequest{0});
+    client_protocol.send_move(game::MoveRequest{{0, 0}});
+    client_protocol.send_select_slot(game::SelectSlotRequest{8});
+    client.shutdown(SHUT_WR);
+
+    const auto movement = server_protocol.receive_game_request();
+    ASSERT_TRUE(movement.has_value());
+    const auto* right = std::get_if<game::MoveRequest>(&*movement);
+    ASSERT_NE(right, nullptr);
+    EXPECT_EQ(right->direction.horizontal, 1);
+    EXPECT_EQ(right->direction.vertical, 0);
+
+    const auto first_selection = server_protocol.receive_game_request();
+    ASSERT_TRUE(first_selection.has_value());
+    const auto* first_slot = std::get_if<game::SelectSlotRequest>(&*first_selection);
+    ASSERT_NE(first_slot, nullptr);
+    EXPECT_EQ(first_slot->slot, 0u);
+
+    const auto stop = server_protocol.receive_game_request();
+    ASSERT_TRUE(stop.has_value());
+    const auto* stopped = std::get_if<game::MoveRequest>(&*stop);
+    ASSERT_NE(stopped, nullptr);
+    EXPECT_EQ(stopped->direction.horizontal, 0);
+    EXPECT_EQ(stopped->direction.vertical, 0);
+
+    const auto last_selection = server_protocol.receive_game_request();
+    ASSERT_TRUE(last_selection.has_value());
+    const auto* last_slot = std::get_if<game::SelectSlotRequest>(&*last_selection);
+    ASSERT_NE(last_slot, nullptr);
+    EXPECT_EQ(last_slot->slot, 8u);
+
+    EXPECT_FALSE(server_protocol.receive_game_request().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, RejectsSlotNineBeforeSendingAnyBytes) {
+    EXPECT_THROW(client_protocol.send_select_slot(game::SelectSlotRequest{9}),
+                 std::invalid_argument);
+
+    client.shutdown(SHUT_WR);
+
+    EXPECT_FALSE(server_protocol.receive_game_request().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedSlotNine) {
+    const std::array<std::uint8_t, 2> message{0x09, 9};
+    ASSERT_EQ(client.sendall(message.data(), message.size()), 2);
+    client.shutdown(SHUT_WR);
+
+    EXPECT_THROW(server_protocol.receive_game_request(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsTruncatedSlotSelection) {
+    const std::array<std::uint8_t, 1> message{0x09};
+    ASSERT_EQ(client.sendall(message.data(), message.size()), 1);
+    client.shutdown(SHUT_WR);
+
+    EXPECT_THROW(server_protocol.receive_game_request(), std::runtime_error);
 }

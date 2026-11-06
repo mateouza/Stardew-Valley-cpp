@@ -22,6 +22,15 @@ void ClientProtocol::send_move(const game::MoveRequest& request) {
     send_bytes(message.data(), message.size());
 }
 
+void ClientProtocol::send_select_slot(const game::SelectSlotRequest& request) {
+    if (request.slot >= game::InventoryState::CAPACITY) {
+        throw std::invalid_argument("El espacio seleccionado es invalido");
+    }
+
+    const std::array<std::uint8_t, 2> message{SELECT_SLOT_MESSAGE, request.slot};
+    send_bytes(message.data(), message.size());
+}
+
 std::int8_t ClientProtocol::decode_direction(std::uint8_t value) {
     switch (value) {
         case 0x00:

@@ -17,7 +17,6 @@ Acceptor::Acceptor(const char* service, MatchManager& matches, unsigned int outg
 }
 
 void Acceptor::finish_handler(ClientHandler& handler) {
-    handler.stop();
     handler.join();
 
     try {

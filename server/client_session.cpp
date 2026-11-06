@@ -15,7 +15,7 @@ ClientSession::~ClientSession() {
 void ClientSession::start(Queue<MatchCommand>& commands, const std::string& name,
                           std::shared_ptr<SessionChannel> channel) {
 
-    std::lock_guard<std::mutex> lock(workers_mutex);
+    std::unique_lock<std::mutex> lock(workers_mutex);
 
     if (started) {
         throw std::logic_error("La sesion ya fue iniciada");
@@ -47,6 +47,7 @@ void ClientSession::start(Queue<MatchCommand>& commands, const std::string& name
 
         started = true;
     } catch (...) {
+        lock.unlock();
         stop();
         join();
         throw;
@@ -62,6 +63,19 @@ void ClientSession::stop() {
 
     if (channel) {
         channel->request_close();
+    }
+
+    if (!receiver_joinable && !sender_joinable) {
+        std::lock_guard<std::mutex> lock(workers_mutex);
+        if (!socket_closed) {
+            try {
+                socket.close();
+                socket_closed = true;
+            } catch (...) {
+                failure = std::current_exception();
+            }
+        }
+        return;
     }
 
     if (receiver_joinable) {
@@ -135,6 +149,10 @@ void ClientSession::send_match_response(const MatchResponse& response) {
 
 void ClientSession::shutdown_connection() {
     std::lock_guard<std::mutex> lock(workers_mutex);
+
+    if (socket_closed) {
+        return;
+    }
 
     if (channel) {
         channel->request_close();

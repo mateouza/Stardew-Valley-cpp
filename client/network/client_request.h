@@ -6,6 +6,7 @@
 #include "game_command.h"
 #include "lobby_request.h"
 
-using ClientRequest = std::variant<CreateMatchRequest, JoinMatchRequest, game::MoveRequest>;
-
+using ClientRequest =
+        std::variant<CreateMatchRequest, JoinMatchRequest, game::MoveRequest,
+                     game::SelectSlotRequest>;
 #endif

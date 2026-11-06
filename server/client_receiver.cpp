@@ -2,9 +2,11 @@
 
 #include <stdexcept>
 #include <utility>
+#include <variant>
 
 #include "liberror.h"
 #include "player_command.h"
+#include "select_slot_command.h"
 
 ClientReceiver::ClientReceiver(ServerProtocol& protocol, Queue<MatchCommand>& commands,
                                std::shared_ptr<SessionChannel> channel):
@@ -17,13 +19,20 @@ ClientReceiver::ClientReceiver(ServerProtocol& protocol, Queue<MatchCommand>& co
 void ClientReceiver::run() {
     try {
         while (should_keep_running() && !channel->is_closing()) {
-            const auto request = protocol.receive_move();
+            const auto request = protocol.receive_game_request();
 
             if (!request || !should_keep_running() || channel->is_closing()) {
                 break;
             }
 
-            const PlayerCommand command{channel->get_session_id(), *request};
+            MatchCommand command;
+
+            if (const auto* movement = std::get_if<game::MoveRequest>(&*request)) {
+                command = PlayerCommand{channel->get_session_id(), *movement};
+            } else {
+                command = SelectSlotCommand{
+                        channel->get_session_id(), std::get<game::SelectSlotRequest>(*request)};
+            }
 
             if (!commands.try_push(command)) {
                 throw std::runtime_error("La cola de comandos de la partida esta llena");

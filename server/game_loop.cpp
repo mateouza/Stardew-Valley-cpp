@@ -47,8 +47,13 @@ void GameLoop::process_add_player(const AddPlayerCommand& command) {
                 return;
             }
 
-            if (player_id && !channel->get_outgoing_queue().try_push(game_info)) {
-                channel->request_close();
+            if (player_id) {
+                if (!channel->get_outgoing_queue().try_push(game_info)) {
+                    channel->request_close();
+                    return;
+                }
+
+                send_inventory(*player_id, *channel);
             }
         } catch (const ClosedQueue&) {
             channel->request_close();
@@ -86,6 +91,33 @@ void GameLoop::process_movement(const PlayerCommand& command) {
     model.set_direction(session->second.player_id, command.request.direction);
 }
 
+void GameLoop::send_inventory(game::PlayerId player_id, SessionChannel& channel) {
+    const auto inventory = model.get_inventory_state(player_id);
+    if (!inventory) {
+        throw std::logic_error("La sesion no tiene un jugador registrado");
+    }
+
+    try {
+        if (!channel.get_outgoing_queue().try_push(*inventory)) {
+            channel.request_close();
+        }
+    } catch (const ClosedQueue&) {
+        channel.request_close();
+    }
+}
+
+void GameLoop::process_selection(const SelectSlotCommand& command) {
+    const auto session = sessions.find(command.session_id);
+    if (session == sessions.end() || session->second.channel->is_closing()) {
+        return;
+    }
+
+    const auto player_id = session->second.player_id;
+    if (model.select_slot(player_id, command.request.slot) == game::SelectSlotResult::Accepted) {
+        send_inventory(player_id, *session->second.channel);
+    }
+}
+
 void GameLoop::process_commands() {
     constexpr std::size_t MAX_COMMANDS_PER_TICK = 128;
 
@@ -103,6 +135,8 @@ void GameLoop::process_commands() {
             process_movement(*movement);
         } else if (const auto* entry = std::get_if<AddPlayerCommand>(&command)) {
             process_add_player(*entry);
+        } else if (const auto* selection = std::get_if<SelectSlotCommand>(&command)) {
+            process_selection(*selection);
         }
     }
 }
