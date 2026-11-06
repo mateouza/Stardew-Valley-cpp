@@ -171,6 +171,12 @@ TEST_F(ServerNetworkLobbyClientTest, CreatesAGameAndHandsOverTheConnection) {
     EXPECT_EQ(connection->invite_code, ticket.game_id);
     EXPECT_EQ(connection->game_info.map.width, 2u);
 
+    const auto inventory_message = connection->network->receive();
+    ASSERT_TRUE(inventory_message.has_value());
+    const auto* inventory = std::get_if<game::InventoryState>(&*inventory_message);
+    ASSERT_NE(inventory, nullptr);
+    EXPECT_EQ(inventory->selected_slot, 0u);
+
     const auto message = connection->network->receive();
     ASSERT_TRUE(message.has_value());
     const auto* state = std::get_if<game::GameState>(&*message);
@@ -191,6 +197,13 @@ TEST_F(ServerNetworkLobbyClientTest, JoinsTheGameOfAnotherPlayer) {
 
     auto connection = guest.take_game_connection();
     ASSERT_TRUE(connection.has_value());
+
+    const auto inventory_message = connection->network->receive();
+    ASSERT_TRUE(inventory_message.has_value());
+    const auto* inventory = std::get_if<game::InventoryState>(&*inventory_message);
+    ASSERT_NE(inventory, nullptr);
+    EXPECT_EQ(inventory->selected_slot, 0u);
+
     const auto message = connection->network->receive();
     ASSERT_TRUE(message.has_value());
     const auto* state = std::get_if<game::GameState>(&*message);

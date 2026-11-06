@@ -60,7 +60,7 @@ protected:
 
     SessionId add_player(const std::string& name) {
         const auto session_id = next_session_id++;
-        auto channel = std::make_shared<SessionChannel>(session_id, MAX_STEPS + 2);
+        auto channel = std::make_shared<SessionChannel>(session_id, MAX_STEPS + 3);
 
         if (!commands.try_push(AddPlayerCommand{name, channel})) {
             throw std::runtime_error("La cola de comandos de la prueba esta llena");
@@ -116,6 +116,16 @@ protected:
             EXPECT_EQ(received_info->map.tiles, info.map.tiles);
             EXPECT_DOUBLE_EQ(received_info->player_width, info.player_width);
             EXPECT_DOUBLE_EQ(received_info->player_height, info.player_height);
+            if (!channel->get_outgoing_queue().try_pop(message)) {
+                throw std::runtime_error("No se recibio el inventario inicial");
+            }
+
+            const auto* inventory = std::get_if<game::InventoryState>(&message);
+            if (!inventory) {
+                throw std::runtime_error("El tercer mensaje debe ser el inventario inicial");
+            }
+
+            EXPECT_EQ(inventory->selected_slot, 0u);
         }
     }
 
