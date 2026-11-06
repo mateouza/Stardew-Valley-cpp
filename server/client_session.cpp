@@ -59,6 +59,18 @@ void ClientSession::stop() {
     }
 
     stopped = true;
+    if (!receiver_joinable && !sender_joinable) {
+        std::lock_guard<std::mutex> lock(workers_mutex);
+        if (!socket_closed) {
+            try {
+                socket.close();
+                socket_closed = true;
+            } catch (...) {
+                failure = std::current_exception();
+            }
+        }
+        return;
+    }
 
     if (channel) {
         channel->request_close();
@@ -70,9 +82,6 @@ void ClientSession::stop() {
 
     if (sender_joinable) {
         sender->stop();
-    }
-    if (!receiver_joinable && !sender_joinable) {
-        return;
     }
 
     try {
@@ -138,6 +147,10 @@ void ClientSession::send_match_response(const MatchResponse& response) {
 
 void ClientSession::shutdown_connection() {
     std::lock_guard<std::mutex> lock(workers_mutex);
+
+    if (socket_closed) {
+        return;
+    }
 
     if (channel) {
         channel->request_close();
