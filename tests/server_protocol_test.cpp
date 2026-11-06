@@ -218,6 +218,37 @@ TEST(ServerProtocolTest, CoordinatesReceiverStopShutdownAndJoin) {
     EXPECT_TRUE(connection.is_stream_recv_closed());
 }
 
+TEST(ServerProtocolTest, SessionClosesChannelWhenAdmissionQueueIsFull) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    Queue<MatchCommand> commands(1);
+    auto queued_channel = std::make_shared<SessionChannel>(6, 16);
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Jose", queued_channel}));
+
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+    ClientSession session(std::move(connection));
+
+    EXPECT_THROW(session.start(commands, "Mateo", channel), std::runtime_error);
+    EXPECT_TRUE(channel->is_closing());
+}
+
+TEST(ServerProtocolTest, SessionClosesChannelWhenAdmissionQueueIsClosed) {
+    Socket server("18080");
+    Socket client("127.0.0.1", "18080");
+    Socket connection = server.accept();
+
+    Queue<MatchCommand> commands(1);
+    commands.close();
+
+    auto channel = std::make_shared<SessionChannel>(7, 16);
+    ClientSession session(std::move(connection));
+
+    EXPECT_THROW(session.start(commands, "Mateo", channel), ClosedQueue);
+    EXPECT_TRUE(channel->is_closing());
+}
+
 TEST(ServerProtocolTest, SessionEnqueuesAdmissionAndCoordinatesReceiverCleanup) {
     Socket server("18080");
     Socket client("127.0.0.1", "18080");
