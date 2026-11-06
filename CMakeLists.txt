@@ -372,6 +372,7 @@ if(BUILD_CLIENT OR BUILD_LAUNCHER)
     find_package(SDL2 REQUIRED)
     find_package(SDL2pp REQUIRED)
     find_package(SDL2_ttf REQUIRED)
+    find_package(SDL2_mixer REQUIRED)
 
     add_library(client_sdl STATIC
         client/sdl/sdl_client.cpp
@@ -392,6 +393,7 @@ if(BUILD_CLIENT OR BUILD_LAUNCHER)
         game_contracts
         SDL2pp::SDL2pp
         SDL2_ttf::SDL2_ttf
+        SDL2_mixer::SDL2_mixer
     )
 
     target_compile_options(client_sdl PRIVATE -Wall -Wextra -Wpedantic)

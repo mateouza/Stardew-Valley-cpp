@@ -13,6 +13,9 @@
 #include <SDL2pp/SDLImage.hh>
 #include <SDL2pp/SDLTTF.hh>
 #include <SDL_image.h>
+#include <SDL2pp/Mixer.hh>
+#include <SDL2pp/Music.hh>
+#include <SDL2pp/SDLMixer.hh>
 
 #include "core/input_handler.h"
 #include "core/inventory_bar.h"
@@ -33,6 +36,7 @@ namespace {
     constexpr int TAMANIO_FUENTE_PX = 12;
     constexpr int TAMANIO_VISUAL_JUGADOR_PX = 32;
     const std::string RUTA_FUENTE = "assets/Press_Start/PressStart2P-Regular.ttf";   
+    const std::string RUTA_MUSICA_FONDO = "assets/audio/shepherd_dog.wav";
     const SDL2pp::Rect ORIGEN_SPRITE_JUGADOR(43, 23, 11, 16);
 }
 
@@ -115,7 +119,7 @@ void dibujar_jugadores(Renderer& renderer, SDL2pp::Texture& textura, const Clien
 
 bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHandler& input_handler,
                           Renderer& renderer, TextureManager& texturas, SDL2pp::Font& fuente, SDL2pp::Texture& textura, const game::MapData& mapa,
-                          InventoryBar& inventario, const StatBars& estadisticas, Menu& menu, const std::string& codigo_invitacion, Camera& camara,
+                          InventoryBar& inventario, const StatBars& estadisticas, Menu& menu, SDL2pp::Mixer& mixer, const std::string& codigo_invitacion, Camera& camara,
                           int ancho_sprite_jugador, int alto_sprite_jugador) {
     game::MovementDirection ultima_direccion_enviada{0, 0};
     std::optional<game::MovementDirection> pendiente;
@@ -147,13 +151,14 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
         }
 
         if (entrada.click_mouse) {
-            const bool pidio_salir = menu.procesar_click(entrada.click_mouse->x, entrada.click_mouse->y, ANCHO_VENTANA, ALTO_VENTANA);
+            const bool pidio_salir = menu.procesar_click(entrada.click_mouse->x, entrada.click_mouse->y, ANCHO_VENTANA, ALTO_VENTANA, fuente);
 
             if (pidio_salir) {
                 corriendo = false;
                 continue;
             }
         }
+        mixer.SetMusicVolume(static_cast<int>(menu.obtener_volumen_musica() * MIX_MAX_VOLUME));
 
         const game::MovementDirection direccion_obj = menu.esta_abierto() ? game::MovementDirection{0, 0} : entrada.direccion;
         actualizar_direccion_pendiente(direccion_obj, ultima_direccion_enviada, pendiente);
@@ -185,6 +190,7 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
         SDL2pp::SDL sdl(SDL_INIT_VIDEO);
         SDL2pp::SDLImage sdl_image(IMG_INIT_PNG);
         SDL2pp::SDLTTF sdl_ttf;
+        SDL2pp::SDLMixer sdl_mixer_init;
 
         const std::string titulo = codigo_invitacion.empty() ? "Stardew Valley" : "Stardew Valley - Código: " + codigo_invitacion;
         SDLWindow ventana(titulo.c_str(), ANCHO_VENTANA, ALTO_VENTANA, false);
@@ -192,6 +198,9 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
         TextureManager texturas(renderer);
         SDL2pp::Texture& textura = texturas.obtener_textura("assets/Characters/Generic/IDLE/base_idle_strip9.png");
         SDL2pp::Font fuente(RUTA_FUENTE, TAMANIO_FUENTE_PX);
+        SDL2pp::Mixer mixer(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 1024);
+        SDL2pp::Music musica_fondo(RUTA_MUSICA_FONDO);
+        mixer.PlayMusic(musica_fondo, -1);  // -1 = loop infinito
 
         ClientState estado_cliente(id_propio);
         InputHandler input_handler;
@@ -200,7 +209,7 @@ int ejecutar_cliente_sdl(NetworkClient& cliente, game::PlayerId id_propio,
         Camera camara(ANCHO_VENTANA, ALTO_VENTANA);
         Menu menu;
 
-        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, texturas, fuente, textura, info_partida.map, inventario, estadisticas, menu, codigo_invitacion, camara, TAMANIO_VISUAL_JUGADOR_PX, TAMANIO_VISUAL_JUGADOR_PX);
+        const bool conexion_perdida = ejecutar_bucle_juego(cliente, estado_cliente, input_handler, renderer, texturas, fuente, textura, info_partida.map, inventario, estadisticas, menu, mixer, codigo_invitacion, camara, TAMANIO_VISUAL_JUGADOR_PX, TAMANIO_VISUAL_JUGADOR_PX);
         
         if (conexion_perdida) {
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Conexion perdida",
