@@ -119,6 +119,7 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
                           int ancho_sprite_jugador, int alto_sprite_jugador) {
     game::MovementDirection ultima_direccion_enviada{0, 0};
     std::optional<game::MovementDirection> pendiente;
+    std::optional<std::uint8_t> slot_pendiente;
 
     bool corriendo = true;
     bool conexion_perdida = false;
@@ -136,7 +137,14 @@ bool ejecutar_bucle_juego(NetworkClient& cliente, ClientState& estado, InputHand
             continue;
         }
 
-        //TO-DO: manejar seleccion de slot de inventario
+        if (!menu.esta_abierto() && entrada.slot_seleccionado) {
+            slot_pendiente = static_cast<std::uint8_t>(*entrada.slot_seleccionado);
+        }
+        if (slot_pendiente) {
+            if (cliente.try_send(game::SelectSlotRequest{*slot_pendiente})) {
+                slot_pendiente.reset();
+            }
+        }
 
         if (entrada.click_mouse) {
             const bool pidio_salir = menu.procesar_click(entrada.click_mouse->x, entrada.click_mouse->y, ANCHO_VENTANA, ALTO_VENTANA);
