@@ -1332,3 +1332,193 @@ TEST_F(ClientServerProtocolTest, RejectsTruncatedSlotSelection) {
 
     EXPECT_THROW(server_protocol.receive_game_request(), std::runtime_error);
 }
+
+TEST_F(ClientServerProtocolTest, TransfersSoilPreservingDimensionsAndRowOrder) {
+    const game::SoilData expected{
+            3, 2,
+            {game::SoilState::NotCultivable, game::SoilState::Unprepared,
+             game::SoilState::Prepared, game::SoilState::Prepared,
+             game::SoilState::Unprepared, game::SoilState::NotCultivable}};
+
+    server_protocol.send_soil_state(expected);
+
+    const auto message = client_protocol.receive_message();
+    ASSERT_TRUE(message.has_value());
+    const auto* soil = std::get_if<game::SoilData>(&*message);
+    ASSERT_NE(soil, nullptr);
+    EXPECT_EQ(soil->width, expected.width);
+    EXPECT_EQ(soil->height, expected.height);
+    EXPECT_EQ(soil->cells, expected.cells);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsInvalidSoilBeforeSendingAnyBytes) {
+    const game::SoilData invalid{
+            1, 1, {static_cast<game::SoilState>(99)}};
+
+    EXPECT_THROW(server_protocol.send_soil_state(invalid), std::invalid_argument);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, TransfersCropsPreservingCellsAndWaterNeeds) {
+    const game::CropsState expected{
+            {{{0, 2}, {game::CropType::Strawberry, true}},
+             {{1, 0}, {game::CropType::Strawberry, false}}}};
+
+    server_protocol.send_crops_state(expected);
+
+    const auto message = client_protocol.receive_message();
+    ASSERT_TRUE(message.has_value());
+    const auto* crops = std::get_if<game::CropsState>(&*message);
+    ASSERT_NE(crops, nullptr);
+    ASSERT_EQ(crops->crops.size(), 2u);
+
+    for (std::size_t index = 0; index < expected.crops.size(); ++index) {
+        EXPECT_EQ(crops->crops[index].cell.row, expected.crops[index].cell.row);
+        EXPECT_EQ(crops->crops[index].cell.column, expected.crops[index].cell.column);
+        EXPECT_EQ(crops->crops[index].state.type, expected.crops[index].state.type);
+        EXPECT_EQ(crops->crops[index].state.needs_water,
+                  expected.crops[index].state.needs_water);
+    }
+}
+
+TEST_F(ClientServerProtocolTest, TransfersAnEmptyCropsSnapshot) {
+    server_protocol.send_crops_state(game::CropsState{});
+
+    const auto message = client_protocol.receive_message();
+    ASSERT_TRUE(message.has_value());
+    const auto* crops = std::get_if<game::CropsState>(&*message);
+    ASSERT_NE(crops, nullptr);
+    EXPECT_TRUE(crops->crops.empty());
+}
+
+TEST_F(ClientServerProtocolTest, TransfersEveryUseItemResultFamily) {
+    const std::array<game::UseItemResult, 4> expected{
+            game::PrepareSoilResult::Accepted,
+            game::PlantCropResult::AlreadyPlanted,
+            game::WaterCropResult::AlreadyWatered,
+            game::UseItemError::OutOfReach};
+
+    for (const auto& result: expected) {
+        server_protocol.send_use_item_response(UseItemResponse{result});
+
+        const auto message = client_protocol.receive_message();
+        ASSERT_TRUE(message.has_value());
+        const auto* response = std::get_if<UseItemResponse>(&*message);
+        ASSERT_NE(response, nullptr);
+        EXPECT_EQ(response->result, result);
+    }
+}
+
+TEST_F(ClientServerProtocolTest, RejectsInvalidUseItemResultBeforeSendingBytes) {
+    const UseItemResponse invalid{static_cast<game::PlantCropResult>(99)};
+
+    EXPECT_THROW(server_protocol.send_use_item_response(invalid), std::invalid_argument);
+    connection.shutdown(SHUT_WR);
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedSoilWithInvalidDimensions) {
+    const std::array<std::uint8_t, 9> message{
+            0x0B, 0, 0, 0, 0, 0, 0, 0, 1};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 9);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedSoilWithUnknownState) {
+    const std::array<std::uint8_t, 10> message{
+            0x0B, 0, 0, 0, 1, 0, 0, 0, 1, 99};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 10);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedCropWithInvalidWaterFlag) {
+    const std::array<std::uint8_t, 15> message{
+            0x0C,
+            0, 0, 0, 1,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 2};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 15);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsTruncatedCropSnapshot) {
+    const std::array<std::uint8_t, 5> message{0x0C, 0, 0, 0, 1};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 5);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::runtime_error);
+}
+
+TEST_F(ClientServerProtocolTest, RejectsReceivedUseResultWithUnknownFamily) {
+    const std::array<std::uint8_t, 3> message{0x0D, 99, 0};
+
+    ASSERT_EQ(connection.sendall(message.data(), message.size()), 3);
+    connection.shutdown(SHUT_WR);
+
+    EXPECT_THROW(client_protocol.receive_message(), std::invalid_argument);
+}
+
+TEST_F(ClientServerProtocolTest, TransfersMovementUseCellAndStopInOrder) {
+    client_protocol.send_move(game::MoveRequest{{1, 0}});
+    client_protocol.send_use_cell(game::UseCellRequest{{2, 3}});
+    client_protocol.send_move(game::MoveRequest{{0, 0}});
+    client.shutdown(SHUT_WR);
+
+    const auto movement = server_protocol.receive_game_request();
+    ASSERT_TRUE(movement.has_value());
+    const auto* direction = std::get_if<game::MoveRequest>(&*movement);
+    ASSERT_NE(direction, nullptr);
+    EXPECT_EQ(direction->direction.horizontal, 1);
+    EXPECT_EQ(direction->direction.vertical, 0);
+
+    const auto use = server_protocol.receive_game_request();
+    ASSERT_TRUE(use.has_value());
+    const auto* cell = std::get_if<game::UseCellRequest>(&*use);
+    ASSERT_NE(cell, nullptr);
+    EXPECT_EQ(cell->cell.row, 2u);
+    EXPECT_EQ(cell->cell.column, 3u);
+
+    const auto stop = server_protocol.receive_game_request();
+    ASSERT_TRUE(stop.has_value());
+    const auto* stopped = std::get_if<game::MoveRequest>(&*stop);
+    ASSERT_NE(stopped, nullptr);
+    EXPECT_EQ(stopped->direction.horizontal, 0);
+    EXPECT_EQ(stopped->direction.vertical, 0);
+
+    EXPECT_FALSE(server_protocol.receive_game_request().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, RejectsUseItemResultsThatLoseInformationWhenEncoded) {
+    const std::array<int, 3> invalid_values{256, 257, -256};
+
+    for (const auto value: invalid_values) {
+        SCOPED_TRACE(value);
+
+        const std::array<game::UseItemResult, 4> results{
+                static_cast<game::PrepareSoilResult>(value),
+                static_cast<game::PlantCropResult>(value),
+                static_cast<game::WaterCropResult>(value),
+                static_cast<game::UseItemError>(value)};
+
+        for (const auto& result: results) {
+            EXPECT_THROW(server_protocol.send_use_item_response(UseItemResponse{result}),
+                         std::invalid_argument);
+        }
+    }
+
+    connection.shutdown(SHUT_WR);
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}

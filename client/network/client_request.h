@@ -8,5 +8,5 @@
 
 using ClientRequest =
         std::variant<CreateMatchRequest, JoinMatchRequest, game::MoveRequest,
-                     game::SelectSlotRequest>;
+                     game::SelectSlotRequest, game::UseCellRequest>;
 #endif

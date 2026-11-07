@@ -39,6 +39,21 @@ void ClientSender::send_message(const ServerMessage& message) {
         return;
     }
 
+    if (const auto* soil = std::get_if<game::SoilData>(&message)) {
+        protocol.send_soil_state(*soil);
+        return;
+    }
+
+    if (const auto* crops = std::get_if<game::CropsState>(&message)) {
+        protocol.send_crops_state(*crops);
+        return;
+    }
+
+    if (const auto* response = std::get_if<UseItemResponse>(&message)) {
+        protocol.send_use_item_response(*response);
+        return;
+    }
+
     protocol.send_game_state(std::get<game::GameState>(message));
 }
 

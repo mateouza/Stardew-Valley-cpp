@@ -8,11 +8,12 @@
 #include "player_command.h"
 #include "session_channel.h"
 #include "select_slot_command.h"
+#include "use_cell_command.h"
 
 struct AddPlayerCommand {
     std::string name;
     std::shared_ptr<SessionChannel> channel;
 };
 
-using MatchCommand = std::variant<PlayerCommand, AddPlayerCommand, SelectSlotCommand>;
+using MatchCommand = std::variant<PlayerCommand, AddPlayerCommand, SelectSlotCommand, UseCellCommand>;
 #endif

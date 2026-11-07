@@ -5,8 +5,9 @@
 #include <utility>
 
 Server::Server(const char* service, game::Map map, game::Position spawn_position,
-               game::WorldConfig config):
-        matches(std::move(map), spawn_position, config, COMMAND_CAPACITY, TICK_INTERVAL),
+               game::WorldConfig config, std::optional<game::Soil> soil):
+        matches(std::move(map), spawn_position, config, COMMAND_CAPACITY, TICK_INTERVAL,
+                std::move(soil)),
         acceptor(service, matches, OUTGOING_CAPACITY) {}
 
 void Server::run() {

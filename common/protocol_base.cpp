@@ -105,3 +105,31 @@ std::string ProtocolBase::receive_string(std::uint32_t max_length) {
 
     return value;
 }
+
+game::UseItemResult ProtocolBase::decode_use_item_result(std::uint8_t kind,
+                                                        std::uint8_t value) {
+    switch (kind) {
+        case USE_RESULT_PREPARE:
+            if (value <= static_cast<std::uint8_t>(game::PrepareSoilResult::ShovelNotSelected)) {
+                return static_cast<game::PrepareSoilResult>(value);
+            }
+            break;
+        case USE_RESULT_PLANT:
+            if (value <= static_cast<std::uint8_t>(game::PlantCropResult::InvalidCrop)) {
+                return static_cast<game::PlantCropResult>(value);
+            }
+            break;
+        case USE_RESULT_WATER:
+            if (value <= static_cast<std::uint8_t>(game::WaterCropResult::AlreadyWatered)) {
+                return static_cast<game::WaterCropResult>(value);
+            }
+            break;
+        case USE_RESULT_ERROR:
+            if (value <= static_cast<std::uint8_t>(game::UseItemError::UnsupportedItem)) {
+                return static_cast<game::UseItemError>(value);
+            }
+            break;
+    }
+
+    throw std::invalid_argument("El resultado de uso de objeto es invalido");
+}

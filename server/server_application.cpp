@@ -19,7 +19,8 @@ int ServerApplication::run(int argc, char* argv[]) {
         auto demo = game::make_demo_map();
         const game::WorldConfig config = game::load_world_config("config/world.toml");
 
-        Server server(argv[1], std::move(demo.map), demo.spawn_position, config);
+        Server server(argv[1], std::move(demo.map), demo.spawn_position, config,
+              std::move(demo.soil));
         server.run();
 
         return EXIT_SUCCESS;

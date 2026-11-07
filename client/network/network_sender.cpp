@@ -22,6 +22,10 @@ void NetworkSender::send_request(const ClientRequest& request) {
         protocol.send_select_slot(*selection);
         return;
     }
+    if (const auto* use_cell = std::get_if<game::UseCellRequest>(&request)) {
+        protocol.send_use_cell(*use_cell);
+        return;
+    }
 
     protocol.send_move(std::get<game::MoveRequest>(request));
 }

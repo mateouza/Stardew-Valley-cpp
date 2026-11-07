@@ -20,6 +20,9 @@ private:
     MatchResponse receive_match_response();
     game::GameInfo receive_game_info();
     game::InventoryState receive_inventory_state();
+    game::SoilData receive_soil_state();
+    game::CropsState receive_crops_state();
+    UseItemResponse receive_use_item_response();
 
 public:
     explicit ClientProtocol(Socket& socket);
@@ -29,6 +32,7 @@ public:
     void send_create_match(const CreateMatchRequest& request);
     void send_join_match(const JoinMatchRequest& request);
     void send_select_slot(const game::SelectSlotRequest& request);
+    void send_use_cell(const game::UseCellRequest& request);
 };
 
 #endif
