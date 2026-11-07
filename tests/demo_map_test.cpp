@@ -41,7 +41,8 @@ TEST(DemoMapTest, VerticalMovementStopsAtVisibleWall) {
 
 TEST(DemoMapTest, SupportsTwoPlayersMovingIndependently) {
     auto demo = make_demo_map();
-    World world(std::move(demo.map), demo.spawn_position, {2, 2.0, 0.6, 0.6});
+    World world(std::move(demo.map), demo.spawn_position, {2, 2.0, 0.6, 0.6},
+            std::move(demo.soil));
     const auto first_id = std::get<PlayerId>(world.add_player("Jose"));
     const auto second_id = std::get<PlayerId>(world.add_player("Mateo"));
 
@@ -57,6 +58,34 @@ TEST(DemoMapTest, SupportsTwoPlayersMovingIndependently) {
     EXPECT_EQ(state.players.at(1).id, second_id);
     EXPECT_DOUBLE_EQ(state.players.at(1).position.x, 2.5);
     EXPECT_DOUBLE_EQ(state.players.at(1).position.y, 3.5);
+}
+
+TEST(DemoMapTest, ProvidesCultivablePlotBesideSpawn) {
+    const auto demo = make_demo_map();
+
+    EXPECT_EQ(demo.soil.get_width(), demo.map.get_width());
+    EXPECT_EQ(demo.soil.get_height(), demo.map.get_height());
+    EXPECT_EQ(demo.soil.get_state(2, 3), SoilState::Unprepared);
+    EXPECT_EQ(demo.soil.get_state(2, 4), SoilState::Unprepared);
+    EXPECT_EQ(demo.soil.get_state(3, 3), SoilState::Unprepared);
+    EXPECT_EQ(demo.soil.get_state(3, 4), SoilState::Unprepared);
+    EXPECT_EQ(demo.soil.get_state(0, 0), SoilState::NotCultivable);
+    EXPECT_EQ(demo.soil.get_state(2, 2), SoilState::NotCultivable);
+    EXPECT_EQ(demo.soil.get_state(2, 5), SoilState::NotCultivable);
+}
+
+TEST(DemoMapTest, AllowsPreparingThePlotFromSpawnAndSharesTheResult) {
+    auto demo = make_demo_map();
+    World world(std::move(demo.map), demo.spawn_position, {2, 2.0, 0.6, 0.6},
+                std::move(demo.soil));
+    const auto first = std::get<PlayerId>(world.add_player("Jose"));
+    const auto second = std::get<PlayerId>(world.add_player("Mateo"));
+    ASSERT_EQ(world.select_slot(first, 2), SelectSlotResult::Accepted);
+    ASSERT_EQ(world.select_slot(second, 2), SelectSlotResult::Accepted);
+
+    EXPECT_EQ(world.prepare_soil(first, {2, 3}), PrepareSoilResult::Accepted);
+    EXPECT_EQ(world.prepare_soil(second, {2, 3}), PrepareSoilResult::AlreadyPrepared);
+    EXPECT_EQ(world.prepare_soil(first, {2, 2}), PrepareSoilResult::NotCultivable);
 }
 
 }

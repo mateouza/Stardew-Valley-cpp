@@ -8,18 +8,9 @@
 
 #include "inventory_state.h"
 #include "item.h"
+#include "game_results.h"
 
 namespace game {
-
-enum class InventoryResult {
-    Accepted,
-    InvalidItem,
-    InvalidQuantity,
-    InvalidSlot,
-    EmptySlot,
-    NotEnoughSpace,
-    NotEnoughItems,
-};
 
 class Inventory {
 private:

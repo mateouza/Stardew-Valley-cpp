@@ -102,4 +102,66 @@ TEST_F(SoilTest, RejectsQueriesOutsideEitherDimension) {
     EXPECT_THROW(soil.get_state(0, 3), std::out_of_range);
 }
 
+TEST_F(SoilTest, PlantsOnlyOnPreparedCultivableSoil) {
+    EXPECT_EQ(soil.plant(0, 0, CropType::Strawberry), PlantCropResult::SoilNotPrepared);
+    EXPECT_FALSE(soil.get_crop_state(0, 0).has_value());
+    EXPECT_EQ(soil.plant(0, 1, CropType::Strawberry), PlantCropResult::NotCultivable);
+    EXPECT_FALSE(soil.get_crop_state(0, 1).has_value());
+
+    ASSERT_EQ(soil.prepare(0, 0), PrepareSoilResult::Accepted);
+    ASSERT_EQ(soil.plant(0, 0, CropType::Strawberry), PlantCropResult::Accepted);
+    const auto crop = soil.get_crop_state(0, 0);
+    ASSERT_TRUE(crop.has_value());
+    EXPECT_EQ(crop->type, CropType::Strawberry);
+    EXPECT_TRUE(crop->needs_water);
+    EXPECT_EQ(soil.get_state(0, 0), SoilState::Prepared);
+    EXPECT_FALSE(soil.get_crop_state(1, 0).has_value());
+}
+
+TEST_F(SoilTest, RejectedPlantingPreservesTheExistingWateredCrop) {
+    ASSERT_EQ(soil.plant(0, 2, CropType::Strawberry), PlantCropResult::Accepted);
+    ASSERT_EQ(soil.water(0, 2), WaterCropResult::Accepted);
+
+    EXPECT_EQ(soil.plant(0, 2, CropType::Strawberry), PlantCropResult::AlreadyPlanted);
+    const auto crop = soil.get_crop_state(0, 2);
+    ASSERT_TRUE(crop.has_value());
+    EXPECT_FALSE(crop->needs_water);
+}
+
+TEST_F(SoilTest, WateringRequiresACropAndClearsItsCurrentNeed) {
+    EXPECT_EQ(soil.water(0, 2), WaterCropResult::NoCrop);
+    ASSERT_EQ(soil.plant(0, 2, CropType::Strawberry), PlantCropResult::Accepted);
+
+    EXPECT_EQ(soil.water(0, 2), WaterCropResult::Accepted);
+    EXPECT_EQ(soil.water(0, 2), WaterCropResult::AlreadyWatered);
+    EXPECT_EQ(soil.get_state(0, 2), SoilState::Prepared);
+}
+
+TEST_F(SoilTest, RejectsInvalidCropAndOutOfBoundsActions) {
+    const auto largest = std::numeric_limits<std::size_t>::max();
+    EXPECT_EQ(soil.plant(0, 2, static_cast<CropType>(99)), PlantCropResult::InvalidCrop);
+    EXPECT_EQ(soil.plant(2, 0, CropType::Strawberry), PlantCropResult::OutOfBounds);
+    EXPECT_EQ(soil.plant(0, 3, CropType::Strawberry), PlantCropResult::OutOfBounds);
+    EXPECT_EQ(soil.plant(largest, largest, CropType::Strawberry), PlantCropResult::OutOfBounds);
+    EXPECT_EQ(soil.water(2, 0), WaterCropResult::OutOfBounds);
+    EXPECT_EQ(soil.water(0, 3), WaterCropResult::OutOfBounds);
+    EXPECT_EQ(soil.water(largest, largest), WaterCropResult::OutOfBounds);
+    EXPECT_FALSE(soil.get_crop_state(0, 2).has_value());
+    EXPECT_EQ(soil.plant(0, 2, CropType::Strawberry), PlantCropResult::Accepted);
+}
+
+TEST_F(SoilTest, CropStateIsAnIndependentCopy) {
+    ASSERT_EQ(soil.plant(0, 2, CropType::Strawberry), PlantCropResult::Accepted);
+    auto copy = soil.get_crop_state(0, 2);
+    ASSERT_TRUE(copy.has_value());
+    copy->needs_water = false;
+
+    EXPECT_EQ(soil.water(0, 2), WaterCropResult::Accepted);
+}
+
+TEST_F(SoilTest, RejectsCropQueriesOutsideEitherDimension) {
+    EXPECT_THROW(soil.get_crop_state(2, 0), std::out_of_range);
+    EXPECT_THROW(soil.get_crop_state(0, 3), std::out_of_range);
+}
+
 }

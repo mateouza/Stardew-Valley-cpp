@@ -7,6 +7,17 @@
 
 namespace game {
 
+enum class InventoryResult {
+    Accepted,
+    InvalidItem,
+    InvalidQuantity,
+    InvalidSlot,
+    EmptySlot,
+    NotEnoughSpace,
+    NotEnoughItems,
+    UnknownPlayer,
+};
+
 enum class AddPlayerError {
     GameFull,
 };
@@ -44,6 +55,35 @@ enum class PrepareSoilResult {
     OutOfReach,
     ShovelNotSelected,
 };
+
+enum class PlantCropResult {
+    Accepted,
+    OutOfBounds,
+    NotCultivable,
+    SoilNotPrepared,
+    AlreadyPlanted,
+    InvalidCrop,
+};
+
+enum class WaterCropResult {
+    Accepted,
+    OutOfBounds,
+    NoCrop,
+    AlreadyWatered,
+};
+
+enum class UseItemError {
+    UnknownPlayer,
+    DisconnectedPlayer,
+    OutOfBounds,
+    NotCultivable,
+    OutOfReach,
+    NoItemSelected,
+    UnsupportedItem,
+};
+
+using UseItemResult =
+        std::variant<PrepareSoilResult, PlantCropResult, WaterCropResult, UseItemError>;
 
 }
 

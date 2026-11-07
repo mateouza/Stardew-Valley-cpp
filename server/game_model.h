@@ -5,11 +5,15 @@
 #include <string>
 #include <optional>
 #include <cstddef>
-#include "inventory_state.h"
+#include <vector>
 
+#include "inventory_state.h"
 #include "game_results.h"
 #include "game_state.h"
 #include "game_types.h"
+#include "soil_data.h"
+#include "crop_state.h"
+#include "item.h"
 
 namespace game {
 
@@ -34,6 +38,14 @@ public:
     virtual SelectSlotResult select_slot(PlayerId player_id, std::size_t slot) = 0;
 
     virtual PrepareSoilResult prepare_soil(PlayerId player_id, CellPosition cell) = 0;
+
+    virtual std::optional<SoilData> get_soil_state() const = 0;
+
+    virtual InventoryResult add_item(PlayerId player_id, ItemStack item) = 0;
+
+    virtual UseItemResult use_selected_item(PlayerId player_id, CellPosition cell) = 0;
+
+    virtual std::vector<CropData> get_crops_state() const = 0;
 };
 
 }
