@@ -34,6 +34,8 @@ public:
 
     std::optional<CropState> get_crop_state(std::size_t row, std::size_t column) const;
 
+    std::vector<CropData> get_crops_state() const;
+
     SoilData get_data() const;
 };
 

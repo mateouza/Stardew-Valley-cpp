@@ -101,9 +101,13 @@ SelectSlotResult World::select_slot(PlayerId player_id, std::size_t slot) {
                                                                    SelectSlotResult::InvalidSlot;
 }
 
-PrepareSoilResult World::prepare_soil(PlayerId player_id, CellPosition cell) {
+bool World::is_in_reach(Position position, CellPosition cell) {
     constexpr double MAX_REACH = 1.0;
+    return std::hypot(cell.column + 0.5 - position.x, cell.row + 0.5 - position.y) <= MAX_REACH;
+}
 
+PrepareSoilResult World::prepare_soil(PlayerId player_id, CellPosition cell) {
+    
     const auto entry = players.find(player_id);
     if (entry == players.end()) {
         return PrepareSoilResult::UnknownPlayer;
@@ -119,8 +123,7 @@ PrepareSoilResult World::prepare_soil(PlayerId player_id, CellPosition cell) {
         return PrepareSoilResult::NotCultivable;
     }
 
-    const auto position = player.get_position();
-    if (std::hypot(cell.column + 0.5 - position.x, cell.row + 0.5 - position.y) > MAX_REACH) {
+    if (!is_in_reach(player.get_position(), cell)) {
         return PrepareSoilResult::OutOfReach;
     }
 
@@ -136,6 +139,68 @@ std::optional<SoilData> World::get_soil_state() const {
         return std::nullopt;
     }
     return soil->get_data();
+}
+
+InventoryResult World::add_item(PlayerId player_id, ItemStack item) {
+    const auto entry = players.find(player_id);
+    if (entry == players.end()) {
+        return InventoryResult::UnknownPlayer;
+    }
+    return entry->second.add_item(item);
+}
+
+PlantCropResult World::plant_crop(Player& player, CellPosition cell) {
+    const auto result = soil->plant(cell.row, cell.column, CropType::Strawberry);
+    if (result == PlantCropResult::Accepted &&
+        player.remove_item(player.get_selected_slot(), 1) != InventoryResult::Accepted) {
+        throw std::logic_error("La semilla seleccionada debe existir al aceptar la plantacion");
+    }
+    return result;
+}
+
+UseItemResult World::apply_selected_item(Player& player, CellPosition cell) {
+    const auto item = player.get_selected_item();
+    if (!item) {
+        return UseItemError::NoItemSelected;
+    }
+    switch (item->type) {
+        case ItemType::Shovel:
+            return soil->prepare(cell.row, cell.column);
+        case ItemType::StrawberrySeed:
+            return plant_crop(player, cell);
+        case ItemType::WateringCan:
+            return soil->water(cell.row, cell.column);
+        default:
+            return UseItemError::UnsupportedItem;
+    }
+}
+
+UseItemResult World::use_selected_item(PlayerId player_id, CellPosition cell) {
+    const auto entry = players.find(player_id);
+    if (entry == players.end()) {
+        return UseItemError::UnknownPlayer;
+    }
+    auto& player = entry->second;
+    if (!player.is_connected()) {
+        return UseItemError::DisconnectedPlayer;
+    }
+    if (cell.row >= map.get_height() || cell.column >= map.get_width()) {
+        return UseItemError::OutOfBounds;
+    }
+    if (!soil) {
+        return UseItemError::NotCultivable;
+    }
+    if (!is_in_reach(player.get_position(), cell)) {
+        return UseItemError::OutOfReach;
+    }
+    return apply_selected_item(player, cell);
+}
+
+std::vector<CropData> World::get_crops_state() const {
+    if (!soil) {
+        return {};
+    }
+    return soil->get_crops_state();
 }
 
 

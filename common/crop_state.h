@@ -2,6 +2,7 @@
 #define COMMON_CROP_STATE_H_
 
 #include <cstdint>
+#include "game_types.h"
 
 namespace game {
 
@@ -12,6 +13,11 @@ enum class CropType : std::uint8_t {
 struct CropState {
     CropType type = CropType::Strawberry;
     bool needs_water = true;
+};
+
+struct CropData {
+    CellPosition cell;
+    CropState state;
 };
 
 }

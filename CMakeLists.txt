@@ -214,7 +214,9 @@ if(BUILD_TESTING)
 
     gtest_discover_tests(soil_tests)
 
-    add_executable(world_tests tests/world_test.cpp)
+    add_executable(world_tests
+    tests/world_test.cpp
+    tests/world_crop_test.cpp)
     target_link_libraries(world_tests PRIVATE server_model GTest::gtest_main)
     target_compile_options(world_tests PRIVATE -Wall -Wextra -Wpedantic)
 

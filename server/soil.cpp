@@ -117,6 +117,20 @@ std::optional<CropState> Soil::get_crop_state(std::size_t row, std::size_t colum
     return entry->second;
 }
 
+std::vector<CropData> Soil::get_crops_state() const {
+    std::vector<CropData> result;
+    result.reserve(crops.size());
+    for (const auto& [cell, state]: crops) {
+        if (!std::in_range<std::uint32_t>(cell.first) ||
+            !std::in_range<std::uint32_t>(cell.second)) {
+            throw std::overflow_error("La posicion del cultivo no entra en CropData");
+        }
+        result.push_back({{static_cast<std::uint32_t>(cell.first),
+                           static_cast<std::uint32_t>(cell.second)},
+                          state});
+    }
+    return result;
+}
 
 SoilState Soil::get_state(std::size_t row, std::size_t column) const {
     if (!contains(row, column)) {
