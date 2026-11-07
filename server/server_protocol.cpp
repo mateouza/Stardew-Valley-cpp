@@ -71,6 +71,8 @@ std::optional<game::GameRequest> ServerProtocol::receive_game_request() {
             const auto column = receive_uint32();
             return game::UseCellRequest{game::CellPosition{row, column}};
         }
+        case CHEAT_SEEDS_MESSAGE:
+            return game::CheatSeedsRequest{};
 
         default:
             throw std::runtime_error("Tipo de mensaje inesperado");
@@ -392,5 +394,23 @@ void ServerProtocol::send_use_item_response(const UseItemResponse& response) {
 
     const std::array<std::uint8_t, 3> message{
             USE_ITEM_RESPONSE_MESSAGE, kind, value};
+    send_bytes(message.data(), message.size());
+}
+
+void ServerProtocol::send_cheat_seeds_response(const CheatSeedsResponse& response) {
+    std::uint8_t status;
+
+    switch (response.result) {
+        case game::InventoryResult::Accepted:
+            status = CHEAT_SEEDS_ACCEPTED;
+            break;
+        case game::InventoryResult::NotEnoughSpace:
+            status = CHEAT_SEEDS_NO_SPACE;
+            break;
+        default:
+            throw std::invalid_argument("El resultado del cheat de semillas es invalido");
+    }
+
+    const std::array<std::uint8_t, 2> message{CHEAT_SEEDS_RESPONSE_MESSAGE, status};
     send_bytes(message.data(), message.size());
 }

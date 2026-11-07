@@ -53,6 +53,10 @@ void ClientSender::send_message(const ServerMessage& message) {
         protocol.send_use_item_response(*response);
         return;
     }
+    if (const auto* response = std::get_if<CheatSeedsResponse>(&message)) {
+        protocol.send_cheat_seeds_response(*response);
+        return;
+    }
 
     protocol.send_game_state(std::get<game::GameState>(message));
 }

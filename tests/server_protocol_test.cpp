@@ -1522,3 +1522,35 @@ TEST_F(ClientServerProtocolTest, RejectsUseItemResultsThatLoseInformationWhenEnc
     connection.shutdown(SHUT_WR);
     EXPECT_FALSE(client_protocol.receive_message().has_value());
 }
+
+TEST_F(ClientServerProtocolTest, TransfersCheatSeedsWithoutConsumingFollowingMovement) {
+    client_protocol.send_cheat_seeds();
+    client_protocol.send_move(game::MoveRequest{{0, 0}});
+    client.shutdown(SHUT_WR);
+
+    const auto cheat = server_protocol.receive_game_request();
+    ASSERT_TRUE(cheat.has_value());
+    EXPECT_TRUE(std::holds_alternative<game::CheatSeedsRequest>(*cheat));
+
+    const auto movement = server_protocol.receive_game_request();
+    ASSERT_TRUE(movement.has_value());
+    const auto* stop = std::get_if<game::MoveRequest>(&*movement);
+    ASSERT_NE(stop, nullptr);
+    EXPECT_EQ(stop->direction.horizontal, 0);
+    EXPECT_EQ(stop->direction.vertical, 0);
+
+    EXPECT_FALSE(server_protocol.receive_game_request().has_value());
+}
+
+TEST_F(ClientServerProtocolTest, TransfersCheatSeedsAcceptanceAndRejection) {
+    for (const auto expected: {game::InventoryResult::Accepted,
+                              game::InventoryResult::NotEnoughSpace}) {
+        server_protocol.send_cheat_seeds_response(CheatSeedsResponse{expected});
+
+        const auto message = client_protocol.receive_message();
+        ASSERT_TRUE(message.has_value());
+        const auto* response = std::get_if<CheatSeedsResponse>(&*message);
+        ASSERT_NE(response, nullptr);
+        EXPECT_EQ(response->result, expected);
+    }
+}

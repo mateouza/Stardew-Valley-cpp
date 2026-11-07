@@ -43,6 +43,10 @@ protected:
     static constexpr std::uint8_t USE_RESULT_PLANT = 0x01;
     static constexpr std::uint8_t USE_RESULT_WATER = 0x02;
     static constexpr std::uint8_t USE_RESULT_ERROR = 0x03;
+    static constexpr std::uint8_t CHEAT_SEEDS_MESSAGE = 0x0E;
+    static constexpr std::uint8_t CHEAT_SEEDS_RESPONSE_MESSAGE = 0x0F;
+    static constexpr std::uint8_t CHEAT_SEEDS_ACCEPTED = 0x00;
+    static constexpr std::uint8_t CHEAT_SEEDS_NO_SPACE = 0x01;
 
     game::UseItemResult decode_use_item_result(std::uint8_t kind, std::uint8_t value);
 

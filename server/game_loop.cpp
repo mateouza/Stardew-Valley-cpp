@@ -176,6 +176,8 @@ void GameLoop::process_commands() {
             process_selection(*selection);
         }  else if (const auto* use_cell = std::get_if<UseCellCommand>(&command)) {
             process_use_cell(*use_cell);
+        } else if (const auto* cheat = std::get_if<CheatSeedsCommand>(&command)) {
+            process_cheat_seeds(*cheat);
         }
     }
 }
@@ -318,5 +320,30 @@ void GameLoop::send_farm_state(SessionChannel& channel) {
 
     if (!channel.is_closing()) {
         send_to_channel(game::CropsState{model.get_crops_state()}, channel);
+    }
+}
+
+void GameLoop::process_cheat_seeds(const CheatSeedsCommand& command) {
+    constexpr std::uint32_t SEED_QUANTITY = 10;
+
+    const auto session = sessions.find(command.session_id);
+    if (session == sessions.end() || session->second.channel->is_closing()) {
+        return;
+    }
+
+    const auto player_id = session->second.player_id;
+    auto& channel = *session->second.channel;
+    const auto result = model.add_item(
+            player_id, {game::ItemType::StrawberrySeed, game::ItemQuality::Base, SEED_QUANTITY});
+
+    if (result != game::InventoryResult::Accepted &&
+        result != game::InventoryResult::NotEnoughSpace) {
+        throw std::logic_error("El cheat no pudo agregar un objeto valido al jugador registrado");
+    }
+
+    send_to_channel(CheatSeedsResponse{result}, channel);
+
+    if (result == game::InventoryResult::Accepted) {
+        send_inventory(player_id, channel);
     }
 }

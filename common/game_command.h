@@ -18,7 +18,10 @@ struct UseCellRequest {
     CellPosition cell;
 };
 
-using GameRequest = std::variant<MoveRequest, SelectSlotRequest, UseCellRequest>;
+struct CheatSeedsRequest {};
+
+using GameRequest =
+        std::variant<MoveRequest, SelectSlotRequest, UseCellRequest, CheatSeedsRequest>;
 }
 
 #endif
