@@ -386,7 +386,9 @@ void ServerProtocol::send_use_item_response(const UseItemResponse& response) {
         value = static_cast<std::uint8_t>(std::get<game::UseItemError>(response.result));
     }
 
-    decode_use_item_result(kind, value);
+    if (decode_use_item_result(kind, value) != response.result) {
+        throw std::invalid_argument("El resultado de uso de objeto es invalido");
+    }
 
     const std::array<std::uint8_t, 3> message{
             USE_ITEM_RESPONSE_MESSAGE, kind, value};

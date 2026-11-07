@@ -1500,3 +1500,25 @@ TEST_F(ClientServerProtocolTest, TransfersMovementUseCellAndStopInOrder) {
 
     EXPECT_FALSE(server_protocol.receive_game_request().has_value());
 }
+
+TEST_F(ClientServerProtocolTest, RejectsUseItemResultsThatLoseInformationWhenEncoded) {
+    const std::array<int, 3> invalid_values{256, 257, -256};
+
+    for (const auto value: invalid_values) {
+        SCOPED_TRACE(value);
+
+        const std::array<game::UseItemResult, 4> results{
+                static_cast<game::PrepareSoilResult>(value),
+                static_cast<game::PlantCropResult>(value),
+                static_cast<game::WaterCropResult>(value),
+                static_cast<game::UseItemError>(value)};
+
+        for (const auto& result: results) {
+            EXPECT_THROW(server_protocol.send_use_item_response(UseItemResponse{result}),
+                         std::invalid_argument);
+        }
+    }
+
+    connection.shutdown(SHUT_WR);
+    EXPECT_FALSE(client_protocol.receive_message().has_value());
+}
