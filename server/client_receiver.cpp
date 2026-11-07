@@ -32,8 +32,11 @@ void ClientReceiver::run() {
                 command = PlayerCommand{session_id, *movement};
             } else if (const auto* selection = std::get_if<game::SelectSlotRequest>(&*request)) {
                 command = SelectSlotCommand{session_id, *selection};
+            } else if (const auto* use_cell = std::get_if<game::UseCellRequest>(&*request)) {
+                command = UseCellCommand{session_id, *use_cell};
             } else {
-                command = UseCellCommand{session_id, std::get<game::UseCellRequest>(*request)};
+                std::get<game::CheatSeedsRequest>(*request);
+                command = CheatSeedsCommand{session_id};
             }
 
             if (!commands.try_push(command)) {

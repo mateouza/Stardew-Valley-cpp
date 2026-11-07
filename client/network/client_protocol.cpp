@@ -129,6 +129,8 @@ std::optional<ServerMessage> ClientProtocol::receive_message() {
             return ServerMessage{receive_crops_state()};
         case USE_ITEM_RESPONSE_MESSAGE:
             return ServerMessage{receive_use_item_response()};
+        case CHEAT_SEEDS_RESPONSE_MESSAGE:
+            return ServerMessage{receive_cheat_seeds_response()};
         default:
             throw std::runtime_error("Tipo de mensaje recibido inesperado");
     }
@@ -364,4 +366,23 @@ UseItemResponse ClientProtocol::receive_use_item_response() {
     std::array<std::uint8_t, 2> result{};
     receive_bytes(result.data(), result.size());
     return UseItemResponse{decode_use_item_result(result[0], result[1])};
+}
+
+void ClientProtocol::send_cheat_seeds() {
+    const std::uint8_t message_type = CHEAT_SEEDS_MESSAGE;
+    send_bytes(&message_type, sizeof(message_type));
+}
+
+CheatSeedsResponse ClientProtocol::receive_cheat_seeds_response() {
+    std::uint8_t status{};
+    receive_bytes(&status, sizeof(status));
+
+    switch (status) {
+        case CHEAT_SEEDS_ACCEPTED:
+            return CheatSeedsResponse{game::InventoryResult::Accepted};
+        case CHEAT_SEEDS_NO_SPACE:
+            return CheatSeedsResponse{game::InventoryResult::NotEnoughSpace};
+        default:
+            throw std::runtime_error("El resultado recibido del cheat es invalido");
+    }
 }

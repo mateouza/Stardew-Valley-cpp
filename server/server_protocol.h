@@ -34,6 +34,7 @@ public:
     void send_soil_state(const game::SoilData& state);
     void send_crops_state(const game::CropsState& state);
     void send_use_item_response(const UseItemResponse& response);
+    void send_cheat_seeds_response(const CheatSeedsResponse& response);
 };
 
 #endif

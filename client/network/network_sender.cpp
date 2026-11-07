@@ -26,6 +26,10 @@ void NetworkSender::send_request(const ClientRequest& request) {
         protocol.send_use_cell(*use_cell);
         return;
     }
+    if (std::holds_alternative<game::CheatSeedsRequest>(request)) {
+        protocol.send_cheat_seeds();
+        return;
+    }
 
     protocol.send_move(std::get<game::MoveRequest>(request));
 }

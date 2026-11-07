@@ -23,6 +23,7 @@ private:
     game::SoilData receive_soil_state();
     game::CropsState receive_crops_state();
     UseItemResponse receive_use_item_response();
+    CheatSeedsResponse receive_cheat_seeds_response();
 
 public:
     explicit ClientProtocol(Socket& socket);
@@ -33,6 +34,7 @@ public:
     void send_join_match(const JoinMatchRequest& request);
     void send_select_slot(const game::SelectSlotRequest& request);
     void send_use_cell(const game::UseCellRequest& request);
+    void send_cheat_seeds();
 };
 
 #endif

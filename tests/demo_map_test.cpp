@@ -14,9 +14,9 @@ TEST(DemoMapTest, HorizontalMovementStopsAtVisibleWall) {
     const auto demo = make_demo_map();
     const auto data = demo.map.get_data();
 
-    ASSERT_EQ(data.width, 10u);
-    ASSERT_EQ(data.height, 10u);
-    ASSERT_EQ(data.tiles.size(), 100u);
+    ASSERT_EQ(data.width, 50u);
+    ASSERT_EQ(data.height, 40u);
+    ASSERT_EQ(data.tiles.size(), 2000u);
     EXPECT_EQ(data.tiles.at(2 * data.width + 5), TileType::Blocked);
 
     const auto position = demo.map.resolve_movement(demo.spawn_position, {8.5, 2.5}, 0.6, 0.6);

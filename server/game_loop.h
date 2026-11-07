@@ -43,6 +43,7 @@ private:
     void close_pending_channels();
     void process_selection(const SelectSlotCommand& command);
     void process_use_cell(const UseCellCommand& command);
+    void process_cheat_seeds(const CheatSeedsCommand& command);
     void send_inventory(game::PlayerId player_id, SessionChannel& channel);
     void send_to_channel(const ServerMessage& message, SessionChannel& channel);
     void publish_message(const ServerMessage& message);
