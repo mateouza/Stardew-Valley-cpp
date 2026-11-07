@@ -4,9 +4,10 @@
 #include <utility>
 
 Match::Match(game::Map map, game::Position spawn_position, game::WorldConfig config,
-             unsigned int command_capacity, std::chrono::milliseconds tick_interval):
+             unsigned int command_capacity, std::chrono::milliseconds tick_interval,
+             std::optional<game::Soil> soil):
         game_info{map.get_data(), config.player_width, config.player_height},
-        model(std::move(map), spawn_position, config),
+        model(std::move(map), spawn_position, config, std::move(soil)),
         commands(command_capacity),
         game_loop(model, commands, tick_interval, game_info) {
     if (command_capacity == 0) {

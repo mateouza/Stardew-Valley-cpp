@@ -2,12 +2,14 @@
 #define MATCH_H
 
 #include <chrono>
+#include <optional>
 
 #include "game_info.h"
 #include "game_loop.h"
 #include "match_command.h"
 #include "queue.h"
 #include "world.h"
+#include "soil.h"
 
 class Match {
 private:
@@ -21,7 +23,8 @@ private:
 
 public:
     Match(game::Map map, game::Position spawn_position, game::WorldConfig config,
-          unsigned int command_capacity, std::chrono::milliseconds tick_interval);
+      unsigned int command_capacity, std::chrono::milliseconds tick_interval,
+      std::optional<game::Soil> soil = std::nullopt);
 
     ~Match();
     void start();

@@ -2,9 +2,11 @@
 #define SERVER_H
 
 #include <chrono>
+#include <optional>
 
 #include "acceptor.h"
 #include "match_manager.h"
+#include "soil.h"
 
 class Server {
 private:
@@ -17,7 +19,7 @@ private:
 
 public:
     Server(const char* service, game::Map map, game::Position spawn_position,
-           game::WorldConfig config);
+       game::WorldConfig config, std::optional<game::Soil> soil = std::nullopt);
 
     void run();
 };

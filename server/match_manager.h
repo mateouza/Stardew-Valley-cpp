@@ -11,6 +11,7 @@
 #include <string>
 
 #include "match.h"
+#include "soil.h"
 
 struct ManagedMatch {
     std::string name;
@@ -21,6 +22,7 @@ struct ManagedMatch {
 class MatchManager {
 private:
     game::Map initial_map;
+    std::optional<game::Soil> initial_soil;
     game::Position spawn_position;
     game::WorldConfig config;
     unsigned int command_capacity;
@@ -34,7 +36,8 @@ private:
 
 public:
     MatchManager(game::Map initial_map, game::Position spawn_position, game::WorldConfig config,
-                 unsigned int command_capacity, std::chrono::milliseconds tick_interval);
+             unsigned int command_capacity, std::chrono::milliseconds tick_interval,
+             std::optional<game::Soil> initial_soil = std::nullopt);
 
     ~MatchManager();
 

@@ -6,8 +6,10 @@
 
 MatchManager::MatchManager(game::Map initial_map, game::Position spawn_position,
                            game::WorldConfig config, unsigned int command_capacity,
-                           std::chrono::milliseconds tick_interval):
+                           std::chrono::milliseconds tick_interval,
+                           std::optional<game::Soil> initial_soil):
         initial_map(std::move(initial_map)),
+        initial_soil(std::move(initial_soil)),
         spawn_position(spawn_position),
         config(config),
         command_capacity(command_capacity),
@@ -40,7 +42,7 @@ ManagedMatch MatchManager::create_match(const std::string& name) {
 
     const auto code = std::to_string(next_code);
     auto match = std::make_shared<Match>(initial_map, spawn_position, config, command_capacity,
-                                         tick_interval);
+                                     tick_interval, initial_soil);
 
     ManagedMatch entry{name, code, std::move(match)};
     const auto inserted = matches.emplace(code, entry);
