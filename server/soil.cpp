@@ -1,8 +1,8 @@
 #include "soil.h"
 
+#include <cstdint>
 #include <stdexcept>
 #include <utility>
-#include <cstdint>
 
 namespace game {
 
@@ -70,6 +70,53 @@ PrepareSoilResult Soil::prepare(std::size_t row, std::size_t column) {
     state = SoilState::Prepared;
     return PrepareSoilResult::Accepted;
 }
+
+
+PlantCropResult Soil::plant(std::size_t row, std::size_t column, CropType type) {
+    if (!contains(row, column)) {
+        return PlantCropResult::OutOfBounds;
+    }
+    if (type != CropType::Strawberry) {
+        return PlantCropResult::InvalidCrop;
+    }
+    if (cells[row][column] == SoilState::NotCultivable) {
+        return PlantCropResult::NotCultivable;
+    }
+    if (cells[row][column] != SoilState::Prepared) {
+        return PlantCropResult::SoilNotPrepared;
+    }
+    if (!crops.emplace(std::make_pair(row, column), CropState{type}).second) {
+        return PlantCropResult::AlreadyPlanted;
+    }
+    return PlantCropResult::Accepted;
+}
+
+WaterCropResult Soil::water(std::size_t row, std::size_t column) {
+    if (!contains(row, column)) {
+        return WaterCropResult::OutOfBounds;
+    }
+    const auto entry = crops.find({row, column});
+    if (entry == crops.end()) {
+        return WaterCropResult::NoCrop;
+    }
+    if (!entry->second.needs_water) {
+        return WaterCropResult::AlreadyWatered;
+    }
+    entry->second.needs_water = false;
+    return WaterCropResult::Accepted;
+}
+
+std::optional<CropState> Soil::get_crop_state(std::size_t row, std::size_t column) const {
+    if (!contains(row, column)) {
+        throw std::out_of_range("La celda consultada esta fuera del suelo");
+    }
+    const auto entry = crops.find({row, column});
+    if (entry == crops.end()) {
+        return std::nullopt;
+    }
+    return entry->second;
+}
+
 
 SoilState Soil::get_state(std::size_t row, std::size_t column) const {
     if (!contains(row, column)) {

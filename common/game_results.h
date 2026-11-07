@@ -45,6 +45,22 @@ enum class PrepareSoilResult {
     ShovelNotSelected,
 };
 
+enum class PlantCropResult {
+    Accepted,
+    OutOfBounds,
+    NotCultivable,
+    SoilNotPrepared,
+    AlreadyPlanted,
+    InvalidCrop,
+};
+
+enum class WaterCropResult {
+    Accepted,
+    OutOfBounds,
+    NoCrop,
+    AlreadyWatered,
+};
+
 }
 
 #endif
