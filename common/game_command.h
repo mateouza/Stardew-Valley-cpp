@@ -14,9 +14,11 @@ struct MoveRequest {
 struct SelectSlotRequest {
     std::uint8_t slot;
 };
+struct UseCellRequest {
+    CellPosition cell;
+};
 
-using GameRequest = std::variant<MoveRequest, SelectSlotRequest>;
-
+using GameRequest = std::variant<MoveRequest, SelectSlotRequest, UseCellRequest>;
 }
 
 #endif

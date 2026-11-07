@@ -25,13 +25,15 @@ void ClientReceiver::run() {
                 break;
             }
 
+            const auto session_id = channel->get_session_id();
             MatchCommand command;
 
             if (const auto* movement = std::get_if<game::MoveRequest>(&*request)) {
-                command = PlayerCommand{channel->get_session_id(), *movement};
+                command = PlayerCommand{session_id, *movement};
+            } else if (const auto* selection = std::get_if<game::SelectSlotRequest>(&*request)) {
+                command = SelectSlotCommand{session_id, *selection};
             } else {
-                command = SelectSlotCommand{
-                        channel->get_session_id(), std::get<game::SelectSlotRequest>(*request)};
+                command = UseCellCommand{session_id, std::get<game::UseCellRequest>(*request)};
             }
 
             if (!commands.try_push(command)) {

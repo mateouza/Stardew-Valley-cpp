@@ -6,6 +6,7 @@
 #include <string>
 
 #include "socket.h"
+#include "game_results.h"
 
 class ProtocolBase {
 private:
@@ -34,6 +35,16 @@ protected:
     static constexpr std::uint8_t INVENTORY_SLOT_EMPTY = 0x00;
     static constexpr std::uint8_t INVENTORY_SLOT_OCCUPIED = 0x01;
     static constexpr std::uint8_t SELECT_SLOT_MESSAGE = 0x09;
+    static constexpr std::uint8_t USE_CELL_MESSAGE = 0x0A;
+    static constexpr std::uint8_t SOIL_STATE_MESSAGE = 0x0B;
+    static constexpr std::uint8_t CROPS_STATE_MESSAGE = 0x0C;
+    static constexpr std::uint8_t USE_ITEM_RESPONSE_MESSAGE = 0x0D;
+    static constexpr std::uint8_t USE_RESULT_PREPARE = 0x00;
+    static constexpr std::uint8_t USE_RESULT_PLANT = 0x01;
+    static constexpr std::uint8_t USE_RESULT_WATER = 0x02;
+    static constexpr std::uint8_t USE_RESULT_ERROR = 0x03;
+
+    game::UseItemResult decode_use_item_result(std::uint8_t kind, std::uint8_t value);
 
     explicit ProtocolBase(Socket& socket);
     ~ProtocolBase() = default;

@@ -31,6 +31,13 @@ void ClientProtocol::send_select_slot(const game::SelectSlotRequest& request) {
     send_bytes(message.data(), message.size());
 }
 
+void ClientProtocol::send_use_cell(const game::UseCellRequest& request) {
+    const std::uint8_t message_type = USE_CELL_MESSAGE;
+    send_bytes(&message_type, sizeof(message_type));
+    send_uint32(request.cell.row);
+    send_uint32(request.cell.column);
+}
+
 std::int8_t ClientProtocol::decode_direction(std::uint8_t value) {
     switch (value) {
         case 0x00:
@@ -116,6 +123,12 @@ std::optional<ServerMessage> ClientProtocol::receive_message() {
             return ServerMessage{receive_game_info()};
         case INVENTORY_STATE_MESSAGE:
             return ServerMessage{receive_inventory_state()};
+        case SOIL_STATE_MESSAGE:
+            return ServerMessage{receive_soil_state()};
+        case CROPS_STATE_MESSAGE:
+            return ServerMessage{receive_crops_state()};
+        case USE_ITEM_RESPONSE_MESSAGE:
+            return ServerMessage{receive_use_item_response()};
         default:
             throw std::runtime_error("Tipo de mensaje recibido inesperado");
     }
@@ -283,4 +296,72 @@ game::InventoryState ClientProtocol::receive_inventory_state() {
     }
 
     return state;
+}
+
+game::SoilData ClientProtocol::receive_soil_state() {
+    game::SoilData state;
+    state.width = receive_uint32();
+    state.height = receive_uint32();
+
+    if (state.width == 0 || state.height == 0 ||
+        state.width > MAX_MAP_CELLS / state.height) {
+        throw std::runtime_error("Las dimensiones del suelo recibido son invalidas");
+    }
+
+    const auto count = static_cast<std::size_t>(state.width) * state.height;
+    std::vector<std::uint8_t> cells(count);
+    receive_bytes(cells.data(), static_cast<unsigned int>(cells.size()));
+
+    state.cells.reserve(count);
+    for (const auto value: cells) {
+        switch (value) {
+            case static_cast<std::uint8_t>(game::SoilState::NotCultivable):
+            case static_cast<std::uint8_t>(game::SoilState::Unprepared):
+            case static_cast<std::uint8_t>(game::SoilState::Prepared):
+                state.cells.push_back(static_cast<game::SoilState>(value));
+                break;
+            default:
+                throw std::runtime_error("El estado del suelo recibido es invalido");
+        }
+    }
+
+    return state;
+}
+
+game::CropsState ClientProtocol::receive_crops_state() {
+    const auto count = receive_uint32();
+    if (count > MAX_MAP_CELLS) {
+        throw std::runtime_error("La cantidad de cultivos recibida supera el limite");
+    }
+
+    game::CropsState state;
+    state.crops.reserve(count);
+
+    for (std::uint32_t index = 0; index < count; ++index) {
+        game::CropData crop;
+        crop.cell.row = receive_uint32();
+        crop.cell.column = receive_uint32();
+
+        std::array<std::uint8_t, 2> details{};
+        receive_bytes(details.data(), details.size());
+
+        if (details[0] != static_cast<std::uint8_t>(game::CropType::Strawberry)) {
+            throw std::runtime_error("El tipo de cultivo recibido es invalido");
+        }
+        if (details[1] > 1) {
+            throw std::runtime_error("El indicador de riego recibido es invalido");
+        }
+
+        crop.state.type = static_cast<game::CropType>(details[0]);
+        crop.state.needs_water = details[1] == 1;
+        state.crops.push_back(crop);
+    }
+
+    return state;
+}
+
+UseItemResponse ClientProtocol::receive_use_item_response() {
+    std::array<std::uint8_t, 2> result{};
+    receive_bytes(result.data(), result.size());
+    return UseItemResponse{decode_use_item_result(result[0], result[1])};
 }

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "game_types.h"
+#include <vector>
 
 namespace game {
 
@@ -18,6 +19,10 @@ struct CropState {
 struct CropData {
     CellPosition cell;
     CropState state;
+};
+
+struct CropsState {
+    std::vector<CropData> crops;
 };
 
 }
