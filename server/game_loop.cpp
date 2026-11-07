@@ -54,6 +54,10 @@ void GameLoop::process_add_player(const AddPlayerCommand& command) {
                 }
 
                 send_inventory(*player_id, *channel);
+
+                if (!channel->is_closing()) {
+                    send_farm_state(*channel);
+                }
             }
         } catch (const ClosedQueue&) {
             channel->request_close();
@@ -97,13 +101,7 @@ void GameLoop::send_inventory(game::PlayerId player_id, SessionChannel& channel)
         throw std::logic_error("La sesion no tiene un jugador registrado");
     }
 
-    try {
-        if (!channel.get_outgoing_queue().try_push(*inventory)) {
-            channel.request_close();
-        }
-    } catch (const ClosedQueue&) {
-        channel.request_close();
-    }
+    send_to_channel(*inventory, channel);
 }
 
 void GameLoop::process_selection(const SelectSlotCommand& command) {
@@ -115,6 +113,45 @@ void GameLoop::process_selection(const SelectSlotCommand& command) {
     const auto player_id = session->second.player_id;
     if (model.select_slot(player_id, command.request.slot) == game::SelectSlotResult::Accepted) {
         send_inventory(player_id, *session->second.channel);
+    }
+}
+
+void GameLoop::process_use_cell(const UseCellCommand& command) {
+    const auto session = sessions.find(command.session_id);
+    if (session == sessions.end() || session->second.channel->is_closing()) {
+        return;
+    }
+
+    const auto player_id = session->second.player_id;
+    auto& channel = *session->second.channel;
+    const auto result = model.use_selected_item(player_id, command.request.cell);
+
+    send_to_channel(UseItemResponse{result}, channel);
+
+    if (const auto* prepare = std::get_if<game::PrepareSoilResult>(&result)) {
+        if (*prepare == game::PrepareSoilResult::Accepted) {
+            const auto soil = model.get_soil_state();
+            if (!soil) {
+                throw std::logic_error("Una preparacion aceptada debe tener suelo");
+            }
+
+            publish_message(*soil);
+        }
+        return;
+    }
+
+    if (const auto* plant = std::get_if<game::PlantCropResult>(&result)) {
+        if (*plant == game::PlantCropResult::Accepted) {
+            send_inventory(player_id, channel);
+            publish_message(game::CropsState{model.get_crops_state()});
+        }
+        return;
+    }
+
+    if (const auto* water = std::get_if<game::WaterCropResult>(&result)) {
+        if (*water == game::WaterCropResult::Accepted) {
+            publish_message(game::CropsState{model.get_crops_state()});
+        }
     }
 }
 
@@ -137,6 +174,8 @@ void GameLoop::process_commands() {
             process_add_player(*entry);
         } else if (const auto* selection = std::get_if<SelectSlotCommand>(&command)) {
             process_selection(*selection);
+        }  else if (const auto* use_cell = std::get_if<UseCellCommand>(&command)) {
+            process_use_cell(*use_cell);
         }
     }
 }
@@ -219,26 +258,8 @@ void GameLoop::close_sessions() {
 }
 
 void GameLoop::publish_state() {
-    if (sessions.empty()) {
-        return;
-    }
-
-    const ServerMessage message = model.get_state();
-
-    for (const auto& session: sessions) {
-        const auto& channel = session.second.channel;
-
-        if (channel->is_closing()) {
-            continue;
-        }
-
-        try {
-            if (!channel->get_outgoing_queue().try_push(message)) {
-                channel->request_close();
-            }
-        } catch (const ClosedQueue&) {
-            channel->request_close();
-        }
+    if (!sessions.empty()) {
+        publish_message(model.get_state());
     }
 }
 
@@ -264,5 +285,38 @@ void GameLoop::stop() {
 void GameLoop::rethrow_if_failed() const {
     if (failure) {
         std::rethrow_exception(failure);
+    }
+}
+
+void GameLoop::send_to_channel(const ServerMessage& message, SessionChannel& channel) {
+    if (channel.is_closing()) {
+        return;
+    }
+
+    try {
+        if (!channel.get_outgoing_queue().try_push(message)) {
+            channel.request_close();
+        }
+    } catch (const ClosedQueue&) {
+        channel.request_close();
+    }
+}
+
+void GameLoop::publish_message(const ServerMessage& message) {
+    for (const auto& entry: sessions) {
+        send_to_channel(message, *entry.second.channel);
+    }
+}
+
+void GameLoop::send_farm_state(SessionChannel& channel) {
+    const auto soil = model.get_soil_state();
+    if (!soil) {
+        return;
+    }
+
+    send_to_channel(*soil, channel);
+
+    if (!channel.is_closing()) {
+        send_to_channel(game::CropsState{model.get_crops_state()}, channel);
     }
 }

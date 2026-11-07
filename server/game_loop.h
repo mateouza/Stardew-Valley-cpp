@@ -14,6 +14,7 @@
 #include "session_channel.h"
 #include "session_id.h"
 #include "thread.h"
+#include "server_message.h"
 
 class GameLoop: public Thread {
 private:
@@ -41,7 +42,11 @@ private:
     void publish_state();
     void close_pending_channels();
     void process_selection(const SelectSlotCommand& command);
+    void process_use_cell(const UseCellCommand& command);
     void send_inventory(game::PlayerId player_id, SessionChannel& channel);
+    void send_to_channel(const ServerMessage& message, SessionChannel& channel);
+    void publish_message(const ServerMessage& message);
+    void send_farm_state(SessionChannel& channel);
 
 public:
     GameLoop(game::GameModel& model, Queue<MatchCommand>& commands,

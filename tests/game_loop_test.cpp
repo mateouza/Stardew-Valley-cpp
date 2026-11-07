@@ -285,9 +285,11 @@ private:
     std::size_t updates = 0;
 
 public:
-    explicit PublishingWorld(std::size_t max_players = 1):
+    explicit PublishingWorld(std::size_t max_players = 1,
+                         std::optional<game::Soil> soil = std::nullopt):
         game::World(game::Map{{{game::TileType::Walkable, game::TileType::Walkable}}},
-                    {0.5, 0.5}, game::WorldConfig{max_players, 1.0, 0.5, 0.5}) {}
+                    {0.5, 0.5}, game::WorldConfig{max_players, 1.0, 0.5, 0.5},
+                    std::move(soil)) {}
 
     void update_world(std::chrono::duration<double> elapsed) override {
         ++updates;
@@ -395,6 +397,195 @@ TEST(GameLoopTest, SendsUpdatedInventoryOnlyToSelectingSession) {
     ASSERT_TRUE(second_outgoing.try_pop(message));
     ASSERT_TRUE(std::holds_alternative<game::GameState>(message));
     EXPECT_THROW(second_outgoing.try_pop(message), ClosedQueue);
+}
+
+TEST(GameLoopTest, PublishesPreparedSoilAndRepliesToRejectedUseOnlyToOwner) {
+    PublishingWorld world{2, game::Soil{{{game::SoilState::Unprepared,
+                                        game::SoilState::Unprepared}}}};
+    Queue<MatchCommand> commands(16);
+    auto first = std::make_shared<SessionChannel>(7, 16);
+    auto second = std::make_shared<SessionChannel>(8, 16);
+    const game::GameInfo info{
+            {2, 1, {game::TileType::Walkable, game::TileType::Walkable}}, 0.5, 0.5};
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", first}));
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Jose", second}));
+    ASSERT_TRUE(commands.try_push(SelectSlotCommand{7, game::SelectSlotRequest{2}}));
+    ASSERT_TRUE(commands.try_push(UseCellCommand{7, game::UseCellRequest{{0, 1}}}));
+    ASSERT_TRUE(commands.try_push(UseCellCommand{7, game::UseCellRequest{{0, 1}}}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{20}, info);
+    game_loop.start();
+    game_loop.join();
+
+    for (const auto& channel: {first, second}) {
+        std::size_t soil_messages = 0;
+        std::size_t responses = 0;
+        ServerMessage message;
+
+        try {
+            while (channel->get_outgoing_queue().try_pop(message)) {
+                if (const auto* soil = std::get_if<game::SoilData>(&message)) {
+                    ++soil_messages;
+                    EXPECT_EQ(soil->width, 2u);
+                    EXPECT_EQ(soil->height, 1u);
+                    ASSERT_EQ(soil->cells.size(), 2u);
+                    EXPECT_EQ(soil->cells[0], game::SoilState::Unprepared);
+
+                    const auto expected = soil_messages == 1 ? game::SoilState::Unprepared :
+                                                            game::SoilState::Prepared;
+                    EXPECT_EQ(soil->cells[1], expected);
+                }
+
+                if (const auto* response = std::get_if<UseItemResponse>(&message)) {
+                    ASSERT_EQ(channel->get_session_id(), 7u);
+                    const auto* result =
+                            std::get_if<game::PrepareSoilResult>(&response->result);
+                    ASSERT_NE(result, nullptr);
+
+                    if (responses == 0) {
+                        EXPECT_EQ(*result, game::PrepareSoilResult::Accepted);
+                    } else {
+                        EXPECT_EQ(*result, game::PrepareSoilResult::AlreadyPrepared);
+                    }
+
+                    ++responses;
+                }
+            }
+        } catch (const ClosedQueue&) {
+        }
+
+        EXPECT_EQ(soil_messages, 2u);
+        EXPECT_EQ(responses, channel->get_session_id() == 7 ? 2u : 0u);
+    }
+
+    EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
+}
+
+class FarmingWorld: public PublishingWorld {
+public:
+    FarmingWorld():
+            PublishingWorld{2, game::Soil{{{game::SoilState::Unprepared,
+                                           game::SoilState::Unprepared}}}} {}
+
+    game::AddPlayerResult add_player(const std::string& name) override {
+        const auto result = PublishingWorld::add_player(name);
+        if (const auto* id = std::get_if<game::PlayerId>(&result)) {
+            if (add_item(*id, {game::ItemType::StrawberrySeed, game::ItemQuality::Base, 2}) !=
+                game::InventoryResult::Accepted) {
+                throw std::logic_error("No se pudieron agregar semillas para la prueba");
+            }
+        }
+        return result;
+    }
+};
+
+TEST(GameLoopTest, PlantsWatersAndSendsCurrentFarmToLateJoiningPlayer) {
+    FarmingWorld world;
+    Queue<MatchCommand> commands(16);
+    auto first = std::make_shared<SessionChannel>(7, 32);
+    auto second = std::make_shared<SessionChannel>(8, 32);
+    const game::GameInfo info{
+            {2, 1, {game::TileType::Walkable, game::TileType::Walkable}}, 0.5, 0.5};
+
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Mateo", first}));
+    ASSERT_TRUE(commands.try_push(SelectSlotCommand{7, game::SelectSlotRequest{2}}));
+    ASSERT_TRUE(commands.try_push(UseCellCommand{7, game::UseCellRequest{{0, 1}}}));
+    ASSERT_TRUE(commands.try_push(SelectSlotCommand{7, game::SelectSlotRequest{4}}));
+    ASSERT_TRUE(commands.try_push(UseCellCommand{7, game::UseCellRequest{{0, 1}}}));
+    ASSERT_TRUE(commands.try_push(SelectSlotCommand{7, game::SelectSlotRequest{1}}));
+    ASSERT_TRUE(commands.try_push(UseCellCommand{7, game::UseCellRequest{{0, 1}}}));
+    ASSERT_TRUE(commands.try_push(AddPlayerCommand{"Jose", second}));
+
+    GameLoop game_loop(world, commands, std::chrono::milliseconds{20}, info);
+    game_loop.start();
+    game_loop.join();
+
+    std::size_t responses = 0;
+    std::size_t crop_snapshots = 0;
+    game::InventoryState last_inventory;
+    ServerMessage message;
+
+    try {
+        while (first->get_outgoing_queue().try_pop(message)) {
+            if (const auto* inventory = std::get_if<game::InventoryState>(&message)) {
+                last_inventory = *inventory;
+            }
+
+            if (const auto* response = std::get_if<UseItemResponse>(&message)) {
+                if (responses == 0) {
+                    const auto* result =
+                            std::get_if<game::PrepareSoilResult>(&response->result);
+                    ASSERT_NE(result, nullptr);
+                    EXPECT_EQ(*result, game::PrepareSoilResult::Accepted);
+                } else if (responses == 1) {
+                    const auto* result =
+                            std::get_if<game::PlantCropResult>(&response->result);
+                    ASSERT_NE(result, nullptr);
+                    EXPECT_EQ(*result, game::PlantCropResult::Accepted);
+                } else {
+                    const auto* result =
+                            std::get_if<game::WaterCropResult>(&response->result);
+                    ASSERT_NE(result, nullptr);
+                    EXPECT_EQ(*result, game::WaterCropResult::Accepted);
+                }
+                ++responses;
+            }
+
+            if (const auto* crops = std::get_if<game::CropsState>(&message)) {
+                if (crop_snapshots == 0) {
+                    EXPECT_TRUE(crops->crops.empty());
+                } else {
+                    ASSERT_EQ(crops->crops.size(), 1u);
+                    EXPECT_EQ(crops->crops[0].cell.row, 0u);
+                    EXPECT_EQ(crops->crops[0].cell.column, 1u);
+                    EXPECT_EQ(crops->crops[0].state.type, game::CropType::Strawberry);
+                    EXPECT_EQ(crops->crops[0].state.needs_water, crop_snapshots == 1);
+                }
+                ++crop_snapshots;
+            }
+        }
+    } catch (const ClosedQueue&) {
+    }
+
+    EXPECT_EQ(responses, 3u);
+    EXPECT_EQ(crop_snapshots, 3u);
+    ASSERT_TRUE(last_inventory.items[4].has_value());
+    EXPECT_EQ(last_inventory.items[4]->quantity, 1u);
+    ASSERT_TRUE(last_inventory.items[1].has_value());
+    EXPECT_EQ(last_inventory.items[1]->quantity, 1u);
+
+    auto& outgoing = second->get_outgoing_queue();
+
+    ASSERT_TRUE(outgoing.try_pop(message));
+    ASSERT_TRUE(std::holds_alternative<JoinResponse>(message));
+
+    ASSERT_TRUE(outgoing.try_pop(message));
+    ASSERT_TRUE(std::holds_alternative<game::GameInfo>(message));
+
+    ASSERT_TRUE(outgoing.try_pop(message));
+    const auto* inventory = std::get_if<game::InventoryState>(&message);
+    ASSERT_NE(inventory, nullptr);
+    ASSERT_TRUE(inventory->items[4].has_value());
+    EXPECT_EQ(inventory->items[4]->quantity, 2u);
+    EXPECT_EQ(inventory->selected_slot, 0u);
+
+    ASSERT_TRUE(outgoing.try_pop(message));
+    const auto* soil = std::get_if<game::SoilData>(&message);
+    ASSERT_NE(soil, nullptr);
+    ASSERT_EQ(soil->cells.size(), 2u);
+    EXPECT_EQ(soil->cells[1], game::SoilState::Prepared);
+
+    ASSERT_TRUE(outgoing.try_pop(message));
+    const auto* crops = std::get_if<game::CropsState>(&message);
+    ASSERT_NE(crops, nullptr);
+    ASSERT_EQ(crops->crops.size(), 1u);
+    EXPECT_EQ(crops->crops[0].cell.row, 0u);
+    EXPECT_EQ(crops->crops[0].cell.column, 1u);
+    EXPECT_EQ(crops->crops[0].state.type, game::CropType::Strawberry);
+    EXPECT_FALSE(crops->crops[0].state.needs_water);
+
+    EXPECT_THROW(game_loop.rethrow_if_failed(), std::runtime_error);
 }
 
 class PendingJoinFailureWorld: public game::World {
