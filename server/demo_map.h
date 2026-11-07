@@ -3,12 +3,14 @@
 
 #include "game_types.h"
 #include "map.h"
+#include "soil.h"
 
 namespace game {
 
 struct DemoMap {
     Map map;
     Position spawn_position;
+    Soil soil;
 };
 
 DemoMap make_demo_map();

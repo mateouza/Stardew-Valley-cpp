@@ -19,7 +19,16 @@ DemoMap make_demo_map() {
         tiles[7][column] = TileType::Blocked;
     }
 
-    return {Map{std::move(tiles)}, {2.5, 2.5}};
+    std::vector<std::vector<SoilState>> soil_cells(
+        HEIGHT, std::vector<SoilState>(WIDTH, SoilState::NotCultivable));
+
+    for (std::size_t row = 2; row < 4; ++row) {
+        for (std::size_t column = 3; column < 5; ++column) {
+            soil_cells[row][column] = SoilState::Unprepared;
+        }
+    }
+
+    return {Map{std::move(tiles)}, {2.5, 2.5}, Soil{std::move(soil_cells)}};
 }
 
 }
